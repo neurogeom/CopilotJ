@@ -52,7 +52,7 @@ def get_project_templates_dir() -> Path:
     return templates_dir
 
 
-MODEL_ROOT = get_project_temp_dir("models")
+MODEL_ROOT = Path(__file__).resolve().parent.parent.parent / "assets" / "models"
 
 
 async def cellpose_segmentation(

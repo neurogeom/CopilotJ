@@ -794,7 +794,7 @@ def bioimage_get_model_info(
 
 def bioimage_download_model(
     model_id: Annotated[str, "Model ID or name to download"],
-    dest_dir: Annotated[str | None, "Optional destination directory path (defaults to project temp/bioimage_models)"] = None,
+    dest_dir: Annotated[str | None, "Optional destination directory path (defaults to project assets/bioimage_models)"] = None,
 ) -> str:
     """Download a BioImage Model Zoo model archive.
     
@@ -804,7 +804,7 @@ def bioimage_download_model(
         if dest_dir:
             dest_path = Path(dest_dir)
         else:
-            dest_path = get_project_temp_dir("bioimage_models")
+            dest_path = Path(__file__).resolve().parent.parent.parent / "assets" / "bioimage_models"
         
         dest_path.mkdir(parents=True, exist_ok=True)
 
