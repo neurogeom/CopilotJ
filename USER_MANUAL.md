@@ -1,0 +1,1 @@
+Please refer to the [Page](https://copilotj.chat/#/manual).
