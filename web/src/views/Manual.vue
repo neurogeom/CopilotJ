@@ -6,9 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 
 <script setup lang="ts">
 import "highlight.js/styles/github-dark.css";
-
-import { computed, onMounted, ref } from "vue";
-
+import { computed, nextTick, onMounted, ref } from "vue";
 import { createMarkdownRenderer } from "../lib/markdown";
 
 type TocItem = { level: number; text: string; id: string };
@@ -46,10 +44,12 @@ const renderer = {
 };
 
 const markdown = createMarkdownRenderer(renderer);
+const loadManualModule = () => import("../assets/manual.md?raw");
 
 const manualSrc = ref("");
 const isLoading = ref(true);
 const loadError = ref("");
+const pendingScrollY = ref<number | null>(import.meta.hot?.data.manualScrollY ?? null);
 
 const toc = computed<TocItem[]>(() => {
   if (!manualSrc.value) return [];
@@ -69,19 +69,31 @@ const toc = computed<TocItem[]>(() => {
   return items;
 });
 
-const html = computed(() => (manualSrc.value ? (markdown.parse(manualSrc.value) as string) : ""));
+const html = computed(() => {
+  if (!manualSrc.value) return "";
+  headingCounts.clear();
+  return markdown.parse(manualSrc.value) as string;
+});
 
 async function loadManual() {
   isLoading.value = true;
   loadError.value = "";
 
   try {
-    const module = await import("../assets/manual.md?raw");
+    const module = await loadManualModule();
     manualSrc.value = module.default;
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : "Failed to load the manual.";
   } finally {
     isLoading.value = false;
+    if (pendingScrollY.value != null) {
+      const scrollY = pendingScrollY.value;
+      pendingScrollY.value = null;
+      await nextTick();
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: scrollY, behavior: "auto" });
+      });
+    }
   }
 }
 
@@ -93,6 +105,16 @@ function scrollToSection(id: string) {
   const node = document.getElementById(id);
   if (!node) return;
   node.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+if (import.meta.hot) {
+  import.meta.hot.dispose((data) => {
+    data.manualScrollY = window.scrollY;
+  });
+
+  import.meta.hot.accept(() => {
+    // Let the remounted component restore the previous viewport position.
+  });
 }
 </script>
 
@@ -130,7 +152,11 @@ function scrollToSection(id: string) {
         <div class="rounded-4xl border border-zinc-200/60 bg-white/85 p-6 shadow-sm ring-1 ring-black/5 md:p-8 xl:p-10">
           <p v-if="isLoading" class="text-sm text-zinc-500">Loading manual...</p>
           <p v-else-if="loadError" class="text-sm text-red-600">{{ loadError }}</p>
-          <article v-else class="prose dark:prose-invert prose-emerald max-w-none prose-headings:scroll-mt-28" v-html="html" />
+          <article
+            v-else
+            class="prose dark:prose-invert prose-emerald max-w-none prose-headings:scroll-mt-28"
+            v-html="html"
+          />
         </div>
       </div>
     </div>

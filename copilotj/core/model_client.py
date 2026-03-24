@@ -6,13 +6,13 @@ import abc
 import os
 from typing import Any, AsyncGenerator, Literal, Sequence, cast, overload, override
 
-import langfuse.openai
 import openai.types.chat
 import openai.types.responses
 import pydantic
 from langchain_openai import OpenAIEmbeddings
 
 from copilotj.core.config import get_llm_and_key, get_proxy, get_vlm_and_key
+from copilotj.core.langfuse_compat import new_async_openai_client
 from copilotj.core.message import ImageMessage, TextMessage
 from copilotj.core.tool import Tool
 
@@ -187,7 +187,7 @@ class OpenAIChatCompletionClient(ModelClient):
         super().__init__()
         self._model, self._api_key = get_llm_and_key(model, api_key)
         http_client = openai.DefaultAsyncHttpxClient(proxy=proxy) if proxy is not None else None
-        self._client = langfuse.openai.AsyncOpenAI(api_key=self._api_key, http_client=http_client, base_url=base_url)
+        self._client = new_async_openai_client(api_key=self._api_key, http_client=http_client, base_url=base_url)
 
     @override
     def get_model(self) -> str:
@@ -376,7 +376,7 @@ class OpenAIResponseClient(ModelClient):
         super().__init__()
         self._model, self._api_key = get_llm_and_key(model, api_key)
         http_client = openai.DefaultAsyncHttpxClient(proxy=proxy) if proxy is not None else None
-        self._client = langfuse.openai.AsyncOpenAI(api_key=self._api_key, http_client=http_client, base_url=base_url)
+        self._client = new_async_openai_client(api_key=self._api_key, http_client=http_client, base_url=base_url)
 
     @override
     def get_model(self) -> str:

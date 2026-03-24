@@ -11,10 +11,10 @@ from contextlib import suppress
 from typing import AsyncGenerator, Literal, override
 
 import aiohttp.web as web
-import langfuse
 import pydantic
 
 from copilotj.core import UI, UIEvent, UIEventPost, UIEventState
+from copilotj.core.langfuse_compat import LangfuseClient, new_langfuse_client
 from copilotj.core.ui import UIEventContentMarkdown
 from copilotj.multiagent.leader_multiagent import LeaderDriven
 from copilotj.plugin.api import HTTPPluginAPI, PluginAPI
@@ -59,7 +59,7 @@ class _OptimizePrompt(pydantic.BaseModel):
 
 
 class _Thread(UI):
-    def __init__(self, thread_id: str, *, config: _ConfigQuery | None = None, trace_context: langfuse.Langfuse):
+    def __init__(self, thread_id: str, *, config: _ConfigQuery | None = None, trace_context: LangfuseClient):
         self.thread_id = thread_id
         self._trace_ctx = trace_context
 
@@ -235,7 +235,7 @@ class Threads:
         super().__init__()
         self._threads: dict[str, tuple[_Thread, threading.Lock]] = {}
         self._threads_lock = threading.Lock()
-        self._trace_ctx = langfuse.Langfuse()
+        self._trace_ctx = new_langfuse_client()
 
     async def new_thread(self, request: web.Request) -> web.Response:
         try:

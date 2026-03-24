@@ -8,7 +8,6 @@ import os
 from typing import Annotated
 
 import pydantic
-from langfuse import Langfuse
 
 import copilotj.multiagent.py_tools as py_tools
 import copilotj.multiagent.tools as tools
@@ -27,6 +26,7 @@ from copilotj.core import (
     Tool,
     new_model_client,
 )
+from copilotj.core.langfuse_compat import LangfuseClient
 from copilotj.multiagent.agent_loader import load_agent_configs
 from copilotj.multiagent.Executor import Executor
 from copilotj.multiagent.kb_tools import _load_macro_plugin_names, kb_build, kb_retrieve, rebuild_registry
@@ -96,7 +96,7 @@ class LeaderAgent(ChatAgent):
         ]
         self.agents = agents if agents else {}
 
-    async def handle_request(self, main_task: str, *, trace_ctx: Langfuse | None = None) -> ModelResponse:
+    async def handle_request(self, main_task: str, *, trace_ctx: LangfuseClient | None = None) -> ModelResponse:
         self.imagej_windowInfo_text = await self.plugin_tools.imagej_windowInfo()
         # Generate the list of available tools and agents for the prompt
         mytools = self.tools
@@ -499,7 +499,7 @@ User prompt to optimize:
         except Exception as e:
             self.log_error(f"Background summarization failed: {e}")
 
-    async def run(self, task: str, trace_ctx: Langfuse | None = None) -> None:
+    async def run(self, task: str, trace_ctx: LangfuseClient | None = None) -> None:
         topic_intro = f"[DIALOG #{self.dialog_counter}] User Task: {task}"
         self.log_info(topic_intro)
 

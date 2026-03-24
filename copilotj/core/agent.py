@@ -9,9 +9,9 @@ import inspect
 from collections.abc import Awaitable, Callable
 from typing import Any, override
 
-import langfuse
 import pydantic
 
+from copilotj.core.langfuse_compat import LangfuseClient, get_langfuse_client
 from copilotj.core.message import HandoffMessage, ImageMessage, TextMessage
 from copilotj.core.model_client import (
     FinishReasons,
@@ -111,9 +111,9 @@ class ChatAgent(Agent):
         *messages: TextMessage | ImageMessage,
         tools: list[Tool] | None = None,
         extra_args: dict[str, Any] | None = None,
-        trace_ctx: langfuse.Langfuse | None = None,
+        trace_ctx: LangfuseClient | None = None,
     ) -> ModelResponse:
-        trace_ctx = trace_ctx or langfuse.get_client()
+        trace_ctx = trace_ctx or get_langfuse_client()
         with trace_ctx.start_as_current_observation(
             as_type="generation",
             name="agent_create",

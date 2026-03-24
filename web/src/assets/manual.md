@@ -26,9 +26,9 @@ CopilotJ consists of three required components:
 
 Download the precompiled JAR files for the CopilotJ Bridge plugin:
 
-- [`CopilotJBridge-0.1.0-SNAPSHOT.jar`](https://copilotj.cvcd.xyz/software/CopilotJBridge-0.1.0-SNAPSHOT.jar)
-- [`jackson-datatype-jsr310-2.9.8.jar`](https://copilotj.cvcd.xyz/software/jackson-datatype-jsr310-2.9.8.jar)
-- [`Java-WebSocket-1.5.2.jar`](https://copilotj.cvcd.xyz/software/Java-WebSocket-1.5.2.jar)
+- [`CopilotJBridge-0.1.0-SNAPSHOT.jar`](https://copilotj.cvcd.xyz/software/precompiled_plugin/CopilotJBridge-0.1.0-SNAPSHOT.jar)
+- [`jackson-datatype-jsr310-2.9.8.jar`](https://copilotj.cvcd.xyz/software/precompiled_plugin/jackson-datatype-jsr310-2.9.8.jar)
+- [`Java-WebSocket-1.5.2.jar`](https://copilotj.cvcd.xyz/software/precompiled_plugin/Java-WebSocket-1.5.2.jar)
 
 **Install into ImageJ / Fiji:**
 
@@ -124,18 +124,7 @@ Recommended workflow:
    uv run python -m copilotj.server --host 127.0.0.1 --port 8786
    ```
 
-By default, the local development server listens at `http://127.0.0.1:8786`.
-The HTTP API is available under the `/api` path (e.g., `http://127.0.0.1:8786/api/ping`).
-
-If you change the host or port, make sure to update all related configurations accordingly so that other components can still communicate with the server.
-
-This listening address is also used by other CopilotJ components:
-
-- ImageJ plugin: Connects to `http://127.0.0.1:8786` by default.
-  If you modify the server address, update the connection URL in the plugin as well.
-- Frontend (non-Docker setup): Set `VITE_API_BASE_URL=http://<host>:<port>` to match your server configuration (e.g., `http://127.0.0.1:8786`), so the web app can correctly reach the backend.
-
-In short, any change to the server’s host or port must be consistently reflected across the plugin and frontend configurations.
+By default, the local development server listens at `http://127.0.0.1:8786`. If you change the host or port, make sure to update all related configurations accordingly so that other components can still communicate with the server.
 
 ### E. Install the CopilotJ frontend server
 
@@ -163,8 +152,11 @@ For source-based development (**Option D2**), the frontend can also be run indep
    pnpm run dev
    ```
 
-   By default, the frontend sends requests to the relative `/api` path.
-   If you run the backend on a different origin, set `VITE_API_BASE_URL` to the backend root URL before starting the dev server. Do not append `/api`.
+   If the backend runs on a different origin, add `VITE_API_BASE_URL` to `web/.env.development.local`.
+
+   ```env
+   VITE_API_BASE_URL=http://127.0.0.1:8786
+   ```
 
 4. (Advanced) For production deployment, we strongly recommend using the provided Docker-based setup, which includes a preconfigured frontend build and reverse proxy.
 
@@ -199,7 +191,7 @@ COPILOTJ_VLM_API_KEY=AI-xxxxxxxx
 # Retrieval-augmented generation (RAG)
 COPILOTJ_RAG_API_KEY=sk-xxxxxxxx
 
-# [Optional] network configuration
+## [Optional] network configuration
 #COPILOTJ_PROXY=http://127.0.0.1:8786
 #COPILOTJ_BASE_URL=http://localhost:11434
 
@@ -209,10 +201,11 @@ COPILOTJ_TAVILY_API_KEY=tvly-xxxxxxxxx
 # Knowledge bank settings (1 to enable, 0 to disable)
 COPILOTJ_KB_AUTOSAVE=0
 
-# Observability and tracing (Langfuse)
-LANGFUSE_SECRET_KEY=<secret key>
-LANGFUSE_PUBLIC_KEY=<public key>
-LANGFUSE_HOST="https://us.cloud.langfuse.com"
+## [Optional] Observability and tracing (Langfuse)
+#LANGFUSE_ENABLED=1
+#LANGFUSE_SECRET_KEY=<secret_key>
+#LANGFUSE_PUBLIC_KEY=<public_key>
+#LANGFUSE_HOST="https://us.cloud.langfuse.com"
 ```
 
 1. **How to obtain API keys**
@@ -220,6 +213,7 @@ LANGFUSE_HOST="https://us.cloud.langfuse.com"
    - **`COPILOTJ_VLM_API_KEY`**: Obtain it from the selected vision-language model provider.
    - **`COPILOTJ_RAG_API_KEY`**: Obtain it from the embedding or retrieval service provider used in your setup.
    - **`COPILOTJ_TAVILY_API_KEY`**: Obtain it from the Tavily dashboard after registering an account.
+   - **`LANGFUSE_ENABLED`**: Set to `1` to enable Langfuse tracing. Keep `0` or unset it to disable tracing.
    - **`LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY`**: Obtain them from the Langfuse dashboard when creating a project.
 
    Useful links: [OpenAI API keys](https://platform.openai.com/api-keys), [Google Gemini API keys](https://aistudio.google.com/app/apikey), [Tavily dashboard](https://app.tavily.com/) and [Langfuse dashboard](https://cloud.langfuse.com/auth/sign-in)
@@ -231,7 +225,7 @@ LANGFUSE_HOST="https://us.cloud.langfuse.com"
    - **`COPILOTJ_PROXY`**: Routes outbound network traffic through a proxy when required.
    - **`COPILOTJ_BASE_URL`**: Specifies the endpoint for local or remote model backends, such as Ollama or SiliconFlow.
    - **`COPILOTJ_KB_AUTOSAVE`**: Controls whether dialogue summaries are automatically stored in the CopilotJ knowledge bank.
-   - **Langfuse keys**: Enable execution tracing, debugging, and performance monitoring.
+   - **Langfuse keys**: Enable execution tracing, debugging, and performance monitoring when `LANGFUSE_ENABLED=1`.
 
    Multiple model backends are supported. For example:
 
@@ -285,8 +279,7 @@ To use CopilotJ, first start the core server and then connect from the ImageJ / 
 2. **Launch ImageJ / Fiji and connect through the plugin**
    - In ImageJ / Fiji, navigate to **Plugins -> CopilotJ -> Connect**.
    - In typical local setups, the default server URL does not need modification.
-     Enter only the server root URL.
-     Do not append `/api`, because the plugin automatically connects to the WebSocket endpoint under `/api/plugins`.
+     If you have changed the server endpoint, enter only the root URL (do not append additional paths).
    - Click **Connect** to establish the connection between the plugin and the core server.
 
 3. **Open the CopilotJ web interface**
