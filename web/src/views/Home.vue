@@ -32,7 +32,7 @@ function openNewWindow(link: string) {
 </script>
 
 <template>
-  <div class="flex flex-col gap-18 md:gap-24">
+  <div class="w-full flex flex-col gap-18 md:gap-24">
     <section class="py-12 md:px-10 lg:py-24 text-center">
       <h1 class="max-w-4xl mx-auto text-3xl font-bold leading-tight md:text-5xl">
         <span class="bg-linear-to-r from-blue-500 to-primary-500 bg-clip-text text-transparent">CopilotJ</span>: A
@@ -107,7 +107,7 @@ function openNewWindow(link: string) {
       </div>
     </section>
 
-    <div ref="demosRef" class="max-w-6xl mx-auto px-4">
+    <div ref="demosRef" class="w-full max-w-6xl mx-auto px-4">
       <Demos />
     </div>
 
@@ -136,30 +136,6 @@ function openNewWindow(link: string) {
         </div>
       </div>
     </section>
-
-    <!-- <section class="max-w-6xl mx-auto px-4"> -->
-    <!--   <h2 class="text-2xl font-bold md:text-3xl">CopilotJ User Interface</h2> -->
-    <!---->
-    <!--   <div -->
-    <!--     class="mt-4 rounded-2xl border border-zinc-200/60 bg-white/70 p-4 shadow-sm ring-1 ring-black/5 grid grid-cols-1 gap-5 lg:grid-cols-3" -->
-    <!--   > -->
-    <!--     <div class="lg:col-span-2"> -->
-    <!--       <img -->
-    <!--         src="/imgs/supplementary_figure1.png" -->
-    <!--         alt="CopilotJ user interface" -->
-    <!--         class="w-full rounded-xl border border-zinc-200/60" -->
-    <!--       /> -->
-    <!--     </div> -->
-    <!---->
-    <!--     <div> -->
-    <!--       <ul class="mt-2 list-disc space-y-2 pl-5"> -->
-    <!--         <li>A browser-based chat interface used to interact with CopilotJ during analysis sessions</li> -->
-    <!--         <li>Highlights chat management, model switching, and natural-language instruction entry</li> -->
-    <!--         <li>Provides the frontend context that complements the backend architecture and execution workflow</li> -->
-    <!--       </ul> -->
-    <!--     </div> -->
-    <!--   </div> -->
-    <!-- </section> -->
 
     <section class="max-w-6xl mx-auto px-4">
       <h2 class="text-2xl font-bold md:text-3xl">CopilotJ workflow</h2>

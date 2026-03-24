@@ -39,7 +39,7 @@ function youtubeEmbed(url: string) {
 </script>
 
 <template>
-  <section class="flex flex-col">
+  <section class="w-full min-w-0 flex flex-col">
     <h2 class="text-2xl font-bold md:text-3xl">Demos</h2>
 
     <div class="w-full mt-6 flex gap-2 overflow-x-auto">
@@ -61,16 +61,18 @@ function youtubeEmbed(url: string) {
 
     <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
       <div
-        class="lg:col-span-2 rounded-3xl border border-zinc-200/60 bg-white/70 shadow-lg ring-1 ring-black/5 overflow-hidden"
+        class="min-w-0 overflow-hidden rounded-3xl border border-zinc-200/60 bg-white/70 shadow-lg ring-1 ring-black/5 lg:col-span-2"
       >
-        <div class="flex items-center justify-between border-b border-zinc-200/60 bg-white/80 px-5 py-3">
-          <div class="mt-1 text-lg font-semibold">{{ activeVideo.title }}</div>
+        <div
+          class="flex flex-col gap-2 border-b border-zinc-200/60 bg-white/80 px-5 py-3 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div class="min-w-0 mt-1 text-lg font-semibold break-words">{{ activeVideo.title }}</div>
 
           <a
             :href="activeVideo.youtubeUrl"
             target="_blank"
             rel="noreferrer"
-            class="inline-flex items-center gap-2 px-1 py-1.5 font-medium transition-colors text-zinc-500 hover:text-zinc-600 hover:underline"
+            class="inline-flex shrink-0 items-center gap-2 px-1 py-1.5 font-medium transition-colors text-zinc-500 hover:text-zinc-600 hover:underline"
           >
             Open on YouTube
           </a>
@@ -90,10 +92,10 @@ function youtubeEmbed(url: string) {
         </div>
       </div>
 
-      <div class="mt-4">
-        <div class="flex items-center justify-between gap-4">
-          <h3 class="text-xl font-semibold">{{ activeGroup }}</h3>
-          <div class="text-sm text-zinc-500">{{ currentGroup.items.length }} videos</div>
+      <div class="min-w-0 mt-4">
+        <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <h3 class="min-w-0 text-xl font-semibold break-words">{{ activeGroup }}</h3>
+          <div class="shrink-0 text-sm text-zinc-500">{{ currentGroup.items.length }} videos</div>
         </div>
 
         <div class="mt-4 flex flex-col gap-3">
@@ -109,10 +111,10 @@ function youtubeEmbed(url: string) {
             "
             @click="active = video.id"
           >
-            <div class="my-1 text-base font-semibold leading-6 transition-colors">{{ video.title }}</div>
+            <div class="my-1 break-words text-base font-semibold leading-6 transition-colors">{{ video.title }}</div>
 
             <p
-              class="line-clamp-3 text-sm leading-6 transition-all"
+              class="line-clamp-3 break-words text-sm leading-6 transition-all"
               :class="video.id === activeVideo.id ? 'max-h-64 text-zinc-200' : 'max-h-0 text-zinc-600'"
             >
               {{ video.summary }}
