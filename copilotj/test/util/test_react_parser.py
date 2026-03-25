@@ -90,6 +90,64 @@ Final Answer: found it
     assert response.finish_reason == "stop"
 
 
+def test_create_parses_bolded_react_keywords():
+    tool = FunctionTool(lookup, "Look up a query.", name="lookup")
+    client = ReActChatCompletionClient(
+        _StubModelClient(
+            response=ModelResponse(
+                reasoning_content=None,
+                content="""\
+**Thought**: need more information
+**Action**:
+{"name": "lookup", "args": {"query": "cells"}}
+**Final Answer**: found it
+""",
+                tool_calls=None,
+                finish_reason="stop",
+            )
+        )
+    )
+
+    response = asyncio.run(client.create([TextMessage(role="user", text="help")], tools=[tool]))
+
+    assert response.reasoning_content == "need more information"
+    assert response.content == "found it"
+    assert response.tool_calls is not None
+    assert len(response.tool_calls) == 1
+    assert response.tool_calls[0].tool.name == "lookup"
+    assert response.tool_calls[0].args.query == "cells"
+    assert response.finish_reason == "stop"
+
+
+def test_create_parses_bolded_keywords_with_colon_inside_bold():
+    tool = FunctionTool(lookup, "Look up a query.", name="lookup")
+    client = ReActChatCompletionClient(
+        _StubModelClient(
+            response=ModelResponse(
+                reasoning_content=None,
+                content="""\
+**Thought:** need more information
+**Action:**
+{"name": "lookup", "args": {"query": "cells"}}
+**Final Answer:** found it
+""",
+                tool_calls=None,
+                finish_reason="stop",
+            )
+        )
+    )
+
+    response = asyncio.run(client.create([TextMessage(role="user", text="help")], tools=[tool]))
+
+    assert response.reasoning_content == "need more information"
+    assert response.content == "found it"
+    assert response.tool_calls is not None
+    assert len(response.tool_calls) == 1
+    assert response.tool_calls[0].tool.name == "lookup"
+    assert response.tool_calls[0].args.query == "cells"
+    assert response.finish_reason == "stop"
+
+
 def test_create_returns_raw_content_without_react_keywords():
     client = ReActChatCompletionClient(
         _StubModelClient(
@@ -184,12 +242,85 @@ def test_create_stream_parses_standard_react_response():
     assert items[3].finish_reason == "stop"
 
 
+def test_create_stream_parses_bolded_react_keywords():
+    tool = FunctionTool(lookup, "Look up a query.", name="lookup")
+    client = ReActChatCompletionClient(
+        _StubModelClient(
+            stream_chunks=[
+                ModelResponseChunk(reasoning_content=None, content="**Thought**: inspect\n", finish_reason=None),
+                ModelResponseChunk(
+                    reasoning_content=None,
+                    content='**Action**: {"name": "lookup", "args": {"query": "cells"}}\n**Final Answer**: done',
+                    finish_reason=None,
+                ),
+                ModelResponseChunk(reasoning_content=None, content=None, finish_reason="stop"),
+            ]
+        )
+    )
+
+    items = [
+        item
+        for item in asyncio.run(_collect_stream(client, [tool]))
+        if not (isinstance(item, ModelResponseChunk) and item.reasoning_content == "")
+    ]
+
+    assert len(items) == 4
+    assert isinstance(items[0], ModelResponseChunk)
+    assert items[0].reasoning_content == "inspect\n"
+    assert isinstance(items[1], ToolCall)
+    assert items[1].tool.name == "lookup"
+    assert items[1].args.query == "cells"
+    assert isinstance(items[2], ModelResponseChunk)
+    assert items[2].content == "done"
+    assert isinstance(items[3], ModelResponseChunk)
+    assert items[3].finish_reason == "stop"
+
+
+def test_create_stream_parses_bolded_keywords_with_colon_inside_bold():
+    tool = FunctionTool(lookup, "Look up a query.", name="lookup")
+    client = ReActChatCompletionClient(
+        _StubModelClient(
+            stream_chunks=[
+                ModelResponseChunk(reasoning_content=None, content="**Thought:** inspect\n", finish_reason=None),
+                ModelResponseChunk(
+                    reasoning_content=None,
+                    content='**Action:** {"name": "lookup", "args": {"query": "cells"}}\n**Final Answer:** done',
+                    finish_reason=None,
+                ),
+                ModelResponseChunk(reasoning_content=None, content=None, finish_reason="stop"),
+            ]
+        )
+    )
+
+    items = [
+        item
+        for item in asyncio.run(_collect_stream(client, [tool]))
+        if not (isinstance(item, ModelResponseChunk) and item.reasoning_content == "")
+    ]
+
+    assert len(items) == 4
+    assert isinstance(items[0], ModelResponseChunk)
+    assert items[0].reasoning_content == "inspect\n"
+    assert isinstance(items[1], ToolCall)
+    assert items[1].tool.name == "lookup"
+    assert items[1].args.query == "cells"
+    assert isinstance(items[2], ModelResponseChunk)
+    assert items[2].content == "done"
+    assert isinstance(items[3], ModelResponseChunk)
+    assert items[3].finish_reason == "stop"
+
+
 def test_build_last_line_prefix_regex_matches_action_and_final_prefixes():
     pattern = _build_last_line_prefix_regex("Action", "Final Answer")
 
     assert pattern.search("A")
     assert pattern.search("Actio")
+    assert pattern.search("**Act")
+    assert pattern.search("**Action**")
+    assert pattern.search("**Action:")
+    assert pattern.search("**Action:**")
     assert pattern.search("Final")
+    assert pattern.search("**Final Answe")
     assert pattern.search("Final Answe")
     assert not pattern.search("Observation")
 

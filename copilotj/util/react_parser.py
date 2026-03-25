@@ -57,10 +57,9 @@ class ReActChatCompletionClient(ModelClient):
         self._kw_final = kw_final
 
         # compile regex patterns
-        ends = "".join((":", r"\n"))
-        re_thought = rf"{kw_thought}[{ends}]"
-        re_action = rf"{kw_action}[{ends}]"
-        re_final = rf"{kw_final}[{ends}]"
+        re_thought = _build_keyword_with_sep_regex(kw_thought)
+        re_action = _build_keyword_with_sep_regex(kw_action)
+        re_final = _build_keyword_with_sep_regex(kw_final)
         flags = re.IGNORECASE | re.DOTALL
 
         # create
@@ -113,7 +112,7 @@ class ReActChatCompletionClient(ModelClient):
             )
 
         try:
-            tool_call = self._parse_action(text, tools=tools or []) if action_match is not None else None
+            tool_call = self._parse_action_content(action_match.group(1).strip(), tools=tools or []) if action_match is not None else None
         except ModelSyntaxError as e:
             e.chat_completion = ModelResponse(
                 content=text,
@@ -345,6 +344,9 @@ class ReActChatCompletionClient(ModelClient):
         if matches is not None:
             text = matches.group(1).strip()
 
+        return self._parse_action_content(text, tools=tools)
+
+    def _parse_action_content(self, text: str, *, tools: list[Tool]) -> ToolCall:
         try:
             tool_call = _extract_json_tool_call(text)
 
@@ -468,9 +470,21 @@ def _build_last_line_prefix_regex(*words: str) -> re.Pattern:
     def word_to_prefix_regex(word: str) -> str:
         assert word, "Word must not be empty"
         # Action -> A(?:c(?:t(?:i(?:o(?:n)?)?)?)?)?
-        return word[0] + "".join(f"(?:{char}?" for i, char in enumerate(word[1:])) + ")?" * (len(word) - 1)
+        escaped = [re.escape(char) for char in word]
+        return escaped[0] + "".join(f"(?:{char}?" for char in escaped[1:]) + ")?" * (len(word) - 1)
 
-    pattern_parts = [word_to_prefix_regex(w) for w in words]
-    # Combine patterns with non-capturing group and ignore case: ^(ActionPrefix|FinalAnswerPrefix)\Z
-    pattern = r"(?i)^(" + "|".join(pattern_parts) + r")\Z"
+    pattern_parts = [rf"(?:\*\*)?{word_to_prefix_regex(w)}(?:\*\*?|:\*\*?|:)?" for w in words]
+    # Combine patterns with non-capturing group and ignore case: (?:^|\n)(ActionPrefix|FinalAnswerPrefix)\Z
+    pattern = r"(?i)(?:^|\n)(?:" + "|".join(pattern_parts) + r")\Z"
     return re.compile(pattern)
+
+
+def _build_keyword_regex(keyword: str) -> str:
+    escaped = re.escape(keyword)
+    return rf"(?:\*\*)?{escaped}(?:\*\*)?"
+
+
+def _build_keyword_with_sep_regex(keyword: str) -> str:
+    keyword_only_bold = _build_keyword_regex(keyword)
+    keyword_colon_in_bold = rf"\*\*{re.escape(keyword)}:\*\*"
+    return rf"(?:{keyword_colon_in_bold}\s*|{keyword_only_bold}\s*(?::|\n))"
