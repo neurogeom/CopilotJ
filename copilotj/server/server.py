@@ -11,6 +11,7 @@ import aiohttp_cors
 
 from copilotj.server.bridge import Bridge
 from copilotj.server.threads import Threads
+from copilotj.server.oauth_handler import OAuthHandler
 
 __all__ = ["Server"]
 
@@ -22,6 +23,7 @@ class Server:
         super().__init__()
         self._bridge = Bridge()
         self._threads = Threads()
+        self._oauth = OAuthHandler()
         self._app = self._create_app()
 
     def add_background_task(self, task: asyncio.Task) -> None:
@@ -53,6 +55,12 @@ class Server:
         r.add_post("/api/threads/{thread_id}/config", self._threads.update_thread_config)
         r.add_post("/api/threads/{thread_id}/optimize-prompt", self._threads.optimize_prompt_endpoint)
         r.add_post("/api/optimize-prompt", self._threads.optimize_prompt_standalone)
+
+        # OAuth authentication routes
+        r.add_get("/api/auth/status", self._oauth.status)
+        r.add_post("/api/auth/login", self._oauth.login)
+        r.add_post("/api/auth/logout", self._oauth.logout)
+        r.add_get("/api/auth/token", self._oauth.get_token)
 
         cors = aiohttp_cors.setup(  # TODO: configure CORS
             app,

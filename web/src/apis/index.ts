@@ -5,3 +5,4 @@
  */
 
 export * from "./threads.ts";
+export * from "./auth.ts";
