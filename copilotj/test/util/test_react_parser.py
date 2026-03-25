@@ -90,7 +90,7 @@ Final Answer: found it
     assert response.finish_reason == "stop"
 
 
-def test_create_raises_for_plain_text_without_react_keywords():
+def test_create_returns_raw_content_without_react_keywords():
     client = ReActChatCompletionClient(
         _StubModelClient(
             response=ModelResponse(
@@ -102,13 +102,32 @@ def test_create_raises_for_plain_text_without_react_keywords():
         )
     )
 
-    try:
-        asyncio.run(client.create([TextMessage(role="user", text="help")], tools=[]))
-    except ModelSyntaxError as exc:
-        assert "Failed to extract action from text" in exc.message
-        assert "Just answer directly." in exc.message
-    else:
-        raise AssertionError("Expected ModelSyntaxError for plain text content")
+    response = asyncio.run(client.create([TextMessage(role="user", text="help")], tools=[]))
+
+    assert response.reasoning_content is None
+    assert response.content == "Just answer directly."
+    assert response.tool_calls == []
+    assert response.finish_reason == "stop"
+
+
+def test_create_parses_final_answer_without_thought_or_action():
+    client = ReActChatCompletionClient(
+        _StubModelClient(
+            response=ModelResponse(
+                reasoning_content=None,
+                content="Final Answer: Just answer directly.",
+                tool_calls=None,
+                finish_reason="stop",
+            )
+        )
+    )
+
+    response = asyncio.run(client.create([TextMessage(role="user", text="help")], tools=[]))
+
+    assert response.reasoning_content is None
+    assert response.content == "Just answer directly."
+    assert response.tool_calls is None
+    assert response.finish_reason == "stop"
 
 
 def test_create_raises_for_unknown_tool():

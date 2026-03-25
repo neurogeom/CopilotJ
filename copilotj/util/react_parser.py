@@ -99,9 +99,21 @@ class ReActChatCompletionClient(ModelClient):
         text = response.content.strip()
 
         thought_match = self._pattern_thought.search(text)
+        action_match = self._pattern_action.search(text)
+        final_match = self._pattern_final.search(text)
         thought = thought_match and thought_match.group(1).strip()
+
+        # Fallback: if no structured reasoning or action found, return raw content as final answer
+        if thought_match is None and action_match is None and final_match is None:
+            return ModelResponse(
+                content=text,
+                reasoning_content=None,
+                tool_calls=[],
+                finish_reason=response.finish_reason,
+            )
+
         try:
-            tool_call = self._parse_action(text, tools=tools or [])
+            tool_call = self._parse_action(text, tools=tools or []) if action_match is not None else None
         except ModelSyntaxError as e:
             e.chat_completion = ModelResponse(
                 content=text,
@@ -111,16 +123,6 @@ class ReActChatCompletionClient(ModelClient):
             )
             raise e
 
-        # Fallback: if no structured reasoning or action found, return raw content as final answer
-        if thought is None and tool_call is None:
-            return ModelResponse(
-                content=text,
-                reasoning_content=None,
-                tool_calls=[],
-                finish_reason=response.finish_reason,
-            )
-
-        final_match = self._pattern_final.search(response.content)
         return ModelResponse(
             content=final_match.group(1).strip() if final_match else None,
             reasoning_content=thought,
