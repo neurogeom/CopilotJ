@@ -26,9 +26,9 @@ CopilotJ consists of three required components:
 
 Download the precompiled JAR files for the CopilotJ Bridge plugin:
 
-- [`CopilotJBridge-0.1.0-SNAPSHOT.jar`](https://copilotj.cvcd.xyz/software/CopilotJBridge-0.1.0-SNAPSHOT.jar)
-- [`jackson-datatype-jsr310-2.9.8.jar`](https://copilotj.cvcd.xyz/software/jackson-datatype-jsr310-2.9.8.jar)
-- [`Java-WebSocket-1.5.2.jar`](https://copilotj.cvcd.xyz/software/Java-WebSocket-1.5.2.jar)
+- [`CopilotJBridge-0.1.0-SNAPSHOT.jar`](https://copilotj.cvcd.xyz/software/precompiled_plugin/CopilotJBridge-0.1.0-SNAPSHOT.jar)
+- [`jackson-datatype-jsr310-2.9.8.jar`](https://copilotj.cvcd.xyz/software/precompiled_plugin/jackson-datatype-jsr310-2.9.8.jar)
+- [`Java-WebSocket-1.5.2.jar`](https://copilotj.cvcd.xyz/software/precompiled_plugin/Java-WebSocket-1.5.2.jar)
 
 **Install into ImageJ / Fiji:**
 
