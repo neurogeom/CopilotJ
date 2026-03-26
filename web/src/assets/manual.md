@@ -124,18 +124,7 @@ Recommended workflow:
    uv run python -m copilotj.server --host 127.0.0.1 --port 8786
    ```
 
-By default, the local development server listens at `http://127.0.0.1:8786`.
-The HTTP API is available under the `/api` path (e.g., `http://127.0.0.1:8786/api/ping`).
-
-If you change the host or port, make sure to update all related configurations accordingly so that other components can still communicate with the server.
-
-This listening address is also used by other CopilotJ components:
-
-- ImageJ plugin: Connects to `http://127.0.0.1:8786` by default.
-  If you modify the server address, update the connection URL in the plugin as well.
-- Frontend (non-Docker setup): Set `VITE_API_BASE_URL=http://<host>:<port>` to match your server configuration (e.g., `http://127.0.0.1:8786`), so the web app can correctly reach the backend.
-
-In short, any change to the server’s host or port must be consistently reflected across the plugin and frontend configurations.
+By default, the local development server listens at `http://127.0.0.1:8786`. If you change the host or port, make sure to update all related configurations accordingly so that other components can still communicate with the server.
 
 ### E. Install the CopilotJ frontend server
 
@@ -163,8 +152,11 @@ For source-based development (**Option D2**), the frontend can also be run indep
    pnpm run dev
    ```
 
-   By default, the frontend sends requests to the relative `/api` path.
-   If you run the backend on a different origin, set `VITE_API_BASE_URL` to the backend root URL before starting the dev server. Do not append `/api`.
+   If the backend runs on a different origin, add `VITE_API_BASE_URL` to `web/.env.development.local`.
+
+   ```env
+   VITE_API_BASE_URL=http://127.0.0.1:8786
+   ```
 
 4. (Advanced) For production deployment, we strongly recommend using the provided Docker-based setup, which includes a preconfigured frontend build and reverse proxy.
 
@@ -285,8 +277,7 @@ To use CopilotJ, first start the core server and then connect from the ImageJ / 
 2. **Launch ImageJ / Fiji and connect through the plugin**
    - In ImageJ / Fiji, navigate to **Plugins -> CopilotJ -> Connect**.
    - In typical local setups, the default server URL does not need modification.
-     Enter only the server root URL.
-     Do not append `/api`, because the plugin automatically connects to the WebSocket endpoint under `/api/plugins`.
+     If you have changed the server endpoint, enter only the root URL (do not append additional paths).
    - Click **Connect** to establish the connection between the plugin and the core server.
 
 3. **Open the CopilotJ web interface**
