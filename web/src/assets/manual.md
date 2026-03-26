@@ -183,6 +183,8 @@ COPILOTJ_DEV=1
 # LLM configuration (text-based reasoning)
 COPILOTJ_MODEL=gpt-4.1-mini
 COPILOTJ_API_KEY=sk-xxxxxxxx
+#COPILOTJ_BASE_URL=http://localhost:11434
+#COPILOTJ_PROXY=http://PATH_TO_YOUR_PROXY
 
 # Vision-language model (image understanding)
 COPILOTJ_VLM_MODEL=gemini-2.5-flash
@@ -191,20 +193,16 @@ COPILOTJ_VLM_API_KEY=AI-xxxxxxxx
 # Retrieval-augmented generation (RAG)
 COPILOTJ_RAG_API_KEY=sk-xxxxxxxx
 
-# [Optional] network configuration
-#COPILOTJ_PROXY=http://127.0.0.1:8786
-#COPILOTJ_BASE_URL=http://localhost:11434
-
 # External search tool (web search)
 COPILOTJ_TAVILY_API_KEY=tvly-xxxxxxxxx
 
 # Knowledge bank settings (1 to enable, 0 to disable)
 COPILOTJ_KB_AUTOSAVE=0
 
-# Observability and tracing (Langfuse)
-LANGFUSE_SECRET_KEY=<secret key>
-LANGFUSE_PUBLIC_KEY=<public key>
-LANGFUSE_HOST="https://us.cloud.langfuse.com"
+## [Optional] Observability and tracing (Langfuse)
+#LANGFUSE_SECRET_KEY=<secret key>
+#LANGFUSE_PUBLIC_KEY=<public key>
+#LANGFUSE_HOST="https://us.cloud.langfuse.com"
 ```
 
 1. **How to obtain API keys**

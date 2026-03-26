@@ -158,7 +158,13 @@ def _new_model_client(model: str, api_key: str, *, proxy: str | None) -> ModelCl
         else:
             return OpenAIResponseClient(model, api_key, proxy=proxy)
 
-    elif model.startswith("zai-org/") or model.startswith("Pro/") or model.startswith("deepseek") or model.startswith("moonshotai/") or model.startswith("Qwen/"):
+    elif (
+        model.startswith("zai-org/")
+        or model.startswith("Pro/")
+        or model.startswith("deepseek")
+        or model.startswith("moonshotai/")
+        or model.startswith("Qwen/")
+    ):
         base_url = os.getenv("COPILOTJ_BASE_URL", "https://api.siliconflow.cn/v1")
         return OpenAIChatCompletionClient(model, api_key, base_url=base_url, proxy=proxy)
 
@@ -187,6 +193,8 @@ class OpenAIChatCompletionClient(ModelClient):
         super().__init__()
         self._model, self._api_key = get_llm_and_key(model, api_key)
         http_client = openai.DefaultAsyncHttpxClient(proxy=proxy) if proxy is not None else None
+
+        # Langfuse support can be safely ignored if LANGFUSE_PUBLIC_KEY or LANGFUSE_SECRET_KEY is not set
         self._client = langfuse.openai.AsyncOpenAI(api_key=self._api_key, http_client=http_client, base_url=base_url)
 
     @override
