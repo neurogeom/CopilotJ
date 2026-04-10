@@ -152,6 +152,10 @@ def _new_model_client(model: str, api_key: str, *, proxy: str | None) -> ModelCl
     elif model.startswith("gemini-"):
         return GeminiChatCompletionClient(model, api_key, proxy=proxy)
 
+    elif model.startswith("claude-"):
+        base_url = os.getenv("COPILOTJ_BASE_URL", "https://api.anthropic.com/v1")
+        return OpenAIChatCompletionClient(model, api_key, base_url=base_url, proxy=proxy)
+
     elif model.startswith("gpt-"):
         if os.getenv("COPILOTJ_BASE_URL", None):
             return OpenAIChatCompletionClient(model, api_key, base_url=os.getenv("COPILOTJ_BASE_URL"), proxy=proxy)
