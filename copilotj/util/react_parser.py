@@ -236,11 +236,8 @@ class ReActChatCompletionClient(ModelClient):
     ) -> tuple[_StreamingState, Iterable[ModelResponseChunk | ToolCall], str]:
         thought_match = self._pattern_thought_kw.search(buffer)
         if thought_match:
-            if thought_match.start() > 0 and buffer[: thought_match.start()].strip():
-                raise ModelSyntaxError(
-                    f"Unexpected content before '{self._kw_thought}' keyword: " + buffer[: thought_match.start()]
-                )
-
+            # Skip any content before 'Thought:' — frontier models like Claude sometimes
+            # output a preamble sentence before the structured ReAct format.
             return self._fsm_before_status(_StreamingState.BeforeThought, buffer[thought_match.end() :], tools=tools)
 
         for pattern_kw, next in [
