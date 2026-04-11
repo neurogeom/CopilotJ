@@ -512,6 +512,8 @@ User prompt to optimize:
 
         tool_retry_counter = 0
         max_tool_retry = 3
+        syntax_error_counter = 0
+        max_syntax_errors = 3
 
         # TODO: add supervise back
         # parallel delegation to multiple agents
@@ -569,9 +571,13 @@ Last Observation:
             try:
                 agent_resp = await self.leader_agent.handle_request(planning_context, trace_ctx=trace_ctx)
             except ModelSyntaxError as e:
-                self.log_error(f"LeaderAgent generated invalid ReAct syntax. Retrying...: {e.message}")
-                dialog_context["status"] = "failed"
+                syntax_error_counter += 1
+                self.log_error(f"LeaderAgent generated invalid ReAct syntax ({syntax_error_counter}/{max_syntax_errors}). Retrying...: {e.message}")
                 dialog_context["steps"].append({"agent": str(e)})
+                if syntax_error_counter >= max_syntax_errors:
+                    self.log_error("Too many ReAct syntax errors. Aborting task.")
+                    dialog_context["status"] = "failed"
+                    break
                 continue
 
             if not (agent_resp.content or agent_resp.reasoning_content or agent_resp.tool_calls):
