@@ -27,8 +27,8 @@ CopilotJ consists of three required components:
 Download the precompiled JAR files for the CopilotJ Bridge plugin:
 
 - [`CopilotJBridge-0.1.0-SNAPSHOT.jar`](https://copilotj.cvcd.xyz/software/precompiled_plugin/CopilotJBridge-0.1.0-SNAPSHOT.jar)
-- [`jackson-datatype-jsr310-2.9.8.jar`](https://copilotj.cvcd.xyz/software/precompiled_plugin/jackson-datatype-jsr310-2.9.8.jar)
-- [`Java-WebSocket-1.5.2.jar`](https://copilotj.cvcd.xyz/software/precompiled_plugin/Java-WebSocket-1.5.2.jar)
+- [`jackson-datatype-jsr310-2.16.1.jar`](https://repo1.maven.org/maven2/com/fasterxml/jackson/datatype/jackson-datatype-jsr310/2.16.1/jackson-datatype-jsr310-2.16.1.jar)
+- [`Java-WebSocket-1.5.2.jar`](https://repo1.maven.org/maven2/org/java-websocket/Java-WebSocket/1.5.2/Java-WebSocket-1.5.2-sources.jar.sha1)
 
 **Install into ImageJ / Fiji:**
 
@@ -37,7 +37,7 @@ Install the CopilotJ Bridge plugin by placing the required JAR files in the appr
 1. **Windows:** Open the ImageJ / Fiji installation directory (e.g., `D:\Fiji.app\`).
 2. **macOS:** Locate `Fiji.app` in Finder, then right-click and select **Show Package Contents**.
 3. Copy the plugin JAR `CopilotJBridge-0.1.0-SNAPSHOT.jar` into `plugins/`.
-4. Copy the dependency JARs `jackson-datatype-jsr310-2.9.8.jar` and `Java-WebSocket-1.5.2.jar` into `jars/`.
+4. Copy the dependency JARs `jackson-datatype-jsr310-2.16.1.jar` and `Java-WebSocket-1.5.2.jar` into `jars/`.
 
 **Verify plugin installation**
 
