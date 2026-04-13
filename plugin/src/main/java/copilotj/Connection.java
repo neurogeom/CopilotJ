@@ -73,6 +73,10 @@ class Connection {
   }
 
   public void close() {
+    // Set state to DISCONNECTED before closing so that the async onClose callback
+    // sees currentState == DISCONNECTED and skips handleReconnect().
+    Connection.notifyStateChange(this, State.DISCONNECTED, "Disconnected by user.");
+
     if (webSocketClient != null) {
       webSocketClient.close();
       webSocketClient = null;
@@ -205,6 +209,10 @@ class Connection {
   private final List<ConnectionStateListener> stateListeners = new CopyOnWriteArrayList<>(); // Thread-safe for
                                                                                              // listeners
   private volatile State currentState = State.DISCONNECTED; // Track current state
+
+  public State getState() {
+    return currentState;
+  }
 
   public void registerStateListener(final ConnectionStateListener listener) {
     if (listener != null && !stateListeners.contains(listener)) {
