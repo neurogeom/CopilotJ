@@ -48,7 +48,9 @@
   </developers>
   <contributors>
     <contributor>
-      <name>None</name>
+      <name>Curtis Rueden</name>
+      <url>https://github.com/ctrueden</url>
+      <properties><id>ctrueden</id></properties>
     </contributor>
   </contributors>
 
