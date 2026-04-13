@@ -9,13 +9,13 @@ Learn more on the [Project Page](https://copilotj.chat/), follow the [User Manua
 
 ## About
 
-**CopilotJ** turns natural-language requests into executable, verifiable bioimage analysis workflows by coordinating ImageJ/FIJI ecosystem, Python scientific libraries, and deep-learning models.
+**CopilotJ** turns natural-language requests into executable, verifiable bioimage analysis workflows by coordinating Fiji/ImageJ ecosystem, Python scientific libraries, and deep-learning models.
 
 CopilotJ comprises three major components:
 
 - **Web Frontend** — A browser-based chat interface through which users interact with CopilotJ. It sends requests to the multi-agent backend and receives streaming responses via RESTful APIs.
 - **Multi-agent Backend** — Orchestrates agents and tools, integrates Python and deep-learning environments with a local database, connects to multiple LLM providers, and retrieves community knowledge sources.
-- **CopilotJ Bridge** — An ImageJ/FIJI plugin that communicates with the backend via a bidirectional WebSocket API, enabling real-time exchange of system status and commands.
+- **CopilotJ Bridge** — A Fiji plugin that communicates with the backend via a bidirectional WebSocket API, enabling real-time exchange of system status and commands.
 
 **Visit [copilotj.chat](https://copilotj.chat/#/) for more information and demos.**
 

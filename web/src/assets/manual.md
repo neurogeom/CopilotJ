@@ -6,7 +6,7 @@
 
 - **Operating systems:** macOS, Linux, Windows
 - **Software:**
-  - [ImageJ / Fiji](https://imagej.net/downloads): latest stable version recommended
+  - [Fiji](https://fiji.sc/#download): Stable and Latest versions are both supported
   - [Python 3.12](https://www.python.org/downloads/): not required when using Docker
 - **Hardware:**
   - RAM: `>= 16 GB` (`32 GB` recommended)
@@ -16,7 +16,7 @@
 
 CopilotJ consists of three required components:
 
-- **CopilotJ Bridge Plugin** for ImageJ / Fiji
+- **CopilotJ Bridge Plugin** for Fiji
 - **CopilotJ Core Server**
 - **CopilotJ frontend server**
 
@@ -30,18 +30,17 @@ Download the precompiled JAR files for the CopilotJ Bridge plugin:
 - [`jackson-datatype-jsr310-2.16.1.jar`](https://repo1.maven.org/maven2/com/fasterxml/jackson/datatype/jackson-datatype-jsr310/2.16.1/jackson-datatype-jsr310-2.16.1.jar)
 - [`Java-WebSocket-1.5.2.jar`](https://repo1.maven.org/maven2/org/java-websocket/Java-WebSocket/1.5.2/Java-WebSocket-1.5.2-sources.jar.sha1)
 
-**Install into ImageJ / Fiji:**
+**Install into Fiji:**
 
-Install the CopilotJ Bridge plugin by placing the required JAR files in the appropriate `plugins/` and `jars/` directories. The exact steps may vary slightly depending on your operating system and ImageJ / Fiji installation.
+Install the CopilotJ Bridge plugin by placing the required JAR files in the appropriate `jars/` directory. The exact steps may vary slightly depending on your operating system and Fiji installation.
 
-1. **Windows:** Open the ImageJ / Fiji installation directory (e.g., `D:\Fiji.app\`).
+1. **Windows:** Open the Fiji installation directory (e.g., `D:\Fiji.app\`).
 2. **macOS:** Locate `Fiji.app` in Finder, then right-click and select **Show Package Contents**.
-3. Copy the plugin JAR `CopilotJBridge-0.1.0-SNAPSHOT.jar` into `plugins/`.
-4. Copy the dependency JARs `jackson-datatype-jsr310-2.16.1.jar` and `Java-WebSocket-1.5.2.jar` into `jars/`.
+3. Copy the files `CopilotJBridge-0.1.0-SNAPSHOT.jar`, `jackson-datatype-jsr310-2.16.1.jar` and `Java-WebSocket-1.5.2.jar` into `jars/`.
 
 **Verify plugin installation**
 
-1. Restart ImageJ / Fiji.
+1. Restart Fiji.
 2. Confirm that **Plugins -> CopilotJ** appears in the menu.
 3. Click it and verify that the configuration window opens successfully.
 
@@ -55,7 +54,7 @@ mvn clean package
 mvn dependency:copy-dependencies -DoutputDirectory=target/deps
 ```
 
-After building, locate the generated `.jar` file in the `target/` directory, then follow the same installation steps in **Option C1** to copy the built plugin JAR and required dependency JARs into ImageJ / Fiji.
+After building, locate the generated `.jar` file in the `target/` directory, then follow the same installation steps in **Option C1** to copy the built plugin JAR and required dependency JARs into Fiji.
 
 ### D. Install the CopilotJ core server
 
@@ -361,14 +360,14 @@ Each configuration file defines an agent's system prompt, role description, and 
 
 ### A. Starting CopilotJ
 
-To use CopilotJ, first start the core server and then connect from the ImageJ / Fiji interface.
+To use CopilotJ, first start the core server and then connect from the Fiji interface.
 
 1. **Start the CopilotJ core server**
    - Ensure the core server is running locally or via Docker.
    - In standard local setups, the default server endpoint is sufficient.
 
-2. **Launch ImageJ / Fiji and connect through the plugin**
-   - In ImageJ / Fiji, navigate to **Plugins -> CopilotJ -> Connect**.
+2. **Launch Fiji and connect through the plugin**
+   - In Fiji, navigate to **Plugins -> CopilotJ -> Connect**.
    - In typical local setups, the default server URL does not need modification.
      If you have changed the server endpoint, enter only the root URL (do not append additional paths).
    - Click **Connect** to establish the connection between the plugin and the core server.
@@ -379,7 +378,7 @@ To use CopilotJ, first start the core server and then connect from the ImageJ / 
    - Once the connection is established, you can start a conversational session and issue analysis instructions.
 
 4. **Open an image for analysis**
-   - Use ImageJ / Fiji to open the image or image stack to be analyzed.
+   - Use Fiji to open the image or image stack to be analyzed.
    - Example datasets used in the study can be found in supplementary data for testing and reproducibility.
 
 ### B. Issuing analysis instructions

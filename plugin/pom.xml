@@ -14,7 +14,7 @@
   <version>0.1.0-SNAPSHOT</version>
 
   <name>Copilot Bridge</name>
-  <description>CopilotJ bridge for ImageJ.</description>
+  <description>CopilotJ bridge for Fiji/ImageJ2.</description>
   <url>https://copilotj.chat/</url>
   <inceptionYear>2024</inceptionYear>
   <organization>
