@@ -12,7 +12,7 @@ import openai.types.responses
 import pydantic
 from langchain_openai import OpenAIEmbeddings
 
-from copilotj.core.config import get_llm_and_key, get_proxy, get_vlm_and_key
+from copilotj.core.config import get_llm_and_key, get_llm_base_url, get_proxy, get_vlm_and_key
 from copilotj.core.message import ImageMessage, TextMessage
 from copilotj.core.tool import Tool
 
@@ -126,9 +126,9 @@ class ModelClient(abc.ABC):
     ) -> AsyncGenerator[ModelResponseChunk | ToolCall, None]: ...
 
 
-def new_model_client(model: str | None = None, api_key: str | None = None, *, proxy: str | None = None) -> ModelClient:
+def new_model_client(model: str | None = None, api_key: str | None = None, *, proxy: str | None = None, base_url: str | None = None) -> ModelClient:
     model, api_key = get_llm_and_key(model, api_key)
-    return _new_model_client(model, api_key, proxy=proxy)
+    return _new_model_client(model, api_key, proxy=proxy, base_url=base_url)
 
 
 def new_vlm_model_client(
@@ -138,27 +138,30 @@ def new_vlm_model_client(
     return _new_model_client(model, api_key, proxy=proxy)
 
 
-def _new_model_client(model: str, api_key: str, *, proxy: str | None) -> ModelClient:
+def _new_model_client(model: str, api_key: str, *, proxy: str | None, base_url: str | None = None) -> ModelClient:
     proxy = get_proxy(proxy)
+    # base_url arg (from per-thread settings) takes precedence over the env var
+    effective_base_url = base_url or get_llm_base_url()
+
     if model.startswith("ollama/"):
         model_name = model.split("/", 1)[1]
         return OllamaChatCompletionClient(model=model_name)
 
     elif model.startswith("deepseek/"):
         model_name = model.split("/", 1)[1]
-        base_url = os.getenv("COPILOTJ_BASE_URL", "https://api.deepseek.com/v1")
-        return OpenAIChatCompletionClient(model=model_name, api_key=api_key, base_url=base_url, proxy=proxy)
+        url = effective_base_url or "https://api.deepseek.com/v1"
+        return OpenAIChatCompletionClient(model=model_name, api_key=api_key, base_url=url, proxy=proxy)
 
     elif model.startswith("gemini-"):
         return GeminiChatCompletionClient(model, api_key, proxy=proxy)
 
     elif model.startswith("claude-"):
-        base_url = os.getenv("COPILOTJ_BASE_URL", "https://api.anthropic.com/v1")
-        return OpenAIChatCompletionClient(model, api_key, base_url=base_url, proxy=proxy)
+        url = effective_base_url or "https://api.anthropic.com/v1"
+        return OpenAIChatCompletionClient(model, api_key, base_url=url, proxy=proxy)
 
     elif model.startswith("gpt-"):
-        if os.getenv("COPILOTJ_BASE_URL", None):
-            return OpenAIChatCompletionClient(model, api_key, base_url=os.getenv("COPILOTJ_BASE_URL"), proxy=proxy)
+        if effective_base_url:
+            return OpenAIChatCompletionClient(model, api_key, base_url=effective_base_url, proxy=proxy)
         else:
             return OpenAIResponseClient(model, api_key, proxy=proxy)
 
@@ -169,10 +172,10 @@ def _new_model_client(model: str, api_key: str, *, proxy: str | None) -> ModelCl
         or model.startswith("moonshotai/")
         or model.startswith("Qwen/")
     ):
-        base_url = os.getenv("COPILOTJ_BASE_URL", "https://api.siliconflow.cn/v1")
-        return OpenAIChatCompletionClient(model, api_key, base_url=base_url, proxy=proxy)
+        url = effective_base_url or "https://api.siliconflow.cn/v1"
+        return OpenAIChatCompletionClient(model, api_key, base_url=url, proxy=proxy)
 
-    return OpenAIChatCompletionClient(model, api_key, base_url=os.getenv("COPILOTJ_BASE_URL"), proxy=proxy)
+    return OpenAIChatCompletionClient(model, api_key, base_url=effective_base_url, proxy=proxy)
 
 
 # TODO: this is tricky
