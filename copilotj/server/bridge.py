@@ -4,7 +4,6 @@
 
 import asyncio
 import logging
-import os
 import uuid
 from datetime import datetime, timedelta
 from typing import Any
@@ -246,7 +245,7 @@ class Bridge:
 
     async def send_event(self, req: BridgeRequest) -> BridgeResponse:
         client_id = req.client_id
-        if client_id == DEV_CLIENT_ID and len(self._clients) > 0 and os.getenv("COPILOTJ_DEV") is not None:
+        if client_id == DEV_CLIENT_ID and len(self._clients) > 0:
             client_id = next(iter(self._clients.keys()))  # get the first client
 
         client = self._clients.get(client_id)

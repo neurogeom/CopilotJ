@@ -15,6 +15,7 @@ import langfuse
 import pydantic
 
 from copilotj.core import UI, UIEvent, UIEventPost, UIEventState
+from copilotj.core.config import get_llm_and_key
 from copilotj.core.ui import UIEventContentMarkdown
 from copilotj.multiagent.leader_multiagent import LeaderDriven
 from copilotj.plugin.api import HTTPPluginAPI, PluginAPI
@@ -248,6 +249,16 @@ class Threads:
                 config = _ConfigQuery.model_validate(config)
             except pydantic.ValidationError as e:
                 return web.Response(status=400, text=f"Invalid configuration: {e}")
+
+        # If no model was explicitly provided, check that the server has one configured
+        config_model = config.model if config else None
+        if config_model is None:
+            resolved_model, _ = get_llm_and_key()
+            if not resolved_model:
+                return web.Response(
+                    status=400,
+                    text="No model configured. Please click the Settings gear icon in the sidebar to set up a model and API key.",
+                )
 
         thread_id = str(uuid.uuid4())
         thread = _Thread(thread_id, config=config, trace_context=self._trace_ctx)

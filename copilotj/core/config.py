@@ -19,8 +19,8 @@ def is_dev() -> bool:
 
 
 def get_llm_and_key(model: str | None = None, api_key: str | None = None) -> tuple[str, str]:
-    model = model or os.getenv("COPILOTJ_MODEL", "gpt-4o-mini")
-    api_key = api_key or os.getenv("COPILOTJ_API_KEY", "")
+    model = model or os.getenv("COPILOTJ_MODEL", "")
+    api_key = api_key or os.getenv("COPILOTJ_API_KEY", "") or ""
     return model, api_key
 
 
@@ -29,8 +29,8 @@ def get_llm_base_url() -> str | None:
 
 
 def get_vlm_and_key(model: str | None = None, api_key: str | None = None) -> tuple[str, str]:
-    model = model or os.getenv("COPILOTJ_VLM_MODEL", "gpt-4o-mini")
-    api_key = api_key or os.getenv("COPILOTJ_VLM_API_KEY", "")
+    model = model or os.getenv("COPILOTJ_VLM_MODEL") or os.getenv("COPILOTJ_MODEL", "")
+    api_key = api_key or os.getenv("COPILOTJ_VLM_API_KEY", os.getenv("COPILOTJ_API_KEY", "")) or ""
     return model, api_key
 
 
