@@ -196,8 +196,9 @@ class ChatAgent(Agent):
             except ModelProviderError as e:
                 await self._runtime.print_error("system", f"LlmProviderError: {e}")
 
-            except Exception:
-                # send a finish message to the runtime
+            except Exception as e:
+                # Log it — otherwise unexpected stream errors silently yield an empty response.
+                self.log_error(f"Unexpected error during model stream: {type(e).__name__}: {e}")
                 await self._runtime.print_chat(
                     self.name, ModelResponseChunk(reasoning_content="", content="", finish_reason="unknown")
                 )

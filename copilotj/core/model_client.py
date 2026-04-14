@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import abc
+import logging
 import os
 from typing import Any, AsyncGenerator, Literal, Sequence, cast, overload, override
 
@@ -15,6 +16,8 @@ from langchain_openai import OpenAIEmbeddings
 from copilotj.core.config import get_llm_and_key, get_llm_base_url, get_proxy, get_vlm_and_key
 from copilotj.core.message import ImageMessage, TextMessage
 from copilotj.core.tool import Tool
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     "FinishReasons",
@@ -222,6 +225,8 @@ class OpenAIChatCompletionClient(ModelClient):
     ) -> ModelResponse:
         try:
             completion = await self._create(messages, stream=False, tools=tools, extra_args=extra_args)
+            if completion.usage is not None:
+                _log_cache_usage(self._model, completion.usage)
             choice = completion.choices[0]
             tool_calls = []
             if choice.message.tool_calls:
@@ -258,6 +263,10 @@ class OpenAIChatCompletionClient(ModelClient):
             stream = await self._create(messages, stream=True, tools=tools, extra_args=extra_args)
             tool_calls: dict[int, openai.types.chat.chat_completion_chunk.ChoiceDeltaToolCall] = {}
             async for chunk in stream:
+                usage = getattr(chunk, "usage", None)
+                if usage is not None:
+                    _log_cache_usage(self._model, usage)
+
                 if chunk.choices is None or len(chunk.choices) == 0:
                     # skip this chunk. gemini sometime send a None when he does not want to say anything :)
                     continue
@@ -343,8 +352,16 @@ class OpenAIChatCompletionClient(ModelClient):
                     for tool in tools
                 ]
 
+            extra = dict(extra_args or {})
+            if stream:
+                # Ask OpenAI to include a final usage chunk so we can observe
+                # whether prompt caching is actually discounting token spend.
+                stream_options = dict(extra.get("stream_options") or {})
+                stream_options.setdefault("include_usage", True)
+                extra["stream_options"] = stream_options
+
             return await self._client.chat.completions.create(
-                model=self._model, messages=openai_messages, tools=openai_tools, **(extra_args or {}), stream=stream
+                model=self._model, messages=openai_messages, tools=openai_tools, **extra, stream=stream
             )
         except openai.APIError as e:
             raise ModelProviderError(f"OpenAI API error: {e.message}", "openai") from e
@@ -411,6 +428,8 @@ class OpenAIResponseClient(ModelClient):
     ) -> ModelResponse:
         try:
             response = await self._create(messages, stream=False, tools=tools, extra_args=extra_args)
+            if response.usage is not None:
+                _log_cache_usage(self._model, response.usage)
             content = None
             tool_calls = []
             for item in response.output:
@@ -436,8 +455,12 @@ class OpenAIResponseClient(ModelClient):
                         args = tool.args_type().model_validate_json(item.arguments)
                         tool_calls.append(ToolCall(id=item.id or "unknown_id", tool=tool, args=args))
 
+                    case "reasoning":
+                        # gpt-5 / o-series reasoning trace — no actionable content to extract here.
+                        pass
+
                     case _:
-                        raise NotImplementedError(f"Unsupported content type {item.type}: {item}")
+                        logger.warning("Unsupported Responses API output item, ignoring: %s", item.type)
 
             return ModelResponse(
                 reasoning_content=None,
@@ -465,11 +488,15 @@ class OpenAIResponseClient(ModelClient):
             async for chunk in stream:
                 # print("\n", chunk.type, chunk, "\n\n")
                 match chunk.type:
+                    case "response.completed":
+                        usage = getattr(chunk.response, "usage", None)
+                        if usage is not None:
+                            _log_cache_usage(self._model, usage)
+
                     case (
                         # response life cycle event
                         "response.created"  # first of all
                         | "response.in_progress"  # after created
-                        | "response.completed"  # all done
                         # output item
                         | "response.output_item.done"
                         # output item - content
@@ -478,12 +505,24 @@ class OpenAIResponseClient(ModelClient):
                         | "response.content_part.done"
                         # output item - function call
                         | "response.function_call_arguments.delta"
+                        # output item - reasoning (gpt-5, o-series)
+                        | "response.reasoning_summary_part.added"
+                        | "response.reasoning_summary_part.done"
+                        | "response.reasoning_summary_text.done"
+                        | "response.reasoning_text.done"
                     ):
                         pass
 
+                    case "response.reasoning_summary_text.delta" | "response.reasoning_text.delta":
+                        # Surface reasoning trace as reasoning_content so the UI can show it.
+                        last_chunk = ModelResponseChunk(
+                            content=None, reasoning_content=chunk.delta, finish_reason=None
+                        )
+                        yield last_chunk
+
                     case "response.output_item.added":
                         match chunk.item.type:
-                            case "message":
+                            case "message" | "reasoning":
                                 pass
 
                             case "function_call":
@@ -494,7 +533,7 @@ class OpenAIResponseClient(ModelClient):
                                 current_function_call = (item.id or "unknown_id", item.name)
 
                             case _:
-                                raise NotImplementedError(f"Unsupported output item: {chunk.item.type}")
+                                logger.warning("Unsupported output item type, ignoring: %s", chunk.item.type)
 
                     case "response.output_text.delta":
                         last_chunk = ModelResponseChunk(content=chunk.delta, reasoning_content=None, finish_reason=None)
@@ -518,7 +557,8 @@ class OpenAIResponseClient(ModelClient):
                         raise ValueError(f"Error from model: {chunk.message}")
 
                     case _:
-                        raise NotImplementedError(f"Unsupported chunk type: {chunk.type}")
+                        # Fail open on unfamiliar events so new model features don't silently blank the response.
+                        logger.warning("Unsupported Responses API chunk type, ignoring: %s", chunk.type)
 
                 finish_reason: FinishReasons = "unknown"
                 match last_chunk:
@@ -632,6 +672,36 @@ class OpenAIResponseClient(ModelClient):
                     raise ValueError(f"Unsupported message type: {msg}")
 
         return {"role": role, "content": content}
+
+
+def _log_cache_usage(model: str, usage: Any) -> None:
+    """Log prompt token usage with cache hit info.
+
+    Works for both Chat Completions usage (``prompt_tokens`` +
+    ``prompt_tokens_details.cached_tokens``) and Responses API usage
+    (``input_tokens`` + ``input_tokens_details.cached_tokens``). Used to
+    verify OpenAI's automatic prompt-prefix caching is actually hitting.
+    """
+    prompt_tokens = getattr(usage, "prompt_tokens", None)
+    if prompt_tokens is None:
+        prompt_tokens = getattr(usage, "input_tokens", None)
+
+    details = getattr(usage, "prompt_tokens_details", None)
+    if details is None:
+        details = getattr(usage, "input_tokens_details", None)
+    cached = getattr(details, "cached_tokens", None) if details is not None else None
+
+    completion_tokens = getattr(usage, "completion_tokens", None)
+    if completion_tokens is None:
+        completion_tokens = getattr(usage, "output_tokens", None)
+
+    logger.info(
+        "[CACHE] model=%s prompt=%s cached=%s completion=%s",
+        model,
+        prompt_tokens,
+        cached if cached is not None else "n/a",
+        completion_tokens,
+    )
 
 
 def _openai_convert_role(role: str) -> Literal["user", "system", "assistant"]:
