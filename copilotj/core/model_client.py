@@ -596,7 +596,25 @@ class OpenAIResponseClient(ModelClient):
     def _merge_messages(
         messages: Sequence[TextMessage | ImageMessage],
     ) -> openai.types.responses.ResponseInputItemParam:
-        """Format a sequence of messages into OpenAI's chat completion format."""
+        """Format a sequence of messages into the Responses API input format."""
+        role = _openai_convert_role(messages[0].role)
+
+        # Assistant history turns must use the EasyInputMessage form with a
+        # plain-string (or output_text) payload; the structured input_text /
+        # input_image types are only valid for user/system/developer input.
+        if role == "assistant":
+            text_parts: list[str] = []
+            for msg in messages:
+                if isinstance(msg, TextMessage):
+                    text_parts.append(msg.text)
+                else:
+                    raise ValueError(f"Assistant messages must be text-only, got: {msg}")
+            return openai.types.responses.EasyInputMessageParam(
+                role="assistant",
+                content="\n".join(text_parts),
+                type="message",
+            )
+
         content: openai.types.responses.ResponseInputMessageContentListParam = []
         for msg in messages:
             match msg:
@@ -613,7 +631,7 @@ class OpenAIResponseClient(ModelClient):
                 case _:
                     raise ValueError(f"Unsupported message type: {msg}")
 
-        return {"role": _openai_convert_role(messages[0].role), "content": content}
+        return {"role": role, "content": content}
 
 
 def _openai_convert_role(role: str) -> Literal["user", "system", "assistant"]:
