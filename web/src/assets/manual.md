@@ -373,9 +373,9 @@ To use CopilotJ, first start the core server and then connect from the Fiji inte
    - Click **Connect** to establish the connection between the plugin and the core server.
 
 3. **Open the CopilotJ web interface**
-   - Open a web browser and navigate to the deployed CopilotJ frontend, for example `http://127.0.0.1:8786`.
-   - The web interface provides the chat-based frontend for interacting with CopilotJ.
-   - Once the connection is established, you can start a conversational session and issue analysis instructions.
+   - Open a web browser and navigate to the deployed CopilotJ frontend: if using Docker (**Option D1**), this will be `http://127.0.0.1:8786` by default&mdash;or if running from source (**Option D2**), the default will be `http://127.0.0.1:5173`.
+   - This web interface provides the chat-based frontend for interacting with CopilotJ.
+   - Once the connection is established, you can start a conversational session and issue analysis instructions by clicking the "Chat" button at the top right of the web interface.
 
 4. **Open an image for analysis**
    - Use Fiji to open the image or image stack to be analyzed.
