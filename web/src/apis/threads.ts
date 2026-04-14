@@ -93,6 +93,15 @@ export interface OptimizePromptResponse {
   optimized: string;
 }
 
+export async function getServerConfig(): Promise<{ model: ThreadConfigModel | null }> {
+  const url = `${baseUrl}/config`;
+  const response = await fetch(url, { method: "GET" });
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}, message: ${await response.text()}`);
+  }
+  return response.json();
+}
+
 export async function newThread(config: ThreadConfigQuery): Promise<NewThread> {
   const url = `${baseUrl}/threads`;
   const options = {

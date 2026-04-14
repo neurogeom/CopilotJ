@@ -5,14 +5,30 @@ SPDX-License-Identifier: Apache-2.0
 -->
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
 import Chatbox from "../components/Chatbox.vue";
 import Settings from "../components/Settings.vue";
 import Sidebar from "../components/Sidebar.vue";
+import { getServerConfig } from "../apis";
 import { useSettings, useSystemState } from "../store";
 
 const settings = useSettings();
 const state = useSystemState();
+
+onMounted(async () => {
+  // Pre-populate the model from the server's env config so the "no model
+  // configured" warning is suppressed when a model is already set server-side.
+  if (settings.model === null) {
+    try {
+      const serverConfig = await getServerConfig();
+      if (serverConfig.model !== null) {
+        settings.setModel(serverConfig.model);
+      }
+    } catch {
+      // Server may not be reachable yet; warning will show and resolve on retry.
+    }
+  }
+});
 
 const chatbox = ref<InstanceType<typeof Chatbox> | null>(null);
 

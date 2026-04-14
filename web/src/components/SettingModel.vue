@@ -84,6 +84,11 @@ const modelGroups = computed(() => {
       items: ollamaModels.value.map((m) => ({ label: m, value: `ollama/${m}` })),
     });
   }
+  // If the active model isn't in any group (e.g. set via .env.local), surface it
+  // so the dropdown shows it rather than appearing blank.
+  if (model.value && !groups.some((g) => g.items.some((i) => i.value === model.value))) {
+    groups.push({ label: "Current", items: [{ label: model.value, value: model.value }] });
+  }
   return groups;
 });
 
@@ -126,6 +131,10 @@ function submit() {
     <FormItem for="defaultModel" label="Use Default Model" layout="row">
       <ToggleSwitch v-model="useDefaultModel" inputId="defaultModel" />
     </FormItem>
+
+    <p v-if="useDefaultModel && props.model?.name" class="text-sm text-slate-500 dark:text-slate-400 -mt-4">
+      Active model: <span class="font-mono">{{ props.model.name }}</span>
+    </p>
 
     <FormItem for="model" label="Model">
       <Select
