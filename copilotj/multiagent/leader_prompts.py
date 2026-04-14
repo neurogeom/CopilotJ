@@ -17,6 +17,9 @@ __all__ = [
     "PROMPT_TOOL_DELETE_WORKFLOW",
     "PROMPT_TOOL_EXPORT_WORKFLOW",
     "PROMPT_TOOL_EXECUTE_WORKFLOW",
+    "build_leader_system_prompt",
+    "build_initial_user_message",
+    "build_observation_message",
     "make_summary_prompt",
     "build_tool_prompt",
     "build_available_specialized_agents_prompt",
@@ -128,11 +131,10 @@ Tip: If background gets fragmented, polarity was inverted; recheck Step 5."
 - Reply `<your changes>` to adjust parameters or refine this plan.
 "}}
 
-## Previous Chat History
-{CHAT_HISTORY}
-
-## CURRENT USER Request or Reply (You must connect with previous chat history):
-{MAIN_TASK}
+## Dialog Structure
+The first user message contains the current request and, if relevant, a summary of previous chat history. \
+Tool observations are returned as subsequent user messages. You must connect each new request with the \
+prior conversation context.
 
 ## Anti-pattern (do NOT do this):
 Thought: I'll open the image and then threshold it.
@@ -238,9 +240,9 @@ with your chosen parameters, e.g. `"calculate black"`).For single-frame images, 
 Where you need to be careful of the path, parameters, access permissions, and available memory.
 
 ## ImageJ WindowInfo
-{IMAGEJ_WINDOWINFO}
-If no image is open, this will be empty, and you can skip imagej_Perception and kb_retrieve. 
-You can choose to skip imagej_Perception, if you get ImageJ WindowInfo and you are sure about the image content and status.
+Current ImageJ window information will be provided inside user messages as it changes. \
+If the block is empty, no image is open, and you can skip imagej_Perception and kb_retrieve. \
+You can choose to skip imagej_Perception if the provided WindowInfo is sufficient to understand the image content and status.
 
 Now begin.
 """
@@ -575,3 +577,58 @@ def _truncate_description(description: str, max_words: int = 40) -> str:
 
     truncated = " ".join(words[:max_words])
     return f"{truncated}..."
+
+
+def build_leader_system_prompt(
+    tool_list: str,
+    plugins_text: str,
+    system_info_text: str,
+    default_image_path: str,
+) -> str:
+    """Build the static system prompt for the leader agent.
+
+    Only content that is stable within a session is included here so that
+    provider-side prefix caching can kick in across a whole multi-step dialog.
+    Dynamic content (chat history, current task, ImageJ window info, tool
+    observations) lives in subsequent user/assistant messages.
+    """
+    return (
+        PROMPT_LEADER.replace("{TOOL_LIST}", tool_list)
+        .replace("{SPECIAL_PLUGIN}", plugins_text)
+        .replace("{SYSTEM_INFO}", system_info_text)
+        .replace("{DEFAULT_IMAGE_PATH}", default_image_path)
+    )
+
+
+def build_initial_user_message(
+    main_task: str,
+    chat_history_summary: str,
+    imagej_window_info: str,
+) -> str:
+    """Build the first user-turn message for a dialog.
+
+    Bundles the prior-dialog summary, current ImageJ window info, and the
+    user's new request into one message. This runs once per dialog, not once
+    per step.
+    """
+    sections: list[str] = []
+    if chat_history_summary:
+        sections.append(f"## Previous Chat History\n{chat_history_summary}")
+    sections.append(f"## ImageJ WindowInfo\n{imagej_window_info or '(no image open)'}")
+    sections.append(f"## Current User Request\n{main_task}")
+    return "\n\n".join(sections)
+
+
+def build_observation_message(
+    tool_response: str,
+    imagej_window_info: str,
+) -> str:
+    """Build a follow-up user-turn message containing a tool observation.
+
+    Sent after each tool call. Only the new observation and the updated
+    window info are included; prior steps are already in the conversation
+    history as assistant/user turns.
+    """
+    parts = [f"Observation:\n{tool_response}"]
+    parts.append(f"## ImageJ WindowInfo\n{imagej_window_info or '(no image open)'}")
+    return "\n\n".join(parts)

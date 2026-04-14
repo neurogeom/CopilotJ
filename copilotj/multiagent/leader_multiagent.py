@@ -31,7 +31,6 @@ from copilotj.multiagent.agent_loader import load_agent_configs
 from copilotj.multiagent.Executor import Executor
 from copilotj.multiagent.kb_tools import _load_macro_plugin_names, kb_build, kb_retrieve, rebuild_registry
 from copilotj.multiagent.leader_prompts import (
-    PROMPT_LEADER,
     PROMPT_TOOL_DELETE_WORKFLOW,
     PROMPT_TOOL_EXECUTE_PYTHON_SCRIPT,
     PROMPT_TOOL_EXECUTE_WORKFLOW,
@@ -46,6 +45,9 @@ from copilotj.multiagent.leader_prompts import (
     PROMPT_TOOL_SAVE_WORKFLOW,
     PROMPT_TOOL_USER_MANIPULATION,
     build_available_specialized_agents_prompt,
+    build_initial_user_message,
+    build_leader_system_prompt,
+    build_observation_message,
     build_tool_prompt,
     make_steps_prompt,
     make_summary_prompt,
@@ -55,6 +57,27 @@ from copilotj.plugin import ClientPluginAPI
 from copilotj.util import ReActChatCompletionClient
 
 __all__ = ["LeaderDriven"]
+
+
+def _reconstruct_react_text(response: ModelResponse) -> str:
+    """Rebuild an assistant-side ReAct text block from a parsed ModelResponse.
+
+    The ReAct wrapper parses the model's raw text output into ``reasoning_content``
+    (Thought), ``tool_calls`` (Action), and ``content`` (Final Answer). For
+    multi-turn conversation we re-assemble those parts into the same shape the
+    model originally produced, so the next turn's context matches the
+    ReAct-formatted examples in the system prompt.
+    """
+    parts: list[str] = []
+    if response.reasoning_content:
+        parts.append(f"Thought: {response.reasoning_content.strip()}")
+    if response.tool_calls:
+        tc = response.tool_calls[0]
+        args_json = json.dumps(tc.args.model_dump(), ensure_ascii=False)
+        parts.append(f'Action: {{"name": "{tc.tool.name}", "args": {args_json}}}')
+    if response.content:
+        parts.append(f"Final Answer: {response.content.strip()}")
+    return "\n".join(parts)
 
 
 class LeaderAgent(ChatAgent):
@@ -70,6 +93,10 @@ class LeaderAgent(ChatAgent):
         super().__init__(name, description, model_client=model_client)
 
         self.chat_history: list[dict[str, str | int]] = []
+
+        # Per-dialog conversation state. Populated by begin_dialog() and
+        # extended by continue_dialog(). Reset at the start of each dialog.
+        self._dialog_messages: list[TextMessage] = []
 
         self.plugin_tools = tools.PluginTools(apis)
 
@@ -96,29 +123,97 @@ class LeaderAgent(ChatAgent):
         ]
         self.agents = agents if agents else {}
 
-    async def handle_request(self, main_task: str, *, trace_ctx: Langfuse | None = None) -> ModelResponse:
-        self.imagej_windowInfo_text = await self.plugin_tools.imagej_windowInfo()
-        # Generate the list of available tools and agents for the prompt
-        mytools = self.tools
-        tool_list = build_tool_prompt(mytools) + "\n" + build_available_specialized_agents_prompt(self.agents)
-
-        # Generate dynamic plugin list for the leader prompt
+    async def _build_system_prompt(self) -> str:
+        """Build the static system prompt for the current session."""
+        tool_list = (
+            build_tool_prompt(self.tools)
+            + "\n"
+            + build_available_specialized_agents_prompt(self.agents)
+        )
         macro_plugins = _load_macro_plugin_names() or ["StarDist", "TrackMate", "CLIJ2"]
         plugins_text = ", ".join(macro_plugins)
-
         system_info_text = await system_info()
 
-        leader_prompt = (
-            PROMPT_LEADER.replace("{MAIN_TASK}", main_task)
-            .replace("{CHAT_HISTORY}", json.dumps(self.chat_history))
-            .replace("{TOOL_LIST}", tool_list)
-            .replace("{DEFAULT_IMAGE_PATH}", str(py_tools.get_project_temp_dir()))
-            .replace("{SPECIAL_PLUGIN}", plugins_text)
-            .replace("{SYSTEM_INFO}", system_info_text)
-            .replace("{IMAGEJ_WINDOWINFO}", self.imagej_windowInfo_text)
+        return build_leader_system_prompt(
+            tool_list=tool_list,
+            plugins_text=plugins_text,
+            system_info_text=system_info_text,
+            default_image_path=str(py_tools.get_project_temp_dir()),
         )
-        # self._runtime.log_info(f"Prompt for {self.name}:\n{leader_prompt}")
-        return await self._create(TextMessage(role="user", text=leader_prompt), tools=mytools, trace_ctx=trace_ctx)
+
+    async def begin_dialog(
+        self, main_task: str, *, trace_ctx: Langfuse | None = None
+    ) -> ModelResponse:
+        """Start a new dialog, seeding the conversation with system + initial user turn.
+
+        Resets per-dialog state. The system prompt (static) and the first user
+        message (prior chat summary + window info + current task) are sent once
+        here and then retained in ``self._dialog_messages`` so subsequent steps
+        only append new turns rather than resending the whole prompt.
+        """
+        self.imagej_windowInfo_text = await self.plugin_tools.imagej_windowInfo()
+        system_prompt = await self._build_system_prompt()
+
+        chat_history_summary = json.dumps(self.chat_history) if self.chat_history else ""
+        initial_user = build_initial_user_message(
+            main_task=main_task,
+            chat_history_summary=chat_history_summary,
+            imagej_window_info=self.imagej_windowInfo_text,
+        )
+
+        self._dialog_messages = [
+            TextMessage(role="system", text=system_prompt),
+            TextMessage(role="user", text=initial_user),
+        ]
+        self._log_prompt_size("begin_dialog")
+        return await self._create(*self._dialog_messages, tools=self.tools, trace_ctx=trace_ctx)
+
+    async def continue_dialog(
+        self,
+        prior_response: ModelResponse,
+        observation: str,
+        *,
+        trace_ctx: Langfuse | None = None,
+    ) -> ModelResponse:
+        """Continue the current dialog after a tool call.
+
+        Appends the prior assistant response (reconstructed from the ReAct
+        parser's structured output) and a new user message carrying the tool
+        observation plus refreshed ImageJ window info.
+        """
+        assistant_text = _reconstruct_react_text(prior_response)
+        if assistant_text:
+            self._dialog_messages.append(TextMessage(role="assistant", text=assistant_text))
+
+        self.imagej_windowInfo_text = await self.plugin_tools.imagej_windowInfo()
+        user_text = build_observation_message(
+            tool_response=observation,
+            imagej_window_info=self.imagej_windowInfo_text,
+        )
+        self._dialog_messages.append(TextMessage(role="user", text=user_text))
+        self._log_prompt_size("continue_dialog")
+        return await self._create(*self._dialog_messages, tools=self.tools, trace_ctx=trace_ctx)
+
+    async def send_correction(
+        self,
+        correction: str,
+        *,
+        trace_ctx: Langfuse | None = None,
+    ) -> ModelResponse:
+        """Append a corrective user message without a prior assistant turn.
+
+        Used when the model produced malformed output and there's no usable
+        assistant message to record.
+        """
+        self._dialog_messages.append(TextMessage(role="user", text=correction))
+        self._log_prompt_size("send_correction")
+        return await self._create(*self._dialog_messages, tools=self.tools, trace_ctx=trace_ctx)
+
+    def _log_prompt_size(self, label: str) -> None:
+        total_chars = sum(len(m.text) for m in self._dialog_messages)
+        self.log_info(
+            f"[PROMPT] {label}: {len(self._dialog_messages)} messages, ~{total_chars} chars"
+        )
 
     async def user_manipulate(
         self, instructions: Annotated[str, "Clear, step-by-step instructions for the user."]
@@ -552,34 +647,46 @@ User prompt to optimize:
         #     dialog_context["status"] = "completed"
         #     break
 
+        # Wait for any background summarization from a previous dialog before
+        # we start a new one. This used to run inside the step loop, but only
+        # the very first iteration ever needed it.
+        if self._summarize_task is not None:
+            await self._summarize_task
+            self._summarize_task = None
+
+        # First turn: send system prompt + initial user message.
+        agent_resp: ModelResponse | None = None
+        try:
+            agent_resp = await self.leader_agent.begin_dialog(task, trace_ctx=trace_ctx)
+        except ModelSyntaxError as e:
+            syntax_error_counter += 1
+            self.log_error(
+                f"LeaderAgent generated invalid ReAct syntax "
+                f"({syntax_error_counter}/{max_syntax_errors}). Retrying...: {e.message}"
+            )
+            dialog_context["steps"].append({"agent": str(e)})
+
         while True:
-            if self._summarize_task is not None:
-                await self._summarize_task
-
-            planning_context = f"""
-User: "{task}".
-So far, your progress includes the following steps:
-{json.dumps(dialog_context["steps"], indent=2)}
-"""
-
-            if dialog_context["last_tool_response"]:
-                planning_context += f"""\n
-Last Observation:
-{dialog_context["last_tool_response"]}
-"""
-
-            # Let LeaderAgent decide the next step
-            try:
-                agent_resp = await self.leader_agent.handle_request(planning_context, trace_ctx=trace_ctx)
-            except ModelSyntaxError as e:
-                syntax_error_counter += 1
-                self.log_error(f"LeaderAgent generated invalid ReAct syntax ({syntax_error_counter}/{max_syntax_errors}). Retrying...: {e.message}")
-                dialog_context["steps"].append({"agent": str(e)})
+            if agent_resp is None:
+                # Previous turn produced a ModelSyntaxError. Ask the model to retry.
                 if syntax_error_counter >= max_syntax_errors:
                     self.log_error("Too many ReAct syntax errors. Aborting task.")
                     dialog_context["status"] = "failed"
                     break
-                continue
+                try:
+                    agent_resp = await self.leader_agent.send_correction(
+                        "Your previous response could not be parsed as valid ReAct. "
+                        "Reply with a single Thought + Action, or a Final Answer.",
+                        trace_ctx=trace_ctx,
+                    )
+                except ModelSyntaxError as e:
+                    syntax_error_counter += 1
+                    self.log_error(
+                        f"LeaderAgent generated invalid ReAct syntax "
+                        f"({syntax_error_counter}/{max_syntax_errors}). Retrying...: {e.message}"
+                    )
+                    dialog_context["steps"].append({"agent": str(e)})
+                    continue
 
             if not (agent_resp.content or agent_resp.reasoning_content or agent_resp.tool_calls):
                 # Handle empty LLM response
@@ -609,6 +716,26 @@ Last Observation:
                 error = "Agent did not provide a valid tool/agent call."
                 tool_retry_counter += 1
                 dialog_context["steps"].append({"agent_response": agent_resp.reasoning_content, "error": error})
+                if tool_retry_counter >= max_tool_retry:
+                    dialog_context["status"] = "failed"
+                    dialog_context["steps"].append(
+                        {"agent": "[WARNING] Too many failed tool calls. Task will be handed to the user."}
+                    )
+                    break
+                try:
+                    agent_resp = await self.leader_agent.send_correction(
+                        "You did not provide a valid Action. "
+                        "Reply with a Thought followed by a single Action, or a Final Answer.",
+                        trace_ctx=trace_ctx,
+                    )
+                except ModelSyntaxError as e:
+                    syntax_error_counter += 1
+                    self.log_error(
+                        f"LeaderAgent generated invalid ReAct syntax "
+                        f"({syntax_error_counter}/{max_syntax_errors}). Retrying...: {e.message}"
+                    )
+                    dialog_context["steps"].append({"agent": str(e)})
+                    agent_resp = None
                 continue
 
             # Handle supervise in one branch before tool/agent
@@ -624,7 +751,7 @@ Last Observation:
 You tried solving the task: "{task}" but encountered several issues.
 Tool/Agent execution failed for '{tool_call.tool.name}' with parameters '{tool_call.args}'.
 Error: {str(e)}
-Please reflect on what went wrong. 
+Please reflect on what went wrong.
 - Identify any mistakes you made.
 - Suggest how you might improve your next plan.
 - Then generate a new Thought + Action to try again.
@@ -647,6 +774,23 @@ Please reflect on what went wrong.
                     {"agent": "[WARNING] Too many failed tool calls. Task will be handed to the user."}
                 )
                 break
+
+            # Continue the dialog with the tool observation as a new user turn.
+            prior_resp = agent_resp
+            try:
+                agent_resp = await self.leader_agent.continue_dialog(
+                    prior_response=prior_resp,
+                    observation=str(resp),
+                    trace_ctx=trace_ctx,
+                )
+            except ModelSyntaxError as e:
+                syntax_error_counter += 1
+                self.log_error(
+                    f"LeaderAgent generated invalid ReAct syntax "
+                    f"({syntax_error_counter}/{max_syntax_errors}). Retrying...: {e.message}"
+                )
+                dialog_context["steps"].append({"agent": str(e)})
+                agent_resp = None
 
         # Offload summarization to background to avoid blocking the frontend
         current_dialog_id = self.dialog_counter
