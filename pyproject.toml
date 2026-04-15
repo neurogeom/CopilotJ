@@ -71,7 +71,12 @@ dependencies = [
   "pystackreg>=0.2.8",
   "suite2p>=0.14.5",
   "ddgs>=9.10.0",
+  # mcp
+  "fastmcp>=2.0.0",
 ]
+
+[project.scripts]
+copilotj-mcp = "copilotj.mcp:run"
 
 [dependency-groups]
 dev = ["pytest>=8.3.4", "pytest-cov>=6.0.0", "ruff>=0.11.4"]
