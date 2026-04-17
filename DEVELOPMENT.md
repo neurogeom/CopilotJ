@@ -9,6 +9,11 @@ This project contains three parts:
 3. **Bridge server**: A communication hub that facilitates interaction between the Python-based Agent and the
    Java-based ImageJ plugin. It typically uses WebSockets to relay messages and commands.
 
+## Prerequisites
+
+- **Python 3.12+** with [uv](https://docs.astral.sh/uv/)
+- **Java 8+** and **Maven 3.x**
+- **Node.js 22+** with [pnpm](https://pnpm.io/installation)
 Run the bridge server:
 
 ```bash

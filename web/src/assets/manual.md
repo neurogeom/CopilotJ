@@ -132,11 +132,7 @@ No separate frontend installation is required.
 
 For source-based development (**Option D2**), the frontend can also be run independently from the `web/` directory.
 
-1. Install [Node.js](https://nodejs.org/en/download) 22 or later, then enable `pnpm` through Corepack.
-
-   ```bash
-   corepack enable pnpm
-   ```
+1. Install [Node.js](https://nodejs.org/en/download) 22 or later and [pnpm](https://pnpm.io/installation).
 
 2. Install frontend dependencies.
 

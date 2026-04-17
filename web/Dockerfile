@@ -8,8 +8,7 @@
 # =============================================================================
 FROM node:22-alpine AS builder
 
-# Enable pnpm via corepack
-RUN corepack enable pnpm
+RUN npm install -g pnpm
 ENV PNPM_HOME=/pnpm \
     PNPM_STORE_DIR=/pnpm/store
 
