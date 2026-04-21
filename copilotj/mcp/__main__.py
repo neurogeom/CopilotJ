@@ -2,6 +2,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from copilotj.mcp import mcp
+from copilotj.mcp import run
 
-mcp.run()
+run()

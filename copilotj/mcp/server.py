@@ -51,7 +51,7 @@ _bridge: Bridge | None = None
 _api: ClientPluginAPI | None = None
 _bridge_runner: _BridgeRunner | None = None
 
-_DEFAULT_BRIDGE_HOST = "0.0.0.0"
+_DEFAULT_BRIDGE_HOST = "127.0.0.1"
 _DEFAULT_BRIDGE_PORT = 8786
 
 
