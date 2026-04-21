@@ -15,6 +15,7 @@ import langfuse
 import pydantic
 
 from copilotj.core import UI, UIEvent, UIEventPost, UIEventState
+from copilotj.core.config import get_llm_and_key
 from copilotj.core.ui import UIEventContentMarkdown
 from copilotj.multiagent.leader_multiagent import LeaderDriven
 from copilotj.plugin.api import HTTPPluginAPI, PluginAPI
@@ -35,6 +36,7 @@ ROLE_SYSTEM = "system"
 class _ConfigModel(pydantic.BaseModel):
     name: str
     api_key: str | None
+    base_url: str | None = None
 
 
 class _Config(pydantic.BaseModel):
@@ -74,6 +76,7 @@ class _Thread(UI):
             ui=self,
             model=config_model.name if config_model else None,
             api_key=config_model.api_key if config_model else None,
+            base_url=config_model.base_url if config_model else None,
         )
         self._post_task: asyncio.Task[None] | None = None
         self._post_done: asyncio.Event | None = None
@@ -165,10 +168,15 @@ class _Thread(UI):
     def get_config(self) -> _Config:
         return self._config
 
-    def update_config(self, *, model: str | None, api_key: str | None) -> None:
-        self._model = model
-        self._api_key = api_key
-        self._agent.update_config(model=model, api_key=api_key)
+    def update_config(self, *, model: str | None, api_key: str | None, base_url: str | None = None) -> None:
+        self._agent.update_config(model=model, api_key=api_key, base_url=base_url)
+        self._config = _Config(
+            model=_ConfigModel(
+                name=self._agent.model_client.get_model(),
+                api_key=self._agent.model_client.get_api_key(),
+                base_url=base_url,
+            )
+        )
 
     async def _run_agent(self, prompt: str, done_event: asyncio.Event) -> None:
         """Run the chat with the agent."""
@@ -249,6 +257,16 @@ class Threads:
             except pydantic.ValidationError as e:
                 return web.Response(status=400, text=f"Invalid configuration: {e}")
 
+        # If no model was explicitly provided, check that the server has one configured
+        config_model = config.model if config else None
+        if config_model is None:
+            resolved_model, _ = get_llm_and_key()
+            if not resolved_model:
+                return web.Response(
+                    status=400,
+                    text="No model configured. Please click the Settings gear icon in the sidebar to set up a model and API key.",
+                )
+
         thread_id = str(uuid.uuid4())
         thread = _Thread(thread_id, config=config, trace_context=self._trace_ctx)
         thread_lock = threading.Lock()
@@ -327,7 +345,7 @@ class Threads:
 
             config = _Config.model_validate(data)
             if (model := config.model) is not None:
-                thread.update_config(model=model.name, api_key=model.api_key)
+                thread.update_config(model=model.name, api_key=model.api_key, base_url=model.base_url)
 
             return web.Response(status=200, text=thread.get_config().model_dump_json())
 

@@ -9,57 +9,93 @@ This project contains three parts:
 3. **Bridge server**: A communication hub that facilitates interaction between the Python-based Agent and the
    Java-based ImageJ plugin. It typically uses WebSockets to relay messages and commands.
 
-Run the bridge server:
+## Prerequisites
+
+- **Python 3.12+** with [uv](https://docs.astral.sh/uv/)
+- **Java 8+** and **Maven 3.x**
+- **Node.js 22+** with [pnpm](https://pnpm.io/installation)
+- [just](https://github.com/casey/just) (command runner)
+
+## Quick start with just
+
+The project uses [just](https://github.com/casey/just) as a task runner.
+Run `just` or `just --list` to see all available commands.
+
+You can also review the `justfile` to understand how each task is defined and configured, or refer to it directly if you prefer not to install [just](https://github.com/casey/just).
+
+| Command             | Description                    |
+| ------------------- | ------------------------------ |
+| `just dev-server`   | Run the bridge server          |
+| `just dev-plugin`   | Run the ImageJ plugin (debug)  |
+| `just dev-web`      | Run the web frontend           |
+| `just test`         | Run Python tests               |
+| `just test-cov`     | Run tests with coverage report |
+| `just build-plugin` | Build the plugin JAR           |
+| `just build-web`    | Build the web frontend         |
+
+## Running the components
+
+### Bridge server
 
 ```bash
-python -m copilotj.server
+just dev-server
 ```
 
-The server is designed to be stable due to its minimal and focused design.
+Alternatively: `./bin/run-backend.sh`
 
-Run the plugin (with FIJI):
-
-```bash
-cd plugin && \
-  mvn exec:java -D"exec.mainClass=copilotj.DefaultCopilotJBridgeService" -D"ij.debug=true"
-```
-
-Run the multiagent:
+### Fiji plugin
 
 ```bash
-python -m copilotj.multiagent
+just dev-plugin
 ```
 
 If you make changes to the Java code, restart the plugin to apply the updates.
 
+### Web frontend
+
+```bash
+cd web && pnpm install
+just dev-web
+```
+
+Alternatively: `./bin/run-frontend.sh`
+
 Once everything is running, look for the message `Bridge WebSocket connection established` in the server console to
 confirm that the connection is active.
 
+## Testing
+
+```bash
+just test        # Run Python tests
+just test-cov    # Run tests with coverage report (HTML + XML)
+```
+
+## Observability (optional)
+
+CopilotJ integrates [Langfuse](https://langfuse.com/) for developers who want to observe and debug LLM usage
+(API calls, prompts/responses, latency, caching). It is enabled automatically when `LANGFUSE_PUBLIC_KEY` and
+`LANGFUSE_SECRET_KEY` environment variables are set. This is entirely optional — end users do not need it.
+
 ### Manual Plugin Deployment
 
-If you prefer to manually deploy the plugin to your ImageJ/FIJI installation:
+If you prefer to manually deploy the plugin to your Fiji installation:
 
-1. **Build the plugin JAR:**
-   Navigate to the `plugin` directory and build the package. This will create the plugin JAR file (e.g.,
-   `CopilotJBridge-1.0.0.jar`) in the `plugin/target/` directory.
+1. **Build and install the plugin and its dependencies:**
+   Navigate to the `plugin` directory and build the package:
+
    ```bash
-   cd plugin && mvn package
+   cd plugin && mvn clean install -Dscijava.app.directory=/path/to/Fiji
    ```
-2. **Copy Dependency Jars:**
-   The plugin requires several dependency JARs. You need to copy these into your ImageJ/FIJI `plugins` or `jars`
-   directory along with the plugin JAR itself. A common way to gather these is using the `maven-dependency-plugin`.
-   You can add this to your `pom.xml` or run a command like:
-   ```bash
-   cd plugin && mvn dependency:copy-dependencies
-   ```
-   This will typically copy the dependencies to `plugin/target/dependency/`.
-3. **Manually Copy Jars to ImageJ/FIJI:**
-   Copy the main plugin JAR (e.g., `plugin/target/copilotj_plugin-1.0.0.jar`) and all the JAR files from
-   `plugin/target/dependency/` into your ImageJ or FIJI's `plugins/` directory (or `jars/` directory, depending on your
-   ImageJ setup).
-   **Important:** Ensure you do not introduce conflicting versions of JARs already present in your ImageJ/FIJI
-   installation. If ImageJ/FIJI already provides a specific library, it's often better to use the existing one, unless
-   the plugin requires a newer version and you've confirmed compatibility. Remove any older or different versions of
-   the same libraries to avoid class loading issues.
-4. **Restart ImageJ/FIJI:**
-   After copying the JAR files, restart ImageJ/FIJI for the changes to take effect.
+
+   where `/path/to/Fiji` is the file path to your Fiji installation folder.
+   This will create the plugin JAR file (e.g., `CopilotJBridge-1.0.0.jar`)
+   in the `plugin/target/` directory, then copy it along with all of its
+   dependency JAR files into the specified Fiji installation.
+
+   Note that Fiji comes bundled with many of CopilotJ's dependencies, but the
+   [SciJava infrastructure](https://github.com/scijava/scijava-maven-plugin/)
+   takes care to keep only the newer version of each dependency JAR when
+   copying them.
+
+2. **Restart Fiji:**
+   After the build is complete, restart Fiji for the changes to take effect.

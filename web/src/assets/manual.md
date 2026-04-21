@@ -6,7 +6,7 @@
 
 - **Operating systems:** macOS, Linux, Windows
 - **Software:**
-  - [ImageJ / Fiji](https://imagej.net/downloads): latest stable version recommended
+  - [Fiji](https://fiji.sc/#download): Stable and Latest versions are both supported
   - [Python 3.12](https://www.python.org/downloads/): not required when using Docker
 - **Hardware:**
   - RAM: `>= 16 GB` (`32 GB` recommended)
@@ -16,7 +16,7 @@
 
 CopilotJ consists of three required components:
 
-- **CopilotJ Bridge Plugin** for ImageJ / Fiji
+- **CopilotJ Bridge Plugin** for Fiji
 - **CopilotJ Core Server**
 - **CopilotJ frontend server**
 
@@ -26,22 +26,21 @@ CopilotJ consists of three required components:
 
 Download the precompiled JAR files for the CopilotJ Bridge plugin:
 
-- [`CopilotJBridge-0.1.0-SNAPSHOT.jar`](https://copilotj.cvcd.xyz/software/CopilotJBridge-0.1.0-SNAPSHOT.jar)
-- [`jackson-datatype-jsr310-2.9.8.jar`](https://copilotj.cvcd.xyz/software/jackson-datatype-jsr310-2.9.8.jar)
-- [`Java-WebSocket-1.5.2.jar`](https://copilotj.cvcd.xyz/software/Java-WebSocket-1.5.2.jar)
+- [`CopilotJBridge-0.1.0-SNAPSHOT.jar`](https://copilotj.cvcd.xyz/software/precompiled_plugin/CopilotJBridge-0.1.0-SNAPSHOT.jar)
+- [`jackson-datatype-jsr310-2.16.1.jar`](https://repo1.maven.org/maven2/com/fasterxml/jackson/datatype/jackson-datatype-jsr310/2.16.1/jackson-datatype-jsr310-2.16.1.jar)
+- [`Java-WebSocket-1.5.2.jar`](https://repo1.maven.org/maven2/org/java-websocket/Java-WebSocket/1.5.2/Java-WebSocket-1.5.2-sources.jar.sha1)
 
-**Install into ImageJ / Fiji:**
+**Install into Fiji:**
 
-Install the CopilotJ Bridge plugin by placing the required JAR files in the appropriate `plugins/` and `jars/` directories. The exact steps may vary slightly depending on your operating system and ImageJ / Fiji installation.
+Install the CopilotJ Bridge plugin by placing the required JAR files in the appropriate `jars/` directory. The exact steps may vary slightly depending on your operating system and Fiji installation.
 
-1. **Windows:** Open the ImageJ / Fiji installation directory (e.g., `D:\Fiji.app\`).
+1. **Windows:** Open the Fiji installation directory (e.g., `D:\Fiji.app\`).
 2. **macOS:** Locate `Fiji.app` in Finder, then right-click and select **Show Package Contents**.
-3. Copy the plugin JAR `CopilotJBridge-0.1.0-SNAPSHOT.jar` into `plugins/`.
-4. Copy the dependency JARs `jackson-datatype-jsr310-2.9.8.jar` and `Java-WebSocket-1.5.2.jar` into `jars/`.
+3. Copy the files `CopilotJBridge-0.1.0-SNAPSHOT.jar`, `jackson-datatype-jsr310-2.16.1.jar` and `Java-WebSocket-1.5.2.jar` into `jars/`.
 
 **Verify plugin installation**
 
-1. Restart ImageJ / Fiji.
+1. Restart Fiji.
 2. Confirm that **Plugins -> CopilotJ** appears in the menu.
 3. Click it and verify that the configuration window opens successfully.
 
@@ -55,7 +54,7 @@ mvn clean package
 mvn dependency:copy-dependencies -DoutputDirectory=target/deps
 ```
 
-After building, locate the generated `.jar` file in the `target/` directory, then follow the same installation steps in **Option C1** to copy the built plugin JAR and required dependency JARs into ImageJ / Fiji.
+After building, locate the generated `.jar` file in the `target/` directory, then follow the same installation steps in **Option C1** to copy the built plugin JAR and required dependency JARs into Fiji.
 
 ### D. Install the CopilotJ core server
 
@@ -124,18 +123,7 @@ Recommended workflow:
    uv run python -m copilotj.server --host 127.0.0.1 --port 8786
    ```
 
-By default, the local development server listens at `http://127.0.0.1:8786`.
-The HTTP API is available under the `/api` path (e.g., `http://127.0.0.1:8786/api/ping`).
-
-If you change the host or port, make sure to update all related configurations accordingly so that other components can still communicate with the server.
-
-This listening address is also used by other CopilotJ components:
-
-- ImageJ plugin: Connects to `http://127.0.0.1:8786` by default.
-  If you modify the server address, update the connection URL in the plugin as well.
-- Frontend (non-Docker setup): Set `VITE_API_BASE_URL=http://<host>:<port>` to match your server configuration (e.g., `http://127.0.0.1:8786`), so the web app can correctly reach the backend.
-
-In short, any change to the server’s host or port must be consistently reflected across the plugin and frontend configurations.
+By default, the local development server listens at `http://127.0.0.1:8786`. If you change the host or port, make sure to update all related configurations accordingly so that other components can still communicate with the server.
 
 ### E. Install the CopilotJ frontend server
 
@@ -144,11 +132,7 @@ No separate frontend installation is required.
 
 For source-based development (**Option D2**), the frontend can also be run independently from the `web/` directory.
 
-1. Install [Node.js](https://nodejs.org/en/download) 22 or later, then enable `pnpm` through Corepack.
-
-   ```bash
-   corepack enable pnpm
-   ```
+1. Install [Node.js](https://nodejs.org/en/download) 22 or later and [pnpm](https://pnpm.io/installation).
 
 2. Install frontend dependencies.
 
@@ -163,8 +147,11 @@ For source-based development (**Option D2**), the frontend can also be run indep
    pnpm run dev
    ```
 
-   By default, the frontend sends requests to the relative `/api` path.
-   If you run the backend on a different origin, set `VITE_API_BASE_URL` to the backend root URL before starting the dev server. Do not append `/api`.
+   If the backend runs on a different origin, add `VITE_API_BASE_URL` to `web/.env.development.local`.
+
+   ```env
+   VITE_API_BASE_URL=http://127.0.0.1:8786
+   ```
 
 4. (Advanced) For production deployment, we strongly recommend using the provided Docker-based setup, which includes a preconfigured frontend build and reverse proxy.
 
@@ -174,74 +161,167 @@ For source-based development (**Option D2**), the frontend can also be run indep
 
 ### A. Environment configuration
 
-CopilotJ is configured through a local environment file in the root directory of the repository.
+CopilotJ is configured through a local environment file named `.env.local` in the root directory of the repository. For Docker Compose deployments, this file is mounted into the container at runtime. Sensitive information such as API keys must be stored locally and should never be committed to version control.
 
-It is recommended to create a file named `.env.local`.
-For Docker Compose deployments, it will be mounted into the container as `.env.local` at runtime.
+#### Background: models, providers, and API keys
 
-Customize this file with your own API keys and model preferences.
-Sensitive information such as API keys must be stored locally and should never be committed to version control.
+CopilotJ requires at least one **language model** (LLM) to function. A language model is a remote AI service that understands and generates text; CopilotJ sends your instructions to the model, which reasons about what to do and orchestrates CopilotJ's tools accordingly.
 
-Create the local environment file with content such as:
+Models are provided by **AI providers** — companies that operate the model servers. Each provider requires you to create an account and authenticate with an **API key**: a secret credential you include in your `.env.local`. Every request your session sends to a model runs on that provider's remote servers and is billed to your account in units called **tokens** (roughly corresponding to words). Most providers require you to add a payment method and purchase credits before API requests will succeed; a free or evaluation-tier account will typically return an error on the first request.
+
+CopilotJ uses **two separate model slots**:
+
+- **`COPILOTJ_MODEL`**: the main reasoning model, used for planning, tool orchestration, and conversation. This is the most important setting and must always be configured.
+- **`COPILOTJ_VLM_MODEL`**: an optional vision-language model (VLM) used when CopilotJ needs to interpret image content directly. All current models from the three recommended providers (OpenAI, Anthropic, Google) support image input. If omitted, image understanding is disabled.
+
+After updating `.env.local`, restart the CopilotJ core server for changes to take effect.
+
+#### Provider quick reference
+
+| Provider | API endpoint | Buy credits | Manage API keys | Available models |
+|---|---|---|---|---|
+| OpenAI | `https://api.openai.com/v1` | [OpenAI Billing](https://platform.openai.com/settings/organization/billing/overview) | [OpenAI API keys](https://platform.openai.com/settings/organization/api-keys) | [OpenAI models](https://developers.openai.com/api/docs/models) |
+| Anthropic | `https://api.anthropic.com/v1` | [Anthropic Billing](https://platform.claude.com/settings/billing) | [Anthropic API keys](https://platform.claude.com/settings/keys) | [Claude models](https://platform.claude.com/docs/en/about-claude/models/overview) |
+| Google | `https://generativelanguage.googleapis.com/v1beta/openai/` | [Google AI Billing](https://aistudio.google.com/billing) | [Google API keys](https://aistudio.google.com/api-keys) | [Gemini models](https://ai.google.dev/gemini-api/docs/models) |
+| Ollama | `http://localhost:11434` | free (local) | n/a | [Ollama model library](https://ollama.com/library) |
+
+#### Option A1: OpenAI
+
+OpenAI's GPT models work reliably with CopilotJ. `gpt-5.4` is the current flagship; `gpt-5.4-mini` costs less but may produce weaker results on complex workflows.
+
+1. Create an account at [platform.openai.com](https://platform.openai.com).
+2. Add credits via [OpenAI Billing](https://platform.openai.com/settings/organization/billing/overview).
+3. Create an API key at [OpenAI API keys](https://platform.openai.com/settings/organization/api-keys).
+
+```env
+COPILOTJ_MODEL=gpt-5.4
+COPILOTJ_API_KEY=sk-proj-xxxxxxxx
+
+# Optional: vision model (can reuse the same key)
+COPILOTJ_VLM_MODEL=gpt-5.4
+COPILOTJ_VLM_API_KEY=sk-proj-xxxxxxxx
+```
+
+#### Option A2: Anthropic (Claude)
+
+Claude models are recommended for their strong multi-step reasoning and tool use. `claude-sonnet-4-6` offers a good balance of capability and cost; `claude-opus-4-6` is the most capable option.
+
+1. Create an account at [console.anthropic.com](https://console.anthropic.com).
+2. Add credits via [Anthropic Billing](https://platform.claude.com/settings/billing).
+3. Create an API key at [Anthropic API keys](https://platform.claude.com/settings/keys).
+
+```env
+COPILOTJ_MODEL=claude-sonnet-4-6
+COPILOTJ_API_KEY=sk-ant-api03-xxxxxxxx
+
+# Optional: vision model (can reuse the same key)
+COPILOTJ_VLM_MODEL=claude-sonnet-4-6
+COPILOTJ_VLM_API_KEY=sk-ant-api03-xxxxxxxx
+```
+
+#### Option A3: Google Gemini
+
+Gemini models are well-supported and competitively priced. `gemini-2.5-flash` is fast and inexpensive; `gemini-2.5-pro` provides stronger reasoning.
+
+1. Visit [Google AI Studio](https://aistudio.google.com) and sign in with a Google account.
+2. Enable billing if required via [Google AI Billing](https://aistudio.google.com/billing).
+3. Create an API key at [Google API keys](https://aistudio.google.com/api-keys).
+
+```env
+COPILOTJ_MODEL=gemini-2.5-flash
+COPILOTJ_API_KEY=AIza-xxxxxxxx
+
+# Optional: vision model (can reuse the same key)
+COPILOTJ_VLM_MODEL=gemini-2.5-flash
+COPILOTJ_VLM_API_KEY=AIza-xxxxxxxx
+```
+
+#### Option A4: Ollama (local, offline)
+
+[Ollama](https://ollama.com) runs models locally on your own hardware, with no data sent to external servers and no per-request cost. CopilotJ supports Ollama models via the `ollama/` prefix.
+
+**Important caveat:** CopilotJ's agentic workflows require strong multi-step reasoning and reliable tool-calling. As of early 2026, locally available Ollama models — including large models — have not proven capable enough to reliably complete CopilotJ's workflows out of the box. They tend to fail at tool orchestration, lose context across steps, or produce malformed tool calls. Ollama support is functional, but results will be significantly worse than with a frontier cloud model. This is a limitation of current local model capability, not of CopilotJ itself. With careful model selection and prompt tuning it may be possible to get acceptable results; if you experiment, the most capable models for tool-use tasks as of early 2026   include **qwen3** (Alibaba), **gemma3** (Google), **llama3.3** (Meta), and **phi4** (Microsoft) — prefer the largest variant your hardware can run. You can check the [Ollama model library](https://ollama.com/library) for new releases.
+
+**Prerequisites:** Before configuring CopilotJ to use an Ollama model, make sure Ollama itself is installed and running, and that you have pulled the desired model:
+
+```bash
+# Install Ollama from https://ollama.com if not already installed
+ollama pull qwen3:30b   # or whichever model you want to use
+```
+
+Ollama support in CopilotJ also requires an additional Python package not installed by default. Run this once before starting the server:
+
+```bash
+uv sync --group all
+```
+
+Then configure `.env.local`. No API key is needed:
+
+```env
+COPILOTJ_MODEL=ollama/qwen3:30b
+COPILOTJ_BASE_URL=http://localhost:11434
+```
+
+Note: Ollama models generally do not support image input. If image understanding is needed, configure `COPILOTJ_VLM_MODEL` separately using a cloud provider from the options above.
+
+#### Other configuration variables
+
+The following variables are optional and relate to specific CopilotJ features.
+
+**`COPILOTJ_BASE_URL`**
+
+Overrides the default API endpoint for the main model. Use this when connecting to a non-default server, such as a local Ollama instance (`http://localhost:11434`) or a custom inference server. When not set, each provider uses its standard public endpoint. See the provider-specific sections above for when this is needed.
+
+**`COPILOTJ_PROXY`**
+
+Routes all outbound model API requests through an HTTP/HTTPS [proxy server](https://en.wikipedia.org/wiki/Proxy_server) — an intermediary between your machine and the internet. Commonly required in institutional or corporate networks where all traffic must pass through a central gateway. If you are connecting directly to the internet, you do not need this. Example value: `http://proxy.example.com:8080`.
+
+**`COPILOTJ_RAG_API_KEY`**
+
+Enables [retrieval-augmented generation (RAG)](https://en.wikipedia.org/wiki/Retrieval-augmented_generation), a technique that allows the model to search a document collection before generating a response, rather than relying solely on what it learned during training. This can ground CopilotJ's answers in specific literature, protocols, or your own notes. RAG requires a separate **embedding model** to convert text into numerical vectors for similarity search; `COPILOTJ_RAG_API_KEY` is the credential for that embedding service. If you are already using OpenAI for `COPILOTJ_MODEL`, the same key often works here. For most users getting started, RAG is not required.
+
+**`COPILOTJ_TAVILY_API_KEY`**
+
+Enables live web search during CopilotJ sessions via [Tavily](https://app.tavily.com/), a search API designed for use with language models. Because LLMs have a training cutoff and no built-in internet access, web search allows CopilotJ to look up current documentation, papers, or tool usage examples in real time. Without this key, CopilotJ relies only on what its model already knows. Obtain a key from the [Tavily dashboard](https://app.tavily.com/).
+
+**`COPILOTJ_KB_AUTOSAVE`**
+
+Controls CopilotJ's **knowledge bank** — a persistent store of summaries from past sessions. When set to `1`, CopilotJ automatically summarizes completed dialogues and saves them so that information from previous sessions can be recalled in future ones. Useful if you run many sessions and want CopilotJ to build up knowledge about your data, workflows, and preferences over time. Disabled (`0`) by default; summaries can also be saved manually from the chat interface.
+
+**`LANGFUSE_SECRET_KEY` / `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_HOST`**
+
+Enable execution tracing via [Langfuse](https://langfuse.com), an open-source observability platform for LLM applications. Tracing records a structured log of every model call, tool invocation, token count, latency, and cost for each session, viewable in the Langfuse dashboard. Useful for debugging unexpected agent behavior or understanding where tokens are being spent. Not needed for normal use. Obtain keys from the [Langfuse dashboard](https://cloud.langfuse.com/).
+
+A complete `.env.local` template with all options:
 
 ```env
 # Set DEV mode for better logging
 COPILOTJ_DEV=1
 
-# LLM configuration (text-based reasoning)
-COPILOTJ_MODEL=gpt-4.1-mini
+# LLM configuration (text-based reasoning) — choose one provider
+COPILOTJ_MODEL=gpt-4.1
 COPILOTJ_API_KEY=sk-xxxxxxxx
+#COPILOTJ_BASE_URL=http://localhost:11434
+#COPILOTJ_PROXY=http://PATH_TO_YOUR_PROXY
 
-# Vision-language model (image understanding)
-COPILOTJ_VLM_MODEL=gemini-2.5-flash
-COPILOTJ_VLM_API_KEY=AI-xxxxxxxx
+# Vision-language model (image understanding) — optional, choose one provider
+#COPILOTJ_VLM_MODEL=gemini-2.5-flash
+#COPILOTJ_VLM_API_KEY=AI-xxxxxxxx
 
 # Retrieval-augmented generation (RAG)
-COPILOTJ_RAG_API_KEY=sk-xxxxxxxx
-
-# [Optional] network configuration
-#COPILOTJ_PROXY=http://127.0.0.1:8786
-#COPILOTJ_BASE_URL=http://localhost:11434
+#COPILOTJ_RAG_API_KEY=sk-xxxxxxxx
 
 # External search tool (web search)
-COPILOTJ_TAVILY_API_KEY=tvly-xxxxxxxxx
+#COPILOTJ_TAVILY_API_KEY=tvly-xxxxxxxxx
 
 # Knowledge bank settings (1 to enable, 0 to disable)
 COPILOTJ_KB_AUTOSAVE=0
 
-# Observability and tracing (Langfuse)
-LANGFUSE_SECRET_KEY=<secret key>
-LANGFUSE_PUBLIC_KEY=<public key>
-LANGFUSE_HOST="https://us.cloud.langfuse.com"
+## [Optional] Observability and tracing (Langfuse)
+#LANGFUSE_SECRET_KEY=<secret key>
+#LANGFUSE_PUBLIC_KEY=<public key>
+#LANGFUSE_HOST="https://us.cloud.langfuse.com"
 ```
-
-1. **How to obtain API keys**
-   - **`COPILOTJ_API_KEY`**: Obtain it from the provider of the selected LLM, such as OpenAI or Google Gemini.
-   - **`COPILOTJ_VLM_API_KEY`**: Obtain it from the selected vision-language model provider.
-   - **`COPILOTJ_RAG_API_KEY`**: Obtain it from the embedding or retrieval service provider used in your setup.
-   - **`COPILOTJ_TAVILY_API_KEY`**: Obtain it from the Tavily dashboard after registering an account.
-   - **`LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY`**: Obtain them from the Langfuse dashboard when creating a project.
-
-   Useful links: [OpenAI API keys](https://platform.openai.com/api-keys), [Google Gemini API keys](https://aistudio.google.com/app/apikey), [Tavily dashboard](https://app.tavily.com/) and [Langfuse dashboard](https://cloud.langfuse.com/auth/sign-in)
-
-2. **Purpose of each configuration**
-   - **`COPILOTJ_MODEL`**: Selects the text-based LLM used for reasoning, planning, and tool orchestration.
-   - **`COPILOTJ_VLM_MODEL`**: Selects the vision-language model used for image understanding and multimodal reasoning.
-   - **`COPILOTJ_RAG_API_KEY`**: Enables retrieval-augmented generation through external knowledge services.
-   - **`COPILOTJ_PROXY`**: Routes outbound network traffic through a proxy when required.
-   - **`COPILOTJ_BASE_URL`**: Specifies the endpoint for local or remote model backends, such as Ollama or SiliconFlow.
-   - **`COPILOTJ_KB_AUTOSAVE`**: Controls whether dialogue summaries are automatically stored in the CopilotJ knowledge bank.
-   - **Langfuse keys**: Enable execution tracing, debugging, and performance monitoring.
-
-   Multiple model backends are supported. For example:
-
-   ```env
-   COPILOTJ_MODEL=gemini-2.5-pro
-   COPILOTJ_MODEL=ollama/llama3.1:latest
-   COPILOTJ_MODEL=gpt-4.1
-   ```
-
-   After updating the local environment file, restart the CopilotJ core server for the changes to take effect.
 
 ### B. Agent settings (advanced, optional)
 
@@ -276,26 +356,25 @@ Each configuration file defines an agent's system prompt, role description, and 
 
 ### A. Starting CopilotJ
 
-To use CopilotJ, first start the core server and then connect from the ImageJ / Fiji interface.
+To use CopilotJ, first start the core server and then connect from the Fiji interface.
 
 1. **Start the CopilotJ core server**
    - Ensure the core server is running locally or via Docker.
    - In standard local setups, the default server endpoint is sufficient.
 
-2. **Launch ImageJ / Fiji and connect through the plugin**
-   - In ImageJ / Fiji, navigate to **Plugins -> CopilotJ -> Connect**.
+2. **Launch Fiji and connect through the plugin**
+   - In Fiji, navigate to **Plugins -> CopilotJ -> Connect**.
    - In typical local setups, the default server URL does not need modification.
-     Enter only the server root URL.
-     Do not append `/api`, because the plugin automatically connects to the WebSocket endpoint under `/api/plugins`.
+     If you have changed the server endpoint, enter only the root URL (do not append additional paths).
    - Click **Connect** to establish the connection between the plugin and the core server.
 
 3. **Open the CopilotJ web interface**
-   - Open a web browser and navigate to the deployed CopilotJ frontend, for example `http://127.0.0.1:8786`.
-   - The web interface provides the chat-based frontend for interacting with CopilotJ.
-   - Once the connection is established, you can start a conversational session and issue analysis instructions.
+   - Open a web browser and navigate to the deployed CopilotJ frontend: if using Docker (**Option D1**), this will be `http://127.0.0.1:8786` by default&mdash;or if running from source (**Option D2**), the default will be `http://127.0.0.1:5173`.
+   - This web interface provides the chat-based frontend for interacting with CopilotJ.
+   - Once the connection is established, you can start a conversational session and issue analysis instructions by clicking the "Chat" button at the top right of the web interface.
 
 4. **Open an image for analysis**
-   - Use ImageJ / Fiji to open the image or image stack to be analyzed.
+   - Use Fiji to open the image or image stack to be analyzed.
    - Example datasets used in the study can be found in supplementary data for testing and reproducibility.
 
 ### B. Issuing analysis instructions

@@ -13,7 +13,6 @@ import pydantic
 import ujson
 from pydantic import TypeAdapter
 
-from copilotj.core.config import is_dev
 from copilotj.plugin._base import Request, Response
 from copilotj.plugin.awt import SnapshotDifference, SnapshotSummary, TakeSnapshotRequest
 from copilotj.plugin.awt.action import TypedActionResponse
@@ -159,7 +158,6 @@ class PluginAPI(abc.ABC):
 
     def attach_dev_client(self) -> ClientPluginAPI:
         """Attaches to the first client that connects to the server."""
-        assert is_dev()
         return self.with_client(DEV_CLIENT_ID)
 
     @abc.abstractmethod

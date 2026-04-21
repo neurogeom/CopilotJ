@@ -1,8 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-    http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
@@ -17,17 +14,17 @@
   <version>0.1.0-SNAPSHOT</version>
 
   <name>Copilot Bridge</name>
-  <description>CopilotJ bridge for ImageJ.</description>
-  <url>https://cvcd.xyz/copilot/</url>
+  <description>CopilotJ bridge for Fiji/ImageJ2.</description>
+  <url>https://copilotj.chat/</url>
   <inceptionYear>2024</inceptionYear>
   <organization>
     <name>CVCD</name>
     <url>https://cvcd.xyz/</url>
   </organization>
   <licenses>
-    <license>           <!-- FIXME: Your license here -->
-      <name>CC0</name>
-      <url>https://creativecommons.org/publicdomain/zero/1.0/</url>
+    <license>
+      <name>Apache 2</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
       <distribution>repo</distribution>
     </license>
   </licenses>
@@ -51,44 +48,40 @@
   </developers>
   <contributors>
     <contributor>
-      <name>None</name>
+      <name>Curtis Rueden</name>
+      <url>https://github.com/ctrueden</url>
+      <properties><id>ctrueden</id></properties>
     </contributor>
   </contributors>
 
   <mailingLists>
     <mailingList>
       <name>Image.sc Forum</name>
-      <archive>https://forum.image.sc/tag/imagej</archive>
+      <archive>https://forum.image.sc/tag/copilotj</archive>
     </mailingList>
   </mailingLists>
 
   <scm>
-    <connection>scm:git:https://github.com/imagej/example-imagej2-command</connection>
-    <developerConnection>scm:git:git@github.com:imagej/example-imagej2-command</developerConnection>
+    <connection>scm:git:https://github.com/neurogeom/CopilotJ</connection>
+    <developerConnection>scm:git:git@github.com:neurogeom/CopilotJ</developerConnection>
     <tag>HEAD</tag>
-    <url>https://github.com/imagej/example-imagej2-command</url>
+    <url>https://github.com/neurogeom/CopilotJ</url>
   </scm>
   <issueManagement>
     <system>GitHub Issues</system>
-    <url>https://github.com/imagej/example-imagej2-command/issues</url>
+    <url>https://github.com/neurogeom/CopilotJ</url>
   </issueManagement>
   <ciManagement>
-    <system>None</system>
+    <system>GitHub Actions</system>
+    <url>https://github.com/neurogeom/CopilotJ/actions</url>
   </ciManagement>
 
   <properties>
     <package-name>copilotj</package-name>
-    <main-class>copilotj.CopilotJBridgeService</main-class>
-    <license.licenseName>cc0</license.licenseName>                      <!-- FIXME: Your license-maven-plugin license code here -->
-    <license.copyrightOwners>My Company, Inc.</license.copyrightOwners> <!-- FIXME: Your organization legal entity name here -->
+    <main-class>copilotj.DefaultCopilotJBridgeService</main-class>
+    <license.licenseName>apache_v2</license.licenseName>
+    <license.copyrightOwners>CopilotJ developers.</license.copyrightOwners>
   </properties>
-
-  <repositories>
-    <repository>
-      <id>scijava.public</id>
-      <url>https://maven.scijava.org/content/groups/public</url>
-    </repository>
-  </repositories>
 
   <dependencies>
     <!-- ImageJ dependencies -->
@@ -152,13 +145,20 @@
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
-      <version>2.9.6</version>
+      <version>${jackson.version}</version>
     </dependency>
 
     <dependency>
       <groupId>com.fasterxml.jackson.datatype</groupId>
       <artifactId>jackson-datatype-jsr310</artifactId>
-      <version>2.9.8</version>
+      <version>${jackson.version}</version>
     </dependency>
   </dependencies>
+
+  <repositories>
+    <repository>
+      <id>scijava.public</id>
+      <url>https://maven.scijava.org/content/groups/public</url>
+    </repository>
+  </repositories>
 </project>

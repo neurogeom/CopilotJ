@@ -57,10 +57,9 @@ class ReActChatCompletionClient(ModelClient):
         self._kw_final = kw_final
 
         # compile regex patterns
-        ends = "".join((":", r"\n"))
-        re_thought = rf"{kw_thought}[{ends}]"
-        re_action = rf"{kw_action}[{ends}]"
-        re_final = rf"{kw_final}[{ends}]"
+        re_thought = _build_keyword_with_sep_regex(kw_thought)
+        re_action = _build_keyword_with_sep_regex(kw_action)
+        re_final = _build_keyword_with_sep_regex(kw_final)
         flags = re.IGNORECASE | re.DOTALL
 
         # create
@@ -99,9 +98,21 @@ class ReActChatCompletionClient(ModelClient):
         text = response.content.strip()
 
         thought_match = self._pattern_thought.search(text)
+        action_match = self._pattern_action.search(text)
+        final_match = self._pattern_final.search(text)
         thought = thought_match and thought_match.group(1).strip()
+
+        # Fallback: if no structured reasoning or action found, return raw content as final answer
+        if thought_match is None and action_match is None and final_match is None:
+            return ModelResponse(
+                content=text,
+                reasoning_content=None,
+                tool_calls=[],
+                finish_reason=response.finish_reason,
+            )
+
         try:
-            tool_call = self._parse_action(text, tools=tools or [])
+            tool_call = self._parse_action_content(action_match.group(1).strip(), tools=tools or []) if action_match is not None else None
         except ModelSyntaxError as e:
             e.chat_completion = ModelResponse(
                 content=text,
@@ -111,16 +122,6 @@ class ReActChatCompletionClient(ModelClient):
             )
             raise e
 
-        # Fallback: if no structured reasoning or action found, return raw content as final answer
-        if thought is None and tool_call is None:
-            return ModelResponse(
-                content=text,
-                reasoning_content=None,
-                tool_calls=[],
-                finish_reason=response.finish_reason,
-            )
-
-        final_match = self._pattern_final.search(response.content)
         return ModelResponse(
             content=final_match.group(1).strip() if final_match else None,
             reasoning_content=thought,
@@ -235,11 +236,8 @@ class ReActChatCompletionClient(ModelClient):
     ) -> tuple[_StreamingState, Iterable[ModelResponseChunk | ToolCall], str]:
         thought_match = self._pattern_thought_kw.search(buffer)
         if thought_match:
-            if thought_match.start() > 0 and buffer[: thought_match.start()].strip():
-                raise ModelSyntaxError(
-                    f"Unexpected content before '{self._kw_thought}' keyword: " + buffer[: thought_match.start()]
-                )
-
+            # Skip any content before 'Thought:' — frontier models like Claude sometimes
+            # output a preamble sentence before the structured ReAct format.
             return self._fsm_before_status(_StreamingState.BeforeThought, buffer[thought_match.end() :], tools=tools)
 
         for pattern_kw, next in [
@@ -343,6 +341,9 @@ class ReActChatCompletionClient(ModelClient):
         if matches is not None:
             text = matches.group(1).strip()
 
+        return self._parse_action_content(text, tools=tools)
+
+    def _parse_action_content(self, text: str, *, tools: list[Tool]) -> ToolCall:
         try:
             tool_call = _extract_json_tool_call(text)
 
@@ -466,9 +467,21 @@ def _build_last_line_prefix_regex(*words: str) -> re.Pattern:
     def word_to_prefix_regex(word: str) -> str:
         assert word, "Word must not be empty"
         # Action -> A(?:c(?:t(?:i(?:o(?:n)?)?)?)?)?
-        return word[0] + "".join(f"(?:{char}?" for i, char in enumerate(word[1:])) + ")?" * (len(word) - 1)
+        escaped = [re.escape(char) for char in word]
+        return escaped[0] + "".join(f"(?:{char}?" for char in escaped[1:]) + ")?" * (len(word) - 1)
 
-    pattern_parts = [word_to_prefix_regex(w) for w in words]
-    # Combine patterns with non-capturing group and ignore case: ^(ActionPrefix|FinalAnswerPrefix)\Z
-    pattern = r"(?i)^(" + "|".join(pattern_parts) + r")\Z"
+    pattern_parts = [rf"(?:\*\*)?{word_to_prefix_regex(w)}(?:\*\*?|:\*\*?|:)?" for w in words]
+    # Combine patterns with non-capturing group and ignore case: (?:^|\n)(ActionPrefix|FinalAnswerPrefix)\Z
+    pattern = r"(?i)(?:^|\n)(?:" + "|".join(pattern_parts) + r")\Z"
     return re.compile(pattern)
+
+
+def _build_keyword_regex(keyword: str) -> str:
+    escaped = re.escape(keyword)
+    return rf"(?:\*\*)?{escaped}(?:\*\*)?"
+
+
+def _build_keyword_with_sep_regex(keyword: str) -> str:
+    keyword_only_bold = _build_keyword_regex(keyword)
+    keyword_colon_in_bold = rf"\*\*{re.escape(keyword)}:\*\*"
+    return rf"(?:{keyword_colon_in_bold}\s*|{keyword_only_bold}\s*(?::|\n))"

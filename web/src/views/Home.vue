@@ -255,7 +255,9 @@ function openNewWindow(link: string) {
         <div
           v-for="tool in TOOLS"
           :key="tool.name"
+          :title="tool.name"
           class="tool-card group p-4 bg-gray-200 rounded-lg flex items-center justify-center cursor-pointer transition-all duration-300 hover:bg-white hover:shadow-lg hover:-translate-y-1 hover:scale-105"
+          @click="openNewWindow(tool.link)"
         >
           <img
             :src="tool.logo"
@@ -265,7 +267,9 @@ function openNewWindow(link: string) {
         </div>
 
         <div
+          title="View the CopilotJ source code for the full list of integrated tools"
           class="tool-card group p-4 bg-linear-to-br from-gray-200 to-gray-300 rounded-lg flex items-center justify-center cursor-pointer transition-all duration-300 hover:from-primary-500 hover:to-blue-600 hover:shadow-lg hover:-translate-y-1 hover:scale-105"
+          @click="openNewWindow(GITHUB_REPO)"
         >
           <span class="text-2xl text-gray-500 transition-colors duration-300 group-hover:text-white">and more...</span>
         </div>

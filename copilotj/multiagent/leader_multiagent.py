@@ -275,10 +275,11 @@ class LeaderDriven(Pattern):
         max_steps_before_summary: int = 8,
         model: str | None = None,
         api_key: str | None = None,
+        base_url: str | None = None,
     ) -> None:
         super().__init__("copilotj.leader_driven", ui=ui)
 
-        self.model_client = new_model_client(model=model, api_key=api_key)
+        self.model_client = new_model_client(model=model, api_key=api_key, base_url=base_url)
         # wrap the model client to handle ReAct-style responses
         wrapped_model_client = ReActChatCompletionClient(self.model_client)
 
@@ -323,11 +324,11 @@ class LeaderDriven(Pattern):
         )
         self.log_info("Leader Agent initialized.")
 
-    def update_config(self, *, model: str | None = None, api_key: str | None = None) -> None:
-        if model is not None or api_key is not None:
+    def update_config(self, *, model: str | None = None, api_key: str | None = None, base_url: str | None = None) -> None:
+        if model is not None or api_key is not None or base_url is not None:
             model = model or self.model_client.get_model()
             api_key = api_key or self.model_client.get_api_key()
-            self.model_client = new_model_client(model=model, api_key=api_key)
+            self.model_client = new_model_client(model=model, api_key=api_key, base_url=base_url)
             self.leader_agent.set_model_client(self.model_client)
             for agent in self.specialized_agents.values():
                 agent.set_model_client(self.model_client)
@@ -512,6 +513,8 @@ User prompt to optimize:
 
         tool_retry_counter = 0
         max_tool_retry = 3
+        syntax_error_counter = 0
+        max_syntax_errors = 3
 
         # TODO: add supervise back
         # parallel delegation to multiple agents
@@ -569,9 +572,13 @@ Last Observation:
             try:
                 agent_resp = await self.leader_agent.handle_request(planning_context, trace_ctx=trace_ctx)
             except ModelSyntaxError as e:
-                self.log_error(f"LeaderAgent generated invalid ReAct syntax. Retrying...: {e.message}")
-                dialog_context["status"] = "failed"
+                syntax_error_counter += 1
+                self.log_error(f"LeaderAgent generated invalid ReAct syntax ({syntax_error_counter}/{max_syntax_errors}). Retrying...: {e.message}")
                 dialog_context["steps"].append({"agent": str(e)})
+                if syntax_error_counter >= max_syntax_errors:
+                    self.log_error("Too many ReAct syntax errors. Aborting task.")
+                    dialog_context["status"] = "failed"
+                    break
                 continue
 
             if not (agent_resp.content or agent_resp.reasoning_content or agent_resp.tool_calls):

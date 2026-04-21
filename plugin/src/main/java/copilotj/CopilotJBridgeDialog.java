@@ -40,6 +40,7 @@ public class CopilotJBridgeDialog implements Command, Connection.ConnectionState
   @Parameter
   private LogService logService;
 
+  private JButton connectButton;
   private JLabel statusLabel; // Make statusLabel accessible in the class
   private JLabel idLabel; // Label to display the connection ID
 
@@ -58,14 +59,25 @@ public class CopilotJBridgeDialog implements Command, Connection.ConnectionState
     frame.setLayout(new BorderLayout());
 
     final JTextField urlField = new JTextField(service.getServerUrl());
-    final JButton connectButton = new JButton("(Re)Connect");
+    final Connection existingConn = service.getConnection();
+    final boolean isActive = existingConn != null &&
+        existingConn.getState() != Connection.State.DISCONNECTED;
+    connectButton = new JButton(isActive ? "Disconnect" : "(Re)Connect");
     statusLabel = new JLabel("Initializing..."); // Initial status
     idLabel = new JLabel("ID: N/A"); // Initial ID status
 
     connectButton.addActionListener(e -> {
+      if ("Disconnect".equals(connectButton.getText())) {
+        final Connection conn = service.getConnection();
+        if (conn != null) conn.close();
+        connectButton.setText("(Re)Connect");
+        return;
+      }
+
       final String newUrl = urlField.getText();
       logService.info("Attempting to connect to: " + newUrl);
       service.start(newUrl); // This will create a new connection or restart the existing one
+      connectButton.setText("Disconnect");
 
       // Register listeners when new connection is created
       final Connection connection = service.getConnection();
@@ -114,6 +126,9 @@ public class CopilotJBridgeDialog implements Command, Connection.ConnectionState
         if (conn != null) {
           conn.removeStateListener(CopilotJBridgeDialog.this);
           logService.debug("Removed connection state listener from dialog.");
+          if ("Disconnect".equals(connectButton.getText())) {
+            conn.close();
+          }
         }
 
         final EventHandler handler = service.getEventHandler();

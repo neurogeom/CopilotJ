@@ -73,6 +73,7 @@ export type NewThread = {
 export interface ThreadConfigModel {
   name: string;
   api_key: string | null;
+  base_url: string | null;
 }
 
 export interface ThreadConfig {
