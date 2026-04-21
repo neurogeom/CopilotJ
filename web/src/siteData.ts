@@ -197,7 +197,7 @@ export const ORGS = [
     logo: "/imgs/logo_gdiist.png",
     link: "https://www.gdiist.cn/",
   },
-  { name: "The Hong Kong Polytechnic University", logo: "/imgs/logo_polyu_bme.png", link: "https://www.polyu.edu.hk/" },
+  { name: "The Hong Kong Polytechnic University", logo: "/imgs/logo_polyu.png", link: "https://www.polyu.edu.hk/" },
   { name: "Beijing Normal University", logo: "/imgs/logo_bnu.png", link: "https://www.bnu.edu.cn/" },
 ];
 
