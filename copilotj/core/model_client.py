@@ -262,10 +262,12 @@ class OpenAIChatCompletionClient(ModelClient):
         try:
             stream = await self._create(messages, stream=True, tools=tools, extra_args=extra_args)
             tool_calls: dict[int, openai.types.chat.chat_completion_chunk.ChoiceDeltaToolCall] = {}
+
+            stream_usage = None
             async for chunk in stream:
                 usage = getattr(chunk, "usage", None)
                 if usage is not None:
-                    _log_cache_usage(self._model, usage)
+                    stream_usage = usage
 
                 if chunk.choices is None or len(chunk.choices) == 0:
                     # skip this chunk. gemini sometime send a None when he does not want to say anything :)
@@ -310,6 +312,9 @@ class OpenAIChatCompletionClient(ModelClient):
                     reasoning_content=None,
                     finish_reason=_openai_parse_finish_reason(choice.finish_reason),
                 )
+
+            if stream_usage is not None:
+                _log_cache_usage(self._model, stream_usage)
 
         except openai.APIError as e:
             raise ModelProviderError(f"OpenAI API error: {e.message}", "openai") from e
