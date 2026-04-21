@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import json
 import logging
 import os
 from datetime import datetime
@@ -15,10 +16,13 @@ from typing import Any
 import aiohttp.web as web
 from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
+from fastmcp.tools.base import ToolResult
 from fastmcp.utilities.types import Image
+from mcp.types import TextContent
 
 from copilotj.plugin.api import BridgePluginAPI, ClientPluginAPI
 from copilotj.server.bridge import DEV_CLIENT_ID, Bridge
+from copilotj.util.base64 import extract_base64_image
 
 __all__ = ["mcp"]
 
@@ -209,7 +213,7 @@ async def capture_fiji_screen() -> Image:
 
 
 @mcp.tool
-async def capture_image(title: str | None = None) -> dict[str, Any]:
+async def capture_image(title: str | None = None) -> ToolResult:
     """Capture the current active Fiji image with metadata.
 
     Returns the image content along with metadata: dimensions, bit depth, histogram.
@@ -222,18 +226,27 @@ async def capture_image(title: str | None = None) -> dict[str, Any]:
     except Exception as e:
         raise ToolError(f"Failed to capture image: {e}")
 
-    result: dict[str, Any] = {}
+    content: list = []
 
+    # Metadata as text content
+    metadata: dict[str, Any] = {}
     if response.info:
-        result["info"] = response.info.model_dump(mode="json")
-
+        metadata["info"] = response.info.model_dump(mode="json")
     if response.histogram:
-        result["histogram"] = response.histogram.model_dump(mode="json")
+        metadata["histogram"] = response.histogram.model_dump(mode="json")
+    if metadata:
+        content.append(TextContent(type="text", text=json.dumps(metadata, indent=2)))
 
+    # Image as proper MCP image content block
     if response.image:
-        result["image"] = response.image
+        raw_b64 = extract_base64_image(response.image)
+        image_bytes = base64.b64decode(raw_b64)
+        content.append(Image(data=image_bytes, format="png"))
 
-    return result
+    if not content:
+        raise ToolError("No image data or metadata returned.")
+
+    return ToolResult(content=content)
 
 
 @mcp.tool
