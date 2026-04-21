@@ -335,11 +335,11 @@ async def folder_summary(folder_path: str) -> str:
     Returns up to 300 items with relative paths.
     """
     if folder_path.strip() == ".":
-        return "The current directory is not a valid folder path. Please provide a specific folder path."
+        raise ToolError("The current directory is not a valid folder path. Please provide a specific folder path.")
 
     folder = Path(folder_path)
     if not folder.exists() or not folder.is_dir():
-        return f"The path '{folder_path}' is not a valid directory."
+        raise ToolError(f"The path '{folder_path}' is not a valid directory.")
 
     items: list[str] = []
     max_files = 300
