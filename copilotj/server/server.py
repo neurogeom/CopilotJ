@@ -21,7 +21,7 @@ class Server:
     def __init__(self):
         super().__init__()
         self._bridge = Bridge()
-        self._threads = Threads()
+        self._threads = Threads(self._bridge)
         self._app = self._create_app()
 
     def add_background_task(self, task: asyncio.Task) -> None:
@@ -44,6 +44,7 @@ class Server:
 
         r = app.router
         r.add_get("/api/ping", _on_ping)
+        r.add_get("/api/clients", _on_list_clients)
         r.add_get("/api/plugins", self._bridge.on_plugin_connect)
         r.add_post("/api/plugins/events", self._bridge.on_forward_event)
         r.add_post("/api/threads", self._threads.new_thread)
@@ -72,8 +73,17 @@ class Server:
             await asyncio.gather(self._threads.close(), self._bridge.close())
 
         app.on_shutdown.append(on_shutdown)
+        app["server"] = self
         return app
 
 
 async def _on_ping(request: web.Request) -> web.Response:
     return web.Response(text="pong")
+
+
+async def _on_list_clients(request: web.Request) -> web.Response:
+    """List connected bridge clients."""
+    import json
+
+    clients = request.app["server"]._bridge.list_clients()
+    return web.Response(text=json.dumps(clients), content_type="application/json")

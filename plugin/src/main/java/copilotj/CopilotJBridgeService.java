@@ -14,7 +14,9 @@ public interface CopilotJBridgeService extends SciJavaService {
 
   public String getServerUrl();
 
+  public String getAccessToken();
+
   public Connection getConnection();
 
-  public void start(final String serverURL);
+  public void start(final String serverURL, final String accessToken);
 }

@@ -42,13 +42,15 @@ class Connection {
   private Timer timer;
 
   private final String server;
+  private final String accessToken;
 
   public Connection(final String serverURL, final EventHandler handler, final LogService log,
-      final int maxRetryWaitSecond) {
+      final int maxRetryWaitSecond, final String accessToken) {
     this.server = serverURL;
     this.handler = handler;
     this.log = log;
     this.maxRetryWaitSecond = maxRetryWaitSecond;
+    this.accessToken = accessToken;
     Connection.notifyStateChange(this, State.DISCONNECTED, "Initialized");
   }
 
@@ -109,9 +111,17 @@ class Connection {
           // send a ping to check if the connection is alive
           webSocketClient.sendPing();
 
-          // Notify the handler of the new connection
+          // Send ID negotiation first so the server can assign/display a client ID
           final String event = handler.newConnectedEvent();
           this.send(event);
+
+          // Then send auth event if access token is configured
+          if (accessToken != null && !accessToken.isEmpty()) {
+            final String authEvent = handler.newAuthEvent(accessToken);
+            if (authEvent != null) {
+              this.send(authEvent);
+            }
+          }
         }
 
         @Override

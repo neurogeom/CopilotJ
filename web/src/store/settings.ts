@@ -11,6 +11,8 @@ import type { ThreadConfigModel, ThreadConfigQuery } from "../apis";
 export const useSettings = defineStore("settings", () => {
   const expandSidebar = ref(false);
   const autoScroll = ref(true);
+  const accessToken = ref("");
+  const selectedClientId = ref("");
 
   const model = ref<ThreadConfigModel | null>(null);
   const value = computed<ThreadConfigQuery>(() => ({
@@ -29,12 +31,33 @@ export const useSettings = defineStore("settings", () => {
     model.value = newModel;
   }
 
+  function setAccessToken(token: string) {
+    accessToken.value = token;
+  }
+
+  function setSelectedClientId(id: string) {
+    selectedClientId.value = id;
+  }
+
   function reset() {
     expandSidebar.value = true;
     autoScroll.value = false;
   }
 
-  return { expandSidebar, autoScroll, value, model, toggleAutoScroll, toggleExpandSidebar, setModel, reset };
+  return {
+    expandSidebar,
+    autoScroll,
+    accessToken,
+    selectedClientId,
+    value,
+    model,
+    toggleAutoScroll,
+    toggleExpandSidebar,
+    setModel,
+    setAccessToken,
+    setSelectedClientId,
+    reset,
+  };
 });
 
 if (import.meta.hot) {

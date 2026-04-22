@@ -5,6 +5,7 @@
  */
 
 import { baseUrl } from "./base.ts";
+import { useSettings } from "../store";
 
 interface Payload<T extends string, K> {
   type: T;
@@ -93,11 +94,20 @@ export interface OptimizePromptResponse {
   optimized: string;
 }
 
+function authHeaders(): Record<string, string> {
+  const token = useSettings().accessToken;
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 export async function newThread(config: ThreadConfigQuery): Promise<NewThread> {
   const url = `${baseUrl}/threads`;
   const options = {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(),
     body: JSON.stringify({ config }),
   };
   const response = await fetch(url, options);
@@ -115,7 +125,7 @@ export async function* newThreadPost(
   const url = `${baseUrl}/threads/${threadId}/posts`;
   const options: RequestInit = {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(),
     body: JSON.stringify({ prompt }),
     signal,
   };
@@ -124,7 +134,7 @@ export async function* newThreadPost(
 
 export async function getThreadConfig(threadId: string): Promise<ThreadConfig> {
   const url = `${baseUrl}/threads/${threadId}/config`;
-  const options = { method: "GET", headers: { "Content-Type": "application/json" } };
+  const options = { method: "GET", headers: authHeaders() };
 
   const response = await fetch(url, options);
   if (!response.ok) {
@@ -137,7 +147,7 @@ export async function updateThreadConfig(threadId: string, config: ThreadConfigQ
   const url = `${baseUrl}/threads/${threadId}/config`;
   const options = {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(),
     body: JSON.stringify(config),
   };
 
@@ -150,7 +160,7 @@ export async function updateThreadConfig(threadId: string, config: ThreadConfigQ
 
 export async function deleteThread(threadId: string): Promise<void> {
   const url = `${baseUrl}/threads/${threadId}`;
-  const options = { method: "DELETE" };
+  const options = { method: "DELETE", headers: authHeaders() };
   const response = await fetch(url, options);
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}, message: ${await response.text()}`);
@@ -162,7 +172,7 @@ export async function optimizePrompt(threadId: string, prompt: string): Promise<
   const url = `${baseUrl}/threads/${threadId}/optimize-prompt`;
   const options = {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(),
     body: JSON.stringify({ prompt }),
   };
   const response = await fetch(url, options);
@@ -176,7 +186,7 @@ export async function optimizePromptBeforeThread(prompt: string): Promise<Optimi
   const url = `${baseUrl}/optimize-prompt`;
   const options = {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(),
     body: JSON.stringify({ prompt }),
   };
   const response = await fetch(url, options);

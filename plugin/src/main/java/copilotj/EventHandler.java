@@ -122,6 +122,18 @@ public class EventHandler {
     }
   }
 
+  public String newAuthEvent(final String accessToken) {
+    final ObjectNode data = objectMapper.createObjectNode();
+    data.put("access_token", accessToken);
+    final Payload payload = new Payload("auth", data);
+    try {
+      return objectMapper.writeValueAsString(payload);
+    } catch (final IOException e) {
+      log.error("Error serializing auth event: " + e.getMessage());
+      return null;
+    }
+  }
+
   public String newConnectedEvent() {
     final Payload payload = this.id != null && !this.id.isEmpty()
         ? new Payload("negotiate_id", objectMapper.valueToTree(new IdChanged(this.id)))
@@ -211,6 +223,11 @@ public class EventHandler {
 
         log.info("Connection ID received: " + newId);
         onIdChanged(newId); // Notify listeners about the new ID
+        return null;
+      }
+
+      case "auth_ok": {
+        log.info("Authentication successful");
         return null;
       }
 
