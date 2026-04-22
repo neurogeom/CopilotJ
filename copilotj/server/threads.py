@@ -8,7 +8,7 @@ import threading
 import uuid
 from asyncio import Future
 from contextlib import suppress
-from typing import AsyncGenerator, Literal, override
+from typing import TYPE_CHECKING, AsyncGenerator, Literal, override
 
 import aiohttp.web as web
 import langfuse
@@ -18,7 +18,10 @@ from copilotj.core import UI, UIEvent, UIEventPost, UIEventState
 from copilotj.core.config import get_llm_and_key
 from copilotj.core.ui import UIEventContentMarkdown
 from copilotj.multiagent.leader_multiagent import LeaderDriven
-from copilotj.plugin.api import HTTPPluginAPI, PluginAPI
+from copilotj.plugin.api import DEV_CLIENT_ID, HTTPPluginAPI, PluginAPI
+
+if TYPE_CHECKING:
+    from copilotj.server.bridge import Bridge
 
 __all__ = ["Threads"]
 
@@ -61,14 +64,22 @@ class _OptimizePrompt(pydantic.BaseModel):
 
 
 class _Thread(UI):
-    def __init__(self, thread_id: str, *, config: _ConfigQuery | None = None, trace_context: langfuse.Langfuse):
+    def __init__(
+        self,
+        thread_id: str,
+        *,
+        client_id: uuid.UUID | None = None,
+        config: _ConfigQuery | None = None,
+        trace_context: langfuse.Langfuse,
+    ):
         self.thread_id = thread_id
         self._trace_ctx = trace_context
 
         self._mailbox = asyncio.Queue[UIEvent | _Signal]()
 
         self._apis: PluginAPI = HTTPPluginAPI("http://127.0.0.1:8786")  # TODO: make configurable
-        client_apis = self._apis.attach_dev_client()  # TODO: should be removed
+        cid = client_id or DEV_CLIENT_ID
+        client_apis = self._apis.with_client(cid)
 
         config_model = config and config.model
         self._agent = LeaderDriven(
@@ -239,11 +250,21 @@ class _Thread(UI):
 
 
 class Threads:
-    def __init__(self):
+    def __init__(self, bridge: "Bridge"):
         super().__init__()
+        self._bridge = bridge
         self._threads: dict[str, tuple[_Thread, threading.Lock]] = {}
         self._threads_lock = threading.Lock()
         self._trace_ctx = langfuse.Langfuse()
+
+    def _resolve_client_id(self, request: web.Request) -> uuid.UUID | None:
+        """Extract access token from Authorization header and resolve to a client ID."""
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:].strip()
+            if token:
+                return self._bridge.get_client_id_by_token(token)
+        return None
 
     async def new_thread(self, request: web.Request) -> web.Response:
         try:
@@ -267,8 +288,9 @@ class Threads:
                     text="No model configured. Please click the Settings gear icon in the sidebar to set up a model and API key.",
                 )
 
+        client_id = self._resolve_client_id(request)
         thread_id = str(uuid.uuid4())
-        thread = _Thread(thread_id, config=config, trace_context=self._trace_ctx)
+        thread = _Thread(thread_id, client_id=client_id, config=config, trace_context=self._trace_ctx)
         thread_lock = threading.Lock()
         with self._threads_lock:
             self._threads[thread_id] = (thread, thread_lock)
@@ -428,7 +450,8 @@ class Threads:
             # Create a temporary agent instance for optimization
             # Use default model from settings
             apis = HTTPPluginAPI("http://127.0.0.1:8786")
-            client = apis.attach_dev_client()  # TODO: should be removed or made configurable
+            client_id = self._resolve_client_id(request)
+            client = apis.with_client(client_id or DEV_CLIENT_ID)
             temp_agent = LeaderDriven(apis=client)
             # Optimize the prompt (without chat history context)
             optimized = await temp_agent.optimize_prompt(prompt_data.prompt)

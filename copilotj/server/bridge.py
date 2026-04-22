@@ -182,6 +182,20 @@ class _Client:
 
     async def _on_event(self, response: _BridgeEvent) -> None:
         match response.event:
+            case "auth":
+                token = response.data
+                if isinstance(token, dict):
+                    token = token.get("access_token")
+                if token and isinstance(token, str):
+                    self._bridge._token_to_client[token] = self.id
+                    _log.info("Client %s authenticated with access token", self.id)
+                # Send auth acknowledgement
+                auth_payload = _BridgeEvent(
+                    id=uuid.uuid4(), event_id=response.event_id, event="auth_ok", data=None, err=None
+                )
+                await self._text_message_queue.put(auth_payload.model_dump_json())
+                return
+
             case "query_id":
                 data = _IdChangedEventData(id=self.id)
                 payload = _BridgeEvent(
@@ -216,6 +230,7 @@ class Bridge:
         self._clients = dict[uuid.UUID, _Client]()
         self._close_event: asyncio.Event | None = None  # TODO
         self._used_client_ids = dict[uuid.UUID, datetime]()
+        self._token_to_client = dict[str, uuid.UUID]()
 
     async def on_plugin_connect(self, request: web.Request) -> web.StreamResponse:
         client = _Client(self)
@@ -224,6 +239,12 @@ class Bridge:
         _log.info("Client WebSocket connection established: %s", client.id)
 
         ws = await client.run(request)
+
+        # Clean up token mappings for this client
+        tokens_to_remove = [t for t, cid in self._token_to_client.items() if cid == client.id]
+        for t in tokens_to_remove:
+            del self._token_to_client[t]
+
         self._clients.pop(client.id, None)
         return ws
 
@@ -262,6 +283,15 @@ class Bridge:
             await c.close()
 
         self._clients.clear()
+        self._token_to_client.clear()
+
+    def get_client_id_by_token(self, token: str) -> uuid.UUID | None:
+        """Resolve an access token to a client ID."""
+        return self._token_to_client.get(token)
+
+    def list_clients(self) -> list[dict[str, str]]:
+        """Return info about connected clients."""
+        return [{"id": str(cid)} for cid in self._clients]
 
     def _negotiate_id(self, client: _Client, new_id: uuid.UUID) -> str | None:
         if new_id == client.id:  # not changed

@@ -15,6 +15,7 @@ import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 
@@ -55,10 +56,14 @@ public class CopilotJBridgeDialog implements Command, Connection.ConnectionState
     final JFrame frame = new JFrame("CopilotJ Bridge Config");
     opened = frame;
 
-    frame.setSize(400, 200);
+    frame.setSize(400, 230);
     frame.setLayout(new BorderLayout());
 
     final JTextField urlField = new JTextField(service.getServerUrl());
+    final JPasswordField tokenField = new JPasswordField();
+    if (service.getAccessToken() != null) {
+      tokenField.setText(service.getAccessToken());
+    }
     final Connection existingConn = service.getConnection();
     final boolean isActive = existingConn != null &&
         existingConn.getState() != Connection.State.DISCONNECTED;
@@ -75,8 +80,9 @@ public class CopilotJBridgeDialog implements Command, Connection.ConnectionState
       }
 
       final String newUrl = urlField.getText();
+      final String token = new String(tokenField.getPassword());
       logService.info("Attempting to connect to: " + newUrl);
-      service.start(newUrl); // This will create a new connection or restart the existing one
+      service.start(newUrl, token.isEmpty() ? null : token); // This will create a new connection or restart the existing one
       connectButton.setText("Disconnect");
 
       // Register listeners when new connection is created
@@ -101,13 +107,21 @@ public class CopilotJBridgeDialog implements Command, Connection.ConnectionState
     inputPanel.add(urlField, BorderLayout.CENTER);
     inputPanel.add(connectButton, BorderLayout.EAST);
 
+    final JPanel tokenPanel = new JPanel(new BorderLayout(5, 5)); // Panel for access token
+    tokenPanel.add(new JLabel("Access Token:"), BorderLayout.WEST);
+    tokenPanel.add(tokenField, BorderLayout.CENTER);
+
+    final JPanel fieldsPanel = new JPanel(new BorderLayout(5, 5));
+    fieldsPanel.add(inputPanel, BorderLayout.NORTH);
+    fieldsPanel.add(tokenPanel, BorderLayout.CENTER);
+
     final JPanel statusPanel = new JPanel(new BorderLayout(5, 5)); // Panel for status and ID
     statusPanel.add(statusLabel, BorderLayout.NORTH);
     statusPanel.add(idLabel, BorderLayout.SOUTH);
 
     final JPanel mainPanel = new JPanel(new BorderLayout(10, 10)); // Main content panel
     mainPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10)); // Add padding
-    mainPanel.add(inputPanel, BorderLayout.NORTH);
+    mainPanel.add(fieldsPanel, BorderLayout.NORTH);
     mainPanel.add(statusPanel, BorderLayout.CENTER);
 
     // Register ID listener

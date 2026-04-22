@@ -57,6 +57,7 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
   private LogService log;
 
   private final String serverUrl = "http://127.0.0.1:8786";
+  private String accessToken = null;
   private EventHandler eventHandler;
   private Connection connection;
 
@@ -74,6 +75,11 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
   }
 
   @Override
+  public String getAccessToken() {
+    return accessToken;
+  }
+
+  @Override
   public Connection getConnection() {
     return connection;
   }
@@ -85,9 +91,14 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
     final boolean debug = Boolean.getBoolean("ij.debug");
     this.eventHandler = new EventHandler(context, log, debug);
 
+    final String token = System.getProperty("copilotj.accessToken");
+    if (token != null && !token.isEmpty()) {
+      this.accessToken = token;
+    }
+
     if (debug) {
       log.info("Automatically starting connection to " + serverUrl);
-      this.start(serverUrl);
+      this.start(serverUrl, accessToken);
     }
 
     if (ui.isVisible()) {
@@ -98,7 +109,7 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
   }
 
   @Override
-  public void start(final String serverURL) {
+  public void start(final String serverURL, final String accessToken) {
     if (this.connection != null) {
       this.connection.close();
       this.connection = null;
@@ -106,7 +117,8 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
 
     log.info("copilotj: Start connection " + serverURL);
     final int maxRetryWaitSecond = Integer.getInteger("copilotj.maxRetryWaitSecond", 64);
-    this.connection = new Connection(serverURL, eventHandler, log, maxRetryWaitSecond);
+    this.accessToken = accessToken;
+    this.connection = new Connection(serverURL, eventHandler, log, maxRetryWaitSecond, accessToken);
     this.connection.connect();
   }
 
