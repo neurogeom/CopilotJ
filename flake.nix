@@ -104,16 +104,20 @@
               ]
             );
 
-        packages = [
+        packages = with pkgs; [
           # python
-          pkgs.uv
+          uv
 
           # imagej
-          pkgs.jdk8
-          pkgs.maven
+          jdk8
+          maven
 
-          pkgs.nodejs
-          pkgs.pnpm
+          # web
+          nodejs
+          pnpm
+
+          # misc
+          jq
         ];
       in
       {

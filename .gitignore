@@ -25,6 +25,7 @@ pnpm-debug.log*
 *.log
 *.temp.*
 .DS_Store
+.worktrees/
 .direnv/
 .coverage*
 coverage*
