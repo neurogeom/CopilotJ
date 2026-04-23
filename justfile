@@ -43,3 +43,7 @@ test-cov:
       --doctest-modules --ignore=examples \
       --cov=copilotj --cov-report=xml --cov-report=html \
       --pyargs copilotj
+
+# Create a git worktree under .worktrees/<name> with a new branch
+add-worktree name:
+  scripts/add-worktree.sh {{name}}
