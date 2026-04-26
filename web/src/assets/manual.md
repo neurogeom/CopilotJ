@@ -28,7 +28,7 @@ Download the precompiled JAR files for the CopilotJ Bridge plugin:
 
 - [`CopilotJBridge-0.1.0-SNAPSHOT.jar`](https://copilotj.cvcd.xyz/software/precompiled_plugin/CopilotJBridge-0.1.0-SNAPSHOT.jar)
 - [`jackson-datatype-jsr310-2.16.1.jar`](https://repo1.maven.org/maven2/com/fasterxml/jackson/datatype/jackson-datatype-jsr310/2.16.1/jackson-datatype-jsr310-2.16.1.jar)
-- [`Java-WebSocket-1.5.2.jar`](https://repo1.maven.org/maven2/org/java-websocket/Java-WebSocket/1.5.2/Java-WebSocket-1.5.2-sources.jar.sha1)
+- [`Java-WebSocket-1.5.2.jar`](https://repo1.maven.org/maven2/org/java-websocket/Java-WebSocket/1.5.2/Java-WebSocket-1.5.2-sources.jar)
 
 **Install into Fiji:**
 
