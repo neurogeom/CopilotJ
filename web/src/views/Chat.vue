@@ -6,33 +6,21 @@ SPDX-License-Identifier: Apache-2.0
 
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
-import Chatbox from "../components/Chatbox.vue";
-import Settings from "../components/Settings.vue";
-import Sidebar from "../components/Sidebar.vue";
-import { getServerConfig } from "../apis";
 import { useSettings, useSystemState } from "../store";
+
+type ChatboxExpose = {
+  reset(): void;
+  scrollToPost(postId: string): void;
+};
 
 const settings = useSettings();
 const state = useSystemState();
 
-onMounted(async () => {
-  // Pre-populate the model from the server's env config so the "no model
-  // configured" warning is suppressed when a model is already set server-side.
-  if (settings.model === null) {
-    try {
-      const serverConfig = await getServerConfig();
-      if (serverConfig.model !== null) {
-        settings.setModel(serverConfig.model);
-      }
-    } catch {
-      // Server may not be reachable yet; warning will show and resolve on retry.
-    }
-  }
+const chatbox = ref<ChatboxExpose | null>(null);
+
+onMounted(() => {
+  void settings.loadServerModel();
 });
-
-const chatbox = ref<InstanceType<typeof Chatbox> | null>(null);
-
-const settingsRef = ref<InstanceType<typeof Settings> | null>(null);
 
 function startNewThread() {
   chatbox.value?.reset();
@@ -52,8 +40,8 @@ function clickPost(postId: string) {
     <Chatbox ref="chatbox" :expandSidebar="settings.expandSidebar" @toggleSidebar="settings.toggleAutoScroll" />
 
     <!-- Settings Modal -->
-    <Dialog v-model:visible="state.showSettings" modal header="Settings" class="min-h-1/2">
-      <Settings ref="settingsRef" @submit="state.showSettings = false" />
+    <Dialog :visible="state.showSettings" @update:visible="(value) => (state.showSettings = value)" modal header="Settings" class="min-h-1/2">
+      <Settings @submit="state.showSettings = false" />
     </Dialog>
 
     <ConfirmPopup />

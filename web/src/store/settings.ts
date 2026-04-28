@@ -6,13 +6,15 @@
 
 import { acceptHMRUpdate, defineStore } from "pinia";
 import { computed, ref } from "vue";
-import type { ThreadConfigModel, ThreadConfigQuery } from "../apis";
+import { getServerConfig, type ServerConfigModel, type ThreadConfigModel, type ThreadConfigQuery } from "../apis";
 
 export const useSettings = defineStore("settings", () => {
   const expandSidebar = ref(false);
   const autoScroll = ref(true);
 
   const model = ref<ThreadConfigModel | null>(null);
+  const serverModel = ref<ServerConfigModel | null>(null);
+  const serverModelLoaded = ref(false);
   const value = computed<ThreadConfigQuery>(() => ({
     model: model.value,
   }));
@@ -29,12 +31,36 @@ export const useSettings = defineStore("settings", () => {
     model.value = newModel;
   }
 
+  async function loadServerModel() {
+    try {
+      const config = await getServerConfig();
+      serverModel.value = config.model;
+    } catch (error) {
+      console.error("Failed to load server config:", error);
+      serverModel.value = null;
+    } finally {
+      serverModelLoaded.value = true;
+    }
+  }
+
   function reset() {
     expandSidebar.value = true;
     autoScroll.value = false;
   }
 
-  return { expandSidebar, autoScroll, value, model, toggleAutoScroll, toggleExpandSidebar, setModel, reset };
+  return {
+    expandSidebar,
+    autoScroll,
+    value,
+    model,
+    serverModel,
+    serverModelLoaded,
+    loadServerModel,
+    toggleAutoScroll,
+    toggleExpandSidebar,
+    setModel,
+    reset,
+  };
 });
 
 if (import.meta.hot) {
