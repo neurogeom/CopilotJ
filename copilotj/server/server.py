@@ -9,6 +9,7 @@ import logging
 import aiohttp.web as web
 import aiohttp_cors
 
+from copilotj.core import get_llm_and_key, get_llm_base_url
 from copilotj.server.bridge import Bridge
 from copilotj.server.threads import Threads
 
@@ -81,12 +82,6 @@ async def _on_ping(request: web.Request) -> web.Response:
 
 
 async def _on_config(request: web.Request) -> web.Response:
-    """Return the server's default configuration so the frontend can show the
-    correct initial state (e.g. suppress the 'no model configured' warning when
-    a model is already set via environment variables / .env.local)."""
-    from copilotj.core.config import get_llm_and_key
-
     model_name, _ = get_llm_and_key()
-    if model_name:
-        return web.json_response({"model": {"name": model_name, "api_key": None, "base_url": None}})
-    return web.json_response({"model": None})
+    base_url = get_llm_base_url()
+    return web.json_response({"model": {"name": model_name, "base_url": base_url} if model_name else None})
