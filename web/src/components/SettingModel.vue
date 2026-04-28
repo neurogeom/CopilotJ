@@ -6,10 +6,11 @@ SPDX-License-Identifier: Apache-2.0
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
-import type { ThreadConfigModel } from "../apis";
+import type { ServerConfigModel, ThreadConfigModel } from "../apis/threads";
 
 const props = defineProps<{
   model: ThreadConfigModel | null;
+  serverModel: ServerConfigModel | null;
 }>();
 
 const emit = defineEmits<{
@@ -78,6 +79,12 @@ const staticGroups = [
 
 const modelGroups = computed(() => {
   const groups = [...staticGroups];
+  if (props.serverModel && !groups.some((group) => group.items.some((item) => item.value === props.serverModel?.name))) {
+    groups.unshift({
+      label: "Configured",
+      items: [{ label: props.serverModel.name, value: props.serverModel.name }],
+    });
+  }
   if (ollamaModels.value.length > 0) {
     groups.push({
       label: "Ollama (local)",

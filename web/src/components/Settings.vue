@@ -7,9 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 <script setup lang="ts">
 import { IconRefresh, IconUpload } from "@tabler/icons-vue";
 import { ref } from "vue";
-import type { ThreadConfigModel, ThreadConfigQuery } from "../apis";
+import type { ThreadConfigModel, ThreadConfigQuery } from "../apis/threads";
 import { useSettings } from "../store";
-import SettingModel from "./SettingModel.vue";
 
 const emit = defineEmits<{
   (e: "submit", model: ThreadConfigQuery | null): void;
@@ -43,7 +42,7 @@ function sumbmitModel(model: ThreadConfigModel | null) {
     <TabPanels>
       <!-- Model Tab -->
       <TabPanel value="model">
-        <SettingModel :model="settings.model" @update:model="sumbmitModel" />
+        <SettingModel :model="settings.model" :server-model="settings.serverModel" @update:model="sumbmitModel" />
       </TabPanel>
 
       <!-- Knowledge Base Tab -->

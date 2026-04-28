@@ -70,6 +70,15 @@ export type NewThread = {
   config: ThreadConfig;
 };
 
+export interface ServerConfigModel {
+  name: string;
+  base_url: string | null;
+}
+
+export interface ServerConfig {
+  model: ServerConfigModel | null;
+}
+
 export interface ThreadConfigModel {
   name: string;
   api_key: string | null;
@@ -93,15 +102,6 @@ export interface OptimizePromptResponse {
   optimized: string;
 }
 
-export async function getServerConfig(): Promise<{ model: ThreadConfigModel | null }> {
-  const url = `${baseUrl}/config`;
-  const response = await fetch(url, { method: "GET" });
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}, message: ${await response.text()}`);
-  }
-  return response.json();
-}
-
 export async function newThread(config: ThreadConfigQuery): Promise<NewThread> {
   const url = `${baseUrl}/threads`;
   const options = {
@@ -109,6 +109,17 @@ export async function newThread(config: ThreadConfigQuery): Promise<NewThread> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ config }),
   };
+  const response = await fetch(url, options);
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}, message: ${await response.text()}`);
+  }
+  return response.json();
+}
+
+export async function getServerConfig(): Promise<ServerConfig> {
+  const url = `${baseUrl}/config`;
+  const options = { method: "GET", headers: { "Content-Type": "application/json" } };
+
   const response = await fetch(url, options);
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}, message: ${await response.text()}`);
