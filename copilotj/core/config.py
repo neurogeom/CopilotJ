@@ -35,7 +35,7 @@ def get_vlm_and_key(model: str | None = None, api_key: str | None = None) -> tup
 
 
 def get_vlm_base_url() -> str | None:
-    return os.getenv("COPILOTJ_VLM_BASE_URL", None)
+    return os.getenv("COPILOTJ_VLM_BASE_URL", None) or os.getenv("COPILOTJ_BASE_URL", None)
 
 
 def get_proxy(default_value: str | None = None) -> str | None:
