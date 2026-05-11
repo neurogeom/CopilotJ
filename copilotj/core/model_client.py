@@ -149,7 +149,7 @@ def _new_model_client(model: str, api_key: str, *, proxy: str | None, base_url: 
 
     elif model.startswith("deepseek/"):
         model_name = model.split("/", 1)[1]
-        url = effective_base_url or "https://api.deepseek.com/v1"
+        url = effective_base_url or "https://api.deepseek.com"
         return OpenAIChatCompletionClient(model=model_name, api_key=api_key, base_url=url, proxy=proxy)
 
     elif model.startswith("gemini-"):
