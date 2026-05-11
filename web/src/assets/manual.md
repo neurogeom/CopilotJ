@@ -272,6 +272,10 @@ The following variables are optional and relate to specific CopilotJ features.
 
 Overrides the default API endpoint for the main model. Use this when connecting to a non-default server, such as a local Ollama instance (`http://localhost:11434`) or a custom inference server. When not set, each provider uses its standard public endpoint. See the provider-specific sections above for when this is needed.
 
+**`COPILOTJ_VLM_BASE_URL`**
+
+Overrides the API endpoint for the VLM only. Some LLMs, especially local or smaller models, do not support image input. If you need vision features, configure `COPILOTJ_VLM_MODEL` and `COPILOTJ_VLM_API_KEY` with a model that supports image input, and set `COPILOTJ_VLM_BASE_URL` when that VLM is served by a different provider or endpoint from the main LLM. If omitted and no VLM-specific model/key is configured, CopilotJ reuses `COPILOTJ_BASE_URL` for vision tasks.
+
 **`COPILOTJ_PROXY`**
 
 Routes all outbound model API requests through an HTTP/HTTPS [proxy server](https://en.wikipedia.org/wiki/Proxy_server) — an intermediary between your machine and the internet. Commonly required in institutional or corporate networks where all traffic must pass through a central gateway. If you are connecting directly to the internet, you do not need this. Example value: `http://proxy.example.com:8080`.
