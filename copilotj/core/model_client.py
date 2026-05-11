@@ -13,7 +13,7 @@ import openai.types.responses
 import pydantic
 from langchain_openai import OpenAIEmbeddings
 
-from copilotj.core.config import get_llm_and_key, get_llm_base_url, get_proxy, get_vlm_and_key
+from copilotj.core.config import get_llm_and_key, get_llm_base_url, get_proxy, get_vlm_and_key, get_vlm_base_url
 from copilotj.core.message import ImageMessage, TextMessage
 from copilotj.core.tool import Tool
 
@@ -131,20 +131,17 @@ class ModelClient(abc.ABC):
 
 def new_model_client(model: str | None = None, api_key: str | None = None, *, proxy: str | None = None, base_url: str | None = None) -> ModelClient:
     model, api_key = get_llm_and_key(model, api_key)
-    return _new_model_client(model, api_key, proxy=proxy, base_url=base_url)
+    return _new_model_client(model, api_key, proxy=proxy, base_url=base_url or get_llm_base_url())
 
 
-def new_vlm_model_client(
-    model: str | None = None, api_key: str | None = None, *, proxy: str | None = None
-) -> ModelClient:
+def new_vlm_model_client(model: str | None = None, api_key: str | None = None, *, proxy: str | None = None) -> ModelClient:
     model, api_key = get_vlm_and_key(model, api_key)
-    return _new_model_client(model, api_key, proxy=proxy)
+    return _new_model_client(model, api_key, proxy=proxy, base_url=get_vlm_base_url())
 
 
 def _new_model_client(model: str, api_key: str, *, proxy: str | None, base_url: str | None = None) -> ModelClient:
     proxy = get_proxy(proxy)
-    # base_url arg (from per-thread settings) takes precedence over the env var
-    effective_base_url = base_url or get_llm_base_url()
+    effective_base_url = base_url
 
     if model.startswith("ollama/"):
         model_name = model.split("/", 1)[1]
@@ -171,9 +168,6 @@ def _new_model_client(model: str, api_key: str, *, proxy: str | None, base_url: 
     elif (
         model.startswith("zai-org/")
         or model.startswith("Pro/")
-        or model.startswith("deepseek")
-        or model.startswith("moonshotai/")
-        or model.startswith("Qwen/")
     ):
         url = effective_base_url or "https://api.siliconflow.cn/v1"
         return OpenAIChatCompletionClient(model, api_key, base_url=url, proxy=proxy)
