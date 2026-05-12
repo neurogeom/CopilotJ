@@ -141,7 +141,6 @@ def new_vlm_model_client(model: str | None = None, api_key: str | None = None, *
 
 def _new_model_client(model: str, api_key: str, *, proxy: str | None, base_url: str | None = None) -> ModelClient:
     proxy = get_proxy(proxy)
-    effective_base_url = base_url
 
     if model.startswith("ollama/"):
         model_name = model.split("/", 1)[1]
@@ -149,19 +148,19 @@ def _new_model_client(model: str, api_key: str, *, proxy: str | None, base_url: 
 
     elif model.startswith("deepseek/"):
         model_name = model.split("/", 1)[1]
-        url = effective_base_url or "https://api.deepseek.com"
+        url = base_url or "https://api.deepseek.com"
         return OpenAIChatCompletionClient(model=model_name, api_key=api_key, base_url=url, proxy=proxy)
 
     elif model.startswith("gemini-"):
         return GeminiChatCompletionClient(model, api_key, proxy=proxy)
 
     elif model.startswith("claude-"):
-        url = effective_base_url or "https://api.anthropic.com/v1"
+        url = base_url or "https://api.anthropic.com/v1"
         return OpenAIChatCompletionClient(model, api_key, base_url=url, proxy=proxy)
 
     elif model.startswith("gpt-"):
-        if effective_base_url:
-            return OpenAIChatCompletionClient(model, api_key, base_url=effective_base_url, proxy=proxy)
+        if base_url:
+            return OpenAIChatCompletionClient(model, api_key, base_url=base_url, proxy=proxy)
         else:
             return OpenAIResponseClient(model, api_key, proxy=proxy)
 
@@ -169,10 +168,10 @@ def _new_model_client(model: str, api_key: str, *, proxy: str | None, base_url: 
         model.startswith("zai-org/")
         or model.startswith("Pro/")
     ):
-        url = effective_base_url or "https://api.siliconflow.cn/v1"
+        url = base_url or "https://api.siliconflow.cn/v1"
         return OpenAIChatCompletionClient(model, api_key, base_url=url, proxy=proxy)
 
-    return OpenAIChatCompletionClient(model, api_key, base_url=effective_base_url, proxy=proxy)
+    return OpenAIChatCompletionClient(model, api_key, base_url=base_url, proxy=proxy)
 
 
 # TODO: this is tricky
