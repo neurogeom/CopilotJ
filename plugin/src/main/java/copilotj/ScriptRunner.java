@@ -55,6 +55,7 @@ class ScriptRunner {
   public static class ScriptRequest {
     public String language;
     public String script;
+    public int timeout;
   }
 
   // Callback interface for async execution
@@ -153,9 +154,15 @@ class ScriptRunner {
         scriptThread.setDaemon(true);
         scriptThread.start();
 
-        // Wait for completion
+        // Wait for completion with timeout
+        final int timeoutSec = request.timeout > 0 ? request.timeout : 300;
+        final long deadline = System.currentTimeMillis() + (long) timeoutSec * 1000;
         while (!completed[0]) {
-          completed.wait(); // Wait until notified
+          final long remaining = deadline - System.currentTimeMillis();
+          if (remaining <= 0) {
+            return new Result("Script execution timed out after " + timeoutSec + " seconds");
+          }
+          completed.wait(remaining);
         }
 
       } catch (InterruptedException e) {
@@ -163,7 +170,12 @@ class ScriptRunner {
         return new Result("Script execution interrupted");
 
       } finally {
-        // Stop the all threads
+        // Stop all threads.
+        // NOTE: interrupt() only sets the interrupt flag; it does not forcibly stop
+        // the thread. ImageJ macro interpreter and SciJava script engine typically do
+        // not check the interrupt status, so long-running scripts may continue
+        // executing after the timeout is reported to the caller. A more robust
+        // solution would require running scripts in a separate process.
         modalMonitor.interrupt();
         scriptThread.interrupt();
 

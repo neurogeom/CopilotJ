@@ -57,3 +57,4 @@ class ScriptResult(Response):
 class ScriptRequest(Request[ScriptResult], event="run_script", response_type=ScriptResult, timeout=16):
     language: str
     script: str
+    timeout: int
