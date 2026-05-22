@@ -1,21 +1,35 @@
 # just is a command runner, Justfile is very similar to Makefile, but simpler.
+#
+# JDK configuration (set via flake.nix env vars):
+#   JAVA_HOME   -> JDK 21 (default, used by dev-plugin / build-plugin)
+#   JAVA8_HOME  -> JDK 8  (fallback, used by dev-plugin-stable / build-plugin-stable)
 
 default:
   @just --list
 
-dev-server:
-  python -m copilotj.server
-
+# Dev: MCP plugin (Java 21)
 dev-plugin:
+  @just build-plugin
   cd plugin && \
+    mvn exec:exec -P mcp
+
+# Dev: core ImageJ plugin (Java 8)
+dev-plugin-stable:
+  cd plugin && \
+    JAVA_HOME="$JAVA8_HOME" \
     mvn compile exec:java -D"exec.mainClass=copilotj.DefaultCopilotJBridgeService" \
       -D"ij.debug=true" -D"scijava.log.level=debug" -D"copilotj.maxRetryWaitSecond=1" \
       -D"copilotj.sourcePath={{justfile_directory()}}"
 
-dev-plugin-full: clean-plugin dev-plugin
+dev-plugin-full-stable: clean-plugin dev-plugin-stable
 
-build-plugin: clean-plugin
-  cd plugin && mvn package
+# Build: MCP fat JAR (Java 21)
+build-plugin:
+  cd plugin && mvn package -P mcp -DskipTests
+
+# Build: core ImageJ plugin JAR (Java 8)
+build-plugin-stable: clean-plugin
+  cd plugin && JAVA_HOME="$JAVA8_HOME" mvn package
 
 clean-plugin:
   cd plugin && mvn clean

@@ -196,4 +196,173 @@
       </resource>
     </resources>
   </build>
+
+  <profiles>
+    <!-- Default profile: exclude MCP sources (Java 8 build) -->
+    <!-- Deactivated automatically when -P mcp is used -->
+    <profile>
+      <id>core</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <excludes>
+                <exclude>copilotj/mcp/**/*.java</exclude>
+              </excludes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <!-- MCP profile: compile everything with Java 21, produce fat JAR -->
+    <profile>
+      <id>mcp</id>
+      <properties>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.release>21</maven.compiler.release>
+        <enforcer.skip>true</enforcer.skip>
+      </properties>
+      <build>
+        <finalName>CopilotJMcp-${project.version}</finalName>
+        <plugins>
+          <!-- Exec plugin: fork a new JVM with ij1-patcher javaagent -->
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>3.2.0</version>
+            <configuration>
+              <executable>${java.home}/bin/java</executable>
+              <arguments>
+                <argument>-javaagent:${settings.localRepository}/net/imagej/ij1-patcher/2.0.0/ij1-patcher-2.0.0.jar=init</argument>
+                <argument>--add-opens=java.base/java.lang=ALL-UNNAMED</argument>
+                <argument>-Dij.debug=true</argument>
+                <argument>-Dscijava.log.level=debug</argument>
+                <argument>-Dcopilotj.maxRetryWaitSecond=1</argument>
+                <argument>-classpath</argument>
+                <classpath/>
+                <argument>copilotj.DefaultCopilotJBridgeService</argument>
+              </arguments>
+            </configuration>
+          </plugin>
+          <!-- Shade plugin: create fat JAR with MCP dependencies only -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-shade-plugin</artifactId>
+            <version>3.6.0</version>
+            <executions>
+              <execution>
+                <phase>package</phase>
+                <goals><goal>shade</goal></goals>
+                <configuration>
+                  <createDependencyReducedPom>false</createDependencyReducedPom>
+                  <artifactSet>
+                    <includes>
+                      <include>io.modelcontextprotocol.sdk:*</include>
+                      <include>org.eclipse.jetty:*</include>
+                      <include>org.eclipse.jetty.ee10:*</include>
+                      <include>com.fasterxml.jackson.core:*</include>
+                      <include>com.fasterxml.jackson.datatype:*</include>
+                      <include>org.slf4j:*</include>
+                    </includes>
+                  </artifactSet>
+                  <transformers>
+                    <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
+                  </transformers>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+      <dependencies>
+        <!-- Override legacy layer for Java 21 compatibility -->
+        <dependency>
+          <groupId>net.imagej</groupId>
+          <artifactId>ij1-patcher</artifactId>
+          <version>2.0.0</version>
+        </dependency>
+        <dependency>
+          <groupId>net.imagej</groupId>
+          <artifactId>imagej-legacy</artifactId>
+          <version>2.0.2</version>
+        </dependency>
+        <!-- MCP SDK -->
+        <dependency>
+          <groupId>io.modelcontextprotocol.sdk</groupId>
+          <artifactId>mcp-core</artifactId>
+          <version>1.1.2</version>
+        </dependency>
+        <dependency>
+          <groupId>io.modelcontextprotocol.sdk</groupId>
+          <artifactId>mcp-json-jackson2</artifactId>
+          <version>1.1.2</version>
+        </dependency>
+        <!-- Jetty 12 (SSE transport; override pom-scijava's Jetty 9) -->
+        <dependency>
+          <groupId>org.eclipse.jetty</groupId>
+          <artifactId>jetty-server</artifactId>
+          <version>12.0.16</version>
+        </dependency>
+        <dependency>
+          <groupId>org.eclipse.jetty</groupId>
+          <artifactId>jetty-util</artifactId>
+          <version>12.0.16</version>
+        </dependency>
+        <dependency>
+          <groupId>org.eclipse.jetty</groupId>
+          <artifactId>jetty-http</artifactId>
+          <version>12.0.16</version>
+        </dependency>
+        <dependency>
+          <groupId>org.eclipse.jetty</groupId>
+          <artifactId>jetty-io</artifactId>
+          <version>12.0.16</version>
+        </dependency>
+        <dependency>
+          <groupId>org.eclipse.jetty</groupId>
+          <artifactId>jetty-security</artifactId>
+          <version>12.0.16</version>
+        </dependency>
+        <dependency>
+          <groupId>org.eclipse.jetty.ee10</groupId>
+          <artifactId>jetty-ee10-servlet</artifactId>
+          <version>12.0.16</version>
+        </dependency>
+        <!-- Jackson (override pom-scijava managed version for MCP compatibility) -->
+        <dependency>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-core</artifactId>
+          <version>2.18.0</version>
+        </dependency>
+        <dependency>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-annotations</artifactId>
+          <version>2.18.0</version>
+        </dependency>
+        <dependency>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-databind</artifactId>
+          <version>2.18.0</version>
+        </dependency>
+        <dependency>
+          <groupId>com.fasterxml.jackson.datatype</groupId>
+          <artifactId>jackson-datatype-jsr310</artifactId>
+          <version>2.18.0</version>
+        </dependency>
+        <!-- Logging -->
+        <dependency>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-api</artifactId>
+          <version>2.0.9</version>
+        </dependency>
+      </dependencies>
+    </profile>
+  </profiles>
 </project>

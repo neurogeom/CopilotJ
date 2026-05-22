@@ -66,4 +66,18 @@ public class IjImageHelper {
       return null;
     }
   }
+
+  /**
+   * Returns the raw base64 payload of a data-URI produced by
+   * {@link #encodeImageToBase64(BufferedImage, String)} (i.e. drops the
+   * leading {@code data:<mime>;base64,}). Values that are already bare base64
+   * are returned unchanged, so this is safe to call on either form.
+   */
+  public static String extractBase64(final String dataUri) {
+    if (dataUri == null) {
+      return null;
+    }
+    final int comma = dataUri.indexOf(',');
+    return comma < 0 ? dataUri : dataUri.substring(comma + 1);
+  }
 }

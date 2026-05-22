@@ -73,6 +73,9 @@ public class CopilotJBridgeDialog
   private JLabel managedStatusLabel;
   private JTextArea progressArea;
 
+  // -- MCP panel --
+  private JPanel mcpPanel;
+
   /**
    * True while the managed server is being started — keeps buttons disabled
    * against async syncUIState overwrites.
@@ -109,6 +112,10 @@ public class CopilotJBridgeDialog
     tabbedPane.addTab("Managed Server", buildManagedTab());
     tabbedPane.addTab("External Server", buildExternalTab());
 
+    // MCP panel tab (loaded dynamically)
+    mcpPanel = createMcpPanel();
+    tabbedPane.addTab("MCP Server", mcpPanel);
+
     // Select External tab if currently connected externally.
     if (!service.isManaged()) {
       tabbedPane.setSelectedIndex(1);
@@ -117,6 +124,7 @@ public class CopilotJBridgeDialog
     // -- Shared status panel (below tabs) --
     statusLabel = new JLabel("Status: disconnected");
     idLabel = new JLabel("ID: N/A");
+
     final JPanel statusPanel = new JPanel(new BorderLayout(5, 5));
     statusPanel.add(statusLabel, BorderLayout.NORTH);
     statusPanel.add(idLabel, BorderLayout.SOUTH);
@@ -153,6 +161,14 @@ public class CopilotJBridgeDialog
         if (h != null) {
           h.removeListener(CopilotJBridgeDialog.this);
         }
+
+        // Stop MCP server if running
+        if (mcpPanel != null) {
+          try {
+            mcpPanel.getClass().getMethod("dispose").invoke(mcpPanel);
+          } catch (Exception ignored) {}
+        }
+
         frame.dispose();
         opened = null;
       }
@@ -604,6 +620,26 @@ public class CopilotJBridgeDialog
     listenedConnection = conn;
     if (conn != null) {
       conn.registerStateListener(this);
+    }
+  }
+
+  // -- MCP panel --
+
+  private JPanel createMcpPanel() {
+    try {
+      Class<?> cls = Class.forName("copilotj.mcp.McpPanel");
+      java.lang.reflect.Constructor<?> ctor = cls.getConstructor(EventHandler.class, LogService.class);
+      return (JPanel) ctor.newInstance(service.getEventHandler(), logService);
+    } catch (ClassNotFoundException e) {
+      JLabel label = new JLabel("MCP not available");
+      label.setForeground(Color.GRAY);
+      JPanel p = new JPanel();
+      p.setBorder(BorderFactory.createTitledBorder("MCP Server"));
+      p.add(label);
+      return p;
+    } catch (Exception e) {
+      logService.warn("Failed to load MCP: " + e.getMessage());
+      return new JPanel();
     }
   }
 
