@@ -116,7 +116,10 @@ class ClientPluginAPI:
             warnings.warn("The automatic snapshot parameter is deprecated", DeprecationWarning)
             snapshot1 = await self.take_snapshot()
 
-        result = await self._request(ScriptRequest(language=language, script=script), timeout=timeout)
+        timeout = timeout or 600
+        result = await self._request(
+            ScriptRequest(language=language, script=script, timeout=max(timeout - 3, 3)), timeout=timeout
+        )
         if snapshot1 is not None:
             result.snapshot = await self.compare_snapshots(snapshot1.id)
 
