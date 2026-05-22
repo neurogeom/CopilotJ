@@ -110,7 +110,7 @@
           ruff
 
           # imagej
-          jdk8
+          jdk21
           maven
 
           # web
@@ -151,6 +151,9 @@
               UV_PYTHON_DOWNLOADS = "never";
               # Force uv to use nixpkgs Python interpreter
               UV_PYTHON = python.interpreter;
+              # JDK configuration
+              JAVA_HOME = pkgs.jdk21.home;
+              JAVA8_HOME = pkgs.jdk8.home;
             }
             // lib.optionalAttrs pkgs.stdenv.isLinux {
               # Python libraries often load native shared objects using dlopen(3).
@@ -200,6 +203,10 @@
 
                 # Prevent uv from downloading managed Python's
                 UV_PYTHON_DOWNLOADS = "never";
+
+                # JDK configuration
+                JAVA_HOME = pkgs.jdk21.home;
+                JAVA8_HOME = pkgs.jdk8.home;
               };
 
               shellHook = ''

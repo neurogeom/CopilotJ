@@ -27,6 +27,10 @@ import ij.gui.RoiListener;
 import ij.gui.Toolbar;
 import ij.plugin.PlugIn;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+
+import copilotj.util.FlexibleLocalDateTimeDeserializer;
+
 /**
  * This plugin implements the Plugins/Utilities/Monitor Events command.
  * By implementing the IJEventListener, CommandListener, ImageListener
@@ -117,6 +121,7 @@ public class ImagejListener implements PlugIn, IJEventListener, ImageListener, R
   }
 
   public static class HistoryRequest {
+    @JsonDeserialize(using = FlexibleLocalDateTimeDeserializer.class)
     public LocalDateTime since;
   }
 
