@@ -17,6 +17,8 @@ CopilotJ comprises three major components:
 - **Multi-agent Backend** — Orchestrates agents and tools, integrates Python and deep-learning environments with a local database, connects to multiple LLM providers, and retrieves community knowledge sources.
 - **CopilotJ Bridge** — A Fiji plugin that communicates with the backend via a bidirectional WebSocket API, enabling real-time exchange of system status and commands.
 
+**DISCLAIMER:** CopilotJ is an independent open-source research project and is not affiliated with GitHub Copilot, Microsoft Copilot, or Microsoft. A GitHub Copilot subscription is not required and cannot be used as an authentication method for CopilotJ.
+
 **Visit [copilotj.chat](https://copilotj.chat/#/) for more information and demos.**
 
 ## Installation & Configuration
