@@ -14,7 +14,7 @@ fi
 name="$1"
 path="${name//\//__}"
 root="$(dirname "$(git rev-parse --git-common-dir)")"
-worktree="$root/.worktree/$path"
+worktree="$root/.worktrees/$path"
 
 mkdir -p "$(dirname "$worktree")"
 git worktree add -b "$name" "$worktree"
@@ -32,9 +32,10 @@ if command -v direnv >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
 fi
 
 # Install all dependencies for a fresh worktree, fail quietly
-cd "$worktree" && uv sync >/dev/null 2>&1 || true
-cd "$worktree/plugin" && mvn dependency:resolve >/dev/null 2>&1 || true
-cd "$worktree/web" && pnpm install >/dev/null 2>&1 || true
+(cd "$worktree" && uv sync >/dev/null 2>&1 || true) &
+(cd "$worktree/plugin" && mvn dependency:resolve >/dev/null 2>&1 || true) &
+(cd "$worktree/web" && pnpm install >/dev/null 2>&1 || true) &
+wait
 
 echo "Worktree '$name' created at '$worktree', you can start working on it:"
 echo "  cd $worktree"
