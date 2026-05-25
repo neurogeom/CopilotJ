@@ -10,6 +10,8 @@ import { computed } from "vue";
 import Navbar from "./components/Navbar.vue";
 import HeroPattern from "./components/HeroPattern.vue";
 
+const isRoot = computed(() => currentRoute.value === "/");
+
 const router = useRouter();
 const currentRoute = computed(() => router.currentRoute.value.path);
 </script>
@@ -17,7 +19,7 @@ const currentRoute = computed(() => router.currentRoute.value.path);
 <template>
   <div class="relative min-h-screen flex flex-col">
     <!-- Navigation -->
-    <nav v-if="currentRoute != '/chat'" class="w-full sticky top-0 border-b border-gray-200 z-50">
+    <nav v-if="!isRoot && currentRoute !== '/chat'" class="w-full sticky top-0 border-b border-gray-200 z-50">
       <Navbar />
     </nav>
 
@@ -26,7 +28,7 @@ const currentRoute = computed(() => router.currentRoute.value.path);
       <RouterView />
     </main>
 
-    <HeroPattern class="absolute top-0 w-full h-full -z-10 opacity-20" />
+    <HeroPattern v-if="!isRoot" class="absolute top-0 w-full h-full -z-10 opacity-20" />
   </div>
 </template>
 
