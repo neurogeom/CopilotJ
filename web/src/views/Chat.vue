@@ -52,7 +52,7 @@ function clickPost(postId: string) {
     <Chatbox ref="chatbox" :expandSidebar="settings.expandSidebar" @toggleSidebar="settings.toggleAutoScroll" />
 
     <!-- Settings Modal -->
-    <Dialog v-model:visible="state.showSettings" modal header="Settings" class="min-h-1/2">
+    <Dialog v-model:visible="state.showSettings" modal header="Settings" class="min-h-1/2 min-w-2xl">
       <Settings ref="settingsRef" @submit="state.showSettings = false" />
     </Dialog>
 
