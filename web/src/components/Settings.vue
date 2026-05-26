@@ -8,6 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 import { IconRefresh, IconUpload } from "@tabler/icons-vue";
 import { ref } from "vue";
 import type { ThreadConfigModel, ThreadConfigQuery } from "../apis";
+import { getBaseUrl, isApiBaseConfigurable, setApiBaseUrl, testApiConnection } from "../apis/base";
 import { useSettings } from "../store";
 import SettingModel from "./SettingModel.vue";
 
@@ -18,6 +19,21 @@ const emit = defineEmits<{
 const settings = useSettings();
 
 const fileInput = ref<HTMLInputElement | null>(null);
+
+// --- API Base URL config ---
+const apiBaseUrl = ref(getBaseUrl().replace(/\/api$/, ""));
+const connectionStatus = ref<"idle" | "testing" | "ok" | "fail">("idle");
+
+async function testConnection() {
+  connectionStatus.value = "testing";
+  const ok = await testApiConnection(apiBaseUrl.value);
+  connectionStatus.value = ok ? "ok" : "fail";
+}
+
+function saveApiBaseUrl() {
+  setApiBaseUrl(apiBaseUrl.value);
+  connectionStatus.value = "idle";
+}
 
 function handleFileUpload(event: Event) {
   const input = event.target as HTMLInputElement;
@@ -85,6 +101,25 @@ function sumbmitModel(model: ThreadConfigModel | null) {
       <!-- Preferences Tab -->
       <TabPanel value="pref">
         <div class="space-y-4">
+          <FormItem v-if="isApiBaseConfigurable" for="apiBaseUrl" label="API Server URL">
+            <div class="flex items-center gap-2">
+              <InputText
+                type="text"
+                v-model="apiBaseUrl"
+                inputId="apiBaseUrl"
+                placeholder="http://localhost:8786"
+                class="w-full"
+              />
+              <Button class="w-24" label="Test" :loading="connectionStatus === 'testing'" @click="testConnection" />
+              <Button class="w-24" label="Save" @click="saveApiBaseUrl" />
+            </div>
+            <p v-if="connectionStatus === 'ok'" class="text-sm text-green-600 mt-1">Connection successful</p>
+            <p v-else-if="connectionStatus === 'fail'" class="text-sm text-red-600 mt-1">Connection failed</p>
+            <p v-else class="text-sm text-slate-400 mt-1">
+              Configure the API server URL if it's different from the web server
+            </p>
+          </FormItem>
+
           <FormItem for="autoScroll" label="Auto-scroll to Bottom" layout="row">
             <ToggleSwitch v-model="settings.autoScroll" inputId="autoScroll" />
           </FormItem>
