@@ -125,38 +125,6 @@ Recommended workflow:
 
 By default, the local development server listens at `http://127.0.0.1:8786`. If you change the host or port, make sure to update all related configurations accordingly so that other components can still communicate with the server.
 
-### E. Install the CopilotJ frontend server
-
-If you use the recommended Docker Compose deployment (**Option D1**), the CopilotJ frontend server starts automatically together with the backend and the Nginx proxy.
-No separate frontend installation is required.
-
-For source-based development (**Option D2**), the frontend can also be run independently from the `web/` directory.
-
-1. Install [Node.js](https://nodejs.org/en/download) 22 or later and [pnpm](https://pnpm.io/installation).
-
-2. Install frontend dependencies.
-
-   ```bash
-   cd web
-   pnpm install
-   ```
-
-3. Start the Vite development server.
-
-   ```bash
-   pnpm run dev
-   ```
-
-   If the backend runs on a different origin, add `VITE_API_BASE_URL` to `web/.env.development.local`.
-
-   ```env
-   VITE_API_BASE_URL=http://127.0.0.1:8786
-   ```
-
-4. (Advanced) For production deployment, we strongly recommend using the provided Docker-based setup, which includes a preconfigured frontend build and reverse proxy.
-
-   If you need to integrate CopilotJ into your own infrastructure (e.g., behind a custom reverse proxy), you can refer to the `web/Dockerfile`, which demonstrates the standard production workflow: building the Vue application with `pnpm run build` and serving the generated `dist/` directory using an `nginx:alpine` image.
-
 ## Configuration
 
 ### A. Environment configuration
@@ -360,22 +328,21 @@ Each configuration file defines an agent's system prompt, role description, and 
 
 ### A. Starting CopilotJ
 
-To use CopilotJ, first start the core server and then connect from the Fiji interface.
+To use CopilotJ, start the core server, then connect from the Fiji interface.
 
 1. **Start the CopilotJ core server**
    - Ensure the core server is running locally or via Docker.
    - In standard local setups, the default server endpoint is sufficient.
 
-2. **Launch Fiji and connect through the plugin**
+2. **Open the CopilotJ web interface**
+   - Open a web browser and navigate to [copilotj.chat](https://copilotj.chat). click the "Chat" button at the top right of the web interface
+   - On first visit, configure the backend URL by clicking **Settings → Preferences** and entering your CopilotJ server address (e.g., `http://localhost:8786`). Use the **Test** button to verify connectivity, then click **Save**. This setting is stored locally and will persist across sessions.
+
+3. **Launch Fiji and connect through the plugin**
    - In Fiji, navigate to **Plugins -> CopilotJ -> Connect**.
    - In typical local setups, the default server URL does not need modification.
      If you have changed the server endpoint, enter only the root URL (do not append additional paths).
    - Click **Connect** to establish the connection between the plugin and the core server.
-
-3. **Open the CopilotJ web interface**
-   - Open a web browser and navigate to the deployed CopilotJ frontend: if using Docker (**Option D1**), this will be `http://127.0.0.1:8786` by default&mdash;or if running from source (**Option D2**), the default will be `http://127.0.0.1:5173`.
-   - This web interface provides the chat-based frontend for interacting with CopilotJ.
-   - Once the connection is established, you can start a conversational session and issue analysis instructions.
 
 4. **Open an image for analysis**
    - Use Fiji to open the image or image stack to be analyzed.

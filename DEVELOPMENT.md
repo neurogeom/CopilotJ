@@ -63,6 +63,8 @@ Alternatively: `./bin/run-frontend.sh`
 Once everything is running, look for the message `Bridge WebSocket connection established` in the server console to
 confirm that the connection is active.
 
+For production deployment, we strongly recommend using the provided Docker-based setup, which includes a preconfigured frontend build and reverse proxy.
+
 ## Testing
 
 ```bash
