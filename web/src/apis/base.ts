@@ -26,6 +26,12 @@ export const isApiBaseConfigurable =
     ? !!import.meta.env.VITE_CONFIGURABLE_API_BASE
     : true; // enabled by default if not set
 
+export function isApiBaseConfigured(): boolean {
+  const customUrl = localStorage.getItem(STORAGE_KEY);
+  const apiBaseUrl = customUrl || import.meta.env.VITE_API_BASE_URL || "";
+  return apiBaseUrl.length > 0;
+}
+
 export async function testApiConnection(url: string): Promise<boolean> {
   try {
     const normalized = url.replace(/\/+$/, "");
