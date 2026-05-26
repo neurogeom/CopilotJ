@@ -32,7 +32,7 @@ async function testConnection() {
 
 function saveApiBaseUrl() {
   setApiBaseUrl(apiBaseUrl.value);
-  connectionStatus.value = "idle";
+  window.location.reload();
 }
 
 function handleFileUpload(event: Event) {

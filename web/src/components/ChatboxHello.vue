@@ -5,11 +5,15 @@ SPDX-License-Identifier: Apache-2.0
 -->
 
 <script setup lang="ts">
+import { computed } from "vue";
 import Logo from "./Logo.vue";
+import { isApiBaseConfigurable, isApiBaseConfigured } from "../apis/base";
 import { useSettings, useSystemState } from "../store";
 
 const settings = useSettings();
 const state = useSystemState();
+
+const showApiBaseWarning = computed(() => isApiBaseConfigurable && !isApiBaseConfigured());
 
 const suggestions = [
   "Find best segmentation method for this image",
@@ -47,6 +51,10 @@ function usePromptSuggestion(suggestion: string) {
         Settings
       </button>
       to set up a model and API key before submitting.
+    </div>
+
+    <div v-if="showApiBaseWarning" class="mt-2 px-4 py-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-sm text-red-800 dark:text-red-300 max-w-md">
+      API server URL is not configured. Click <button class="underline font-medium hover:text-red-600 dark:hover:text-red-200" @click="state.showSettings = true">Settings</button> to configure a server URL.
     </div>
 
     <div class="w-full mt-8 grid md:grid-cols-2 grid-cols-1 gap-4">
