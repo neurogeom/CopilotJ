@@ -16,6 +16,8 @@ const settings = useSettings();
 const state = useSystemState();
 
 onMounted(async () => {
+  state.testBackendConnection();
+
   // Pre-populate the model from the server's env config so the "no model
   // configured" warning is suppressed when a model is already set server-side.
   if (settings.model === null) {
