@@ -15,6 +15,10 @@ const state = useSystemState();
 
 const showApiBaseWarning = computed(() => isApiBaseConfigurable && !isApiBaseConfigured());
 
+const showConnectionWarning = computed(
+  () => isApiBaseConfigurable && state.backendReachable === false && !state.connectionWarningDismissed,
+);
+
 const suggestions = [
   "Find best segmentation method for this image",
   "Segment this low signal-to-noise cell image",
@@ -55,6 +59,11 @@ function usePromptSuggestion(suggestion: string) {
 
     <div v-if="showApiBaseWarning" class="mt-2 px-4 py-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-sm text-red-800 dark:text-red-300 max-w-md">
       API server URL is not configured. Click <button class="underline font-medium hover:text-red-600 dark:hover:text-red-200" @click="state.showSettings = true">Settings</button> to configure a server URL.
+    </div>
+
+    <div v-if="showConnectionWarning" class="mt-2 px-4 py-3 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 text-sm text-orange-800 dark:text-orange-300 max-w-md flex items-start justify-between gap-2">
+      <span>Cannot connect to the backend server. Please check if the API Server URL is correct in <button class="underline font-medium hover:text-orange-600 dark:hover:text-orange-200" @click="state.showSettings = true">Settings</button>.</span>
+      <button class="shrink-0 font-bold hover:text-orange-600 dark:hover:text-orange-200" @click="state.connectionWarningDismissed = true">&times;</button>
     </div>
 
     <div class="w-full mt-8 grid md:grid-cols-2 grid-cols-1 gap-4">
