@@ -29,7 +29,7 @@ export const FEATURES = [
   {
     label: "Efficient",
     description:
-      "Compared with external chatbot–assisted ImageJ workflows, CopilotJ improves efficiency by up to 4.3-fold and reduces user interactions by 8.1-fold, while substantially enhancing analytical capability and narrowing the performance gap between beginners and experienced users",
+      "Compared with external chatbot–assisted ImageJ workflows, CopilotJ improves user efficiency and reduces interaction burden, while substantially enhancing analytical capability and narrowing the performance gap between beginners and experienced users",
   },
   {
     label: "Reproducible",
