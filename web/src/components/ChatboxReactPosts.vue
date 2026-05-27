@@ -146,23 +146,17 @@ function getElement(id: string): HTMLElement | null {
         class="flex flex-col w-full gap-1"
       >
         <div v-if="shouldShowHeader(post, index)" class="mt-2 flex items-center">
-          <img
-            v-if="post.type === 'agent' && getAgentName(post) == 'Leader Agent'"
-            class="w-8 h-8 rounded-full object-cover"
-            src="../assets/agent_leader.png"
-          />
-
-          <img
-            v-else-if="post.type === 'agent' && getAgentName(post) == 'Research Agent'"
-            class="w-8 h-8 rounded-full object-cover"
-            src="../assets/agent_search.png"
-          />
-
-          <img
-            v-else-if="post.type === 'agent' && getAgentName(post) == 'Tool Agent'"
-            class="w-8 h-8 rounded-full object-cover"
-            src="../assets/agent_tool.png"
-          />
+          <div
+            v-if="post.type === 'agent'"
+            class="w-8 h-8 rounded-full flex items-center justify-center"
+            :class="{
+              'bg-blue-500 dark:bg-blue-600': getAgentName(post) == 'Leader Agent',
+              'bg-emerald-500 dark:bg-emerald-600': getAgentName(post) == 'Research Agent',
+              'bg-amber-500 dark:bg-amber-600': getAgentName(post) == 'Tool Agent',
+            }"
+          >
+            <img class="w-5 h-5 object-contain" src="../assets/copilotj.png" />
+          </div>
 
           <div
             v-else-if="post.type === 'user'"
