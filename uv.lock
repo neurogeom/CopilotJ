@@ -283,6 +283,15 @@ wheels = [
 ]
 
 [[package]]
+name = "appose"
+version = "0.11.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/49/77/6e34728bf31e4e6205a45e1cd0da1145defb340ebb024641e3c53fb2046e/appose-0.11.0.tar.gz", hash = "sha256:31c1d3c1ae0b090fe262499005afd42cee9183c2c12df120560a634dc6dcccb2", size = 60879, upload-time = "2026-03-03T22:31:12.144Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0a/0f/13f9c2e509423cd6e6ac2555cdb05e88b3c6f94d2ebbc24638ae9285f060/appose-0.11.0-py3-none-any.whl", hash = "sha256:2daa1ee03a221d2e509fe9ee13f24f712cf2e3623353379c9a1bdfd12bf98cbd", size = 68492, upload-time = "2026-03-03T22:31:10.994Z" },
+]
+
+[[package]]
 name = "asttokens"
 version = "3.0.1"
 source = { registry = "https://pypi.org/simple" }
@@ -971,6 +980,7 @@ dependencies = [
     { name = "aiohttp", extra = ["speedups"] },
     { name = "aiohttp-cors" },
     { name = "altair" },
+    { name = "appose" },
     { name = "beautifulsoup4" },
     { name = "biapy" },
     { name = "bokeh" },
@@ -1048,6 +1058,7 @@ requires-dist = [
     { name = "aiohttp", extras = ["speedups"], specifier = ">=3.11.12" },
     { name = "aiohttp-cors", specifier = ">=0.8.1" },
     { name = "altair", specifier = ">=5.5.0" },
+    { name = "appose", specifier = ">=0.5.1" },
     { name = "beautifulsoup4", specifier = ">=4.12.3" },
     { name = "biapy", specifier = ">=3.5.6" },
     { name = "bokeh", specifier = ">=3.7.3" },

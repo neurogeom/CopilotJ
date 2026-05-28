@@ -39,6 +39,18 @@ class Server:
         _log.info(f"Listening on {host}:{port}")
         web.run_app(self._app, host=host, port=port)
 
+    async def start(self, host: str = "127.0.0.1", port: int = 0) -> int:
+        """Start the server and return the actual bound port.
+
+        Unlike ``run()``, this does not block. The caller is responsible for
+        keeping the event loop alive (e.g. via ``loop.run_forever()``).
+        """
+        runner = web.AppRunner(self._app)
+        await runner.setup()
+        site = web.TCPSite(runner, host, port)
+        await site.start()
+        return site._server.sockets[0].getsockname()[1]
+
     def _create_app(self) -> web.Application:
         app = web.Application()
 
