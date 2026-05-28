@@ -35,9 +35,7 @@
       "name": "NucleiSegmentationBoundaryModel",
       "nickname": "affable-shark",
       "nickname_icon": "\ud83e\udd88",
-      "owners": [
-        77626
-      ],
+      "owners": [77626],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.5764892/6647674/rdf.yaml",
       "tags": [
         "fluorescence-light-microscopy",
@@ -50,10 +48,7 @@
         "id": "ilastik/stradist_dsb_training_data"
       },
       "type": "model",
-      "versions": [
-        "6647674",
-        "6322939"
-      ]
+      "versions": ["6647674", "6322939"]
     },
     {
       "authors": [
@@ -85,9 +80,7 @@
       "name": "StarDist H&E Nuclei Segmentation",
       "nickname": "chatty-frog",
       "nickname_icon": "\ud83d\udc38",
-      "owners": [
-        313404
-      ],
+      "owners": [313404],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.6338614/6338615/rdf.yaml",
       "tags": [
         "whole-slide-imaging",
@@ -103,9 +96,7 @@
         "id": "deepimagej/monuseg_digital_pathology_miccai2018"
       },
       "type": "model",
-      "versions": [
-        "6338615"
-      ]
+      "versions": ["6338615"]
     },
     {
       "authors": [
@@ -131,9 +122,7 @@
       "name": "LiveCellSegmentationBoundaryModel",
       "nickname": "hiding-tiger",
       "nickname_icon": "\ud83d\udc05",
-      "owners": [
-        77626
-      ],
+      "owners": [77626],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.5869899/6647688/rdf.yaml",
       "tags": [
         "2d",
@@ -147,11 +136,7 @@
         "id": "ilastik/livecell_dataset"
       },
       "type": "model",
-      "versions": [
-        "6647688",
-        "6321179",
-        "5869900"
-      ]
+      "versions": ["6647688", "6321179", "5869900"]
     },
     {
       "authors": [
@@ -176,9 +161,7 @@
       "name": "Neuron Segmentation in EM (Membrane Prediction)",
       "nickname": "impartial-shrimp",
       "nickname_icon": "\ud83e\udd90",
-      "owners": [
-        77626
-      ],
+      "owners": [77626],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.5874741/5874742/rdf.yaml",
       "tags": [
         "unet",
@@ -194,9 +177,7 @@
         "id": "ilastik/cremi_training_data"
       },
       "type": "model",
-      "versions": [
-        "5874742"
-      ]
+      "versions": ["5874742"]
     },
     {
       "authors": [
@@ -228,9 +209,7 @@
       "name": "Pancreatic Phase Contrast Cell Segmentation (U-Net)",
       "nickname": "discreet-rooster",
       "nickname_icon": "\ud83d\udc13",
-      "owners": [
-        147356
-      ],
+      "owners": [147356],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.5914248/8186255/rdf.yaml",
       "tags": [
         "deepimagej",
@@ -247,12 +226,7 @@
         "tensorflow"
       ],
       "type": "model",
-      "versions": [
-        "8186255",
-        "6514622",
-        "6514446",
-        "5914249"
-      ]
+      "versions": ["8186255", "6514622", "6514446", "5914249"]
     },
     {
       "authors": [
@@ -278,9 +252,7 @@
       "name": "EnhancerMitochondriaEM2D",
       "nickname": "hiding-blowfish",
       "nickname_icon": "\ud83d\udc21",
-      "owners": [
-        77626
-      ],
+      "owners": [77626],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.6406756/6811922/rdf.yaml",
       "tags": [
         "unet",
@@ -294,11 +266,7 @@
         "id": "ilastik/mitoem_segmentation_challenge"
       },
       "type": "model",
-      "versions": [
-        "6811922",
-        "6811498",
-        "6406757"
-      ]
+      "versions": ["6811922", "6811498", "6406757"]
     },
     {
       "authors": [
@@ -323,9 +291,7 @@
       "name": "MitochondriaEMSegmentationBoundaryModel",
       "nickname": "kind-seashell",
       "nickname_icon": "\ud83d\udc1a",
-      "owners": [
-        77626
-      ],
+      "owners": [77626],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.5874841/6630266/rdf.yaml",
       "tags": [
         "3d",
@@ -335,10 +301,7 @@
         "unet"
       ],
       "type": "model",
-      "versions": [
-        "6630266",
-        "5874842"
-      ]
+      "versions": ["6630266", "5874842"]
     },
     {
       "authors": [
@@ -369,9 +332,7 @@
       "name": "Cell Segmentation from Membrane Staining for Plant Tissues",
       "nickname": "humorous-owl",
       "nickname_icon": "\ud83e\udd89",
-      "owners": [
-        252845
-      ],
+      "owners": [252845],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.5749843/5888237/rdf.yaml",
       "tags": [
         "zerocostdl4mic",
@@ -389,9 +350,7 @@
         "id": "ilastik/plantseg_ovules"
       },
       "type": "model",
-      "versions": [
-        "5888237"
-      ]
+      "versions": ["5888237"]
     },
     {
       "authors": [
@@ -416,9 +375,7 @@
       "name": "PlatynereisEMnucleiSegmentationBoundaryModel",
       "nickname": "organized-badger",
       "nickname_icon": "\ud83e\udda1",
-      "owners": [
-        77626
-      ],
+      "owners": [77626],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.6028097/6028098/rdf.yaml",
       "tags": [
         "unet",
@@ -432,9 +389,7 @@
         "id": "ilastik/platynereis_em_training_data"
       },
       "type": "model",
-      "versions": [
-        "6028098"
-      ]
+      "versions": ["6028098"]
     },
     {
       "authors": [
@@ -465,9 +420,7 @@
       "name": "StarDist Fluorescence Nuclei Segmentation",
       "nickname": "fearless-crab",
       "nickname_icon": "\ud83e\udd80",
-      "owners": [
-        313404
-      ],
+      "owners": [313404],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.6348084/6348085/rdf.yaml",
       "tags": [
         "fluorescence-light-microscopy",
@@ -487,9 +440,7 @@
         "id": "ilastik/stradist_dsb_training_data"
       },
       "type": "model",
-      "versions": [
-        "6348085"
-      ]
+      "versions": ["6348085"]
     },
     {
       "authors": [
@@ -519,9 +470,7 @@
       "name": "B. Sutilist bacteria segmentation - Widefield microscopy - 2D UNet",
       "nickname": "placid-llama",
       "nickname_icon": "\ud83e\udd99",
-      "owners": [
-        147356
-      ],
+      "owners": [147356],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.7261974/7782776/rdf.yaml",
       "tags": [
         "zerocostdl4mic",
@@ -542,13 +491,7 @@
         "id": "zero/dataset_u-net_2d_multilabel_deepbacs"
       },
       "type": "model",
-      "versions": [
-        "7782776",
-        "7778377",
-        "7688940",
-        "7546703",
-        "7261975"
-      ]
+      "versions": ["7782776", "7778377", "7688940", "7546703", "7261975"]
     },
     {
       "authors": [
@@ -573,9 +516,7 @@
       "name": "PlatynereisEMcellsSegmentationBoundaryModel",
       "nickname": "willing-hedgehog",
       "nickname_icon": "\ud83e\udd94",
-      "owners": [
-        77626
-      ],
+      "owners": [77626],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.6028280/6647695/rdf.yaml",
       "tags": [
         "unet",
@@ -585,10 +526,7 @@
         "platynereis"
       ],
       "type": "model",
-      "versions": [
-        "6647695",
-        "6028281"
-      ]
+      "versions": ["6647695", "6028281"]
     },
     {
       "authors": [
@@ -615,9 +553,7 @@
       "name": "HPA Cell Segmentation (DPNUnet)",
       "nickname": "loyal-parrot",
       "nickname_icon": "\ud83e\udd9c",
-      "owners": [
-        47882
-      ],
+      "owners": [47882],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.6200635/7702687/rdf.yaml",
       "tags": [
         "torchscript",
@@ -627,11 +563,7 @@
         "pytorch"
       ],
       "type": "model",
-      "versions": [
-        "7702687",
-        "6538890",
-        "6200636"
-      ]
+      "versions": ["7702687", "6538890", "6200636"]
     },
     {
       "authors": [
@@ -651,16 +583,11 @@
       "download_count": 36722,
       "id": "10.5281/zenodo.6346511",
       "license": "MIT",
-      "links": [
-        "deepimagej/deepimagej",
-        "imjoy/BioImageIO-Packager"
-      ],
+      "links": ["deepimagej/deepimagej", "imjoy/BioImageIO-Packager"],
       "name": "3D UNet Arabidopsis Apical Stem Cells",
       "nickname": "emotional-cricket",
       "nickname_icon": "\ud83e\udd97",
-      "owners": [
-        66700
-      ],
+      "owners": [66700],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.6346511/7768142/rdf.yaml",
       "tags": [
         "3d",
@@ -679,11 +606,7 @@
         "fluorescence-light-microscopy"
       ],
       "type": "model",
-      "versions": [
-        "7768142",
-        "7701413",
-        "6346512"
-      ]
+      "versions": ["7768142", "7701413", "6346512"]
     },
     {
       "authors": [
@@ -709,23 +632,14 @@
       "name": "Arabidopsis Leaf Segmentation",
       "nickname": "non-judgemental-eagle",
       "nickname_icon": "\ud83e\udd85",
-      "owners": [
-        77626
-      ],
+      "owners": [77626],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.6348728/6348729/rdf.yaml",
-      "tags": [
-        "zerocostdl4mic",
-        "deepimagej",
-        "segmentation",
-        "unet"
-      ],
+      "tags": ["zerocostdl4mic", "deepimagej", "segmentation", "unet"],
       "training_data": {
         "id": "ilastik/arabidopsis_tissue_atlas"
       },
       "type": "model",
-      "versions": [
-        "6348729"
-      ]
+      "versions": ["6348729"]
     },
     {
       "authors": [
@@ -756,9 +670,7 @@
       "name": "Neuron Segmentation in 2D EM (Membrane)",
       "nickname": "creative-panda",
       "nickname_icon": "\ud83d\udc3c",
-      "owners": [
-        271523
-      ],
+      "owners": [271523],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.5817052/5906839/rdf.yaml",
       "tags": [
         "zerocostdl4mic",
@@ -773,10 +685,7 @@
         "2d"
       ],
       "type": "model",
-      "versions": [
-        "5906839",
-        "5850574"
-      ]
+      "versions": ["5906839", "5850574"]
     },
     {
       "authors": [
@@ -802,9 +711,7 @@
       "name": "CovidIFCellSegmentationBoundaryModel",
       "nickname": "powerful-chipmunk",
       "nickname_icon": "\ud83d\udc3f",
-      "owners": [
-        77626
-      ],
+      "owners": [77626],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.5847355/6647683/rdf.yaml",
       "tags": [
         "unet",
@@ -818,10 +725,7 @@
         "id": "ilastik/covid_if_training_data"
       },
       "type": "model",
-      "versions": [
-        "6647683",
-        "6322908"
-      ]
+      "versions": ["6647683", "6322908"]
     },
     {
       "authors": [
@@ -847,9 +751,7 @@
       "name": "MitchondriaEMSegmentation2D",
       "nickname": "shivering-raccoon",
       "nickname_icon": "\ud83e\udd9d",
-      "owners": [
-        77626
-      ],
+      "owners": [77626],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.6406803/6406804/rdf.yaml",
       "tags": [
         "unet",
@@ -862,9 +764,7 @@
         "id": "ilastik/vnc"
       },
       "type": "model",
-      "versions": [
-        "6406804"
-      ]
+      "versions": ["6406804"]
     },
     {
       "authors": [
@@ -883,15 +783,11 @@
       "download_count": 33443,
       "id": "10.5281/zenodo.6200999",
       "license": "CC-BY-4.0",
-      "links": [
-        "deepimagej/deepimagej"
-      ],
+      "links": ["deepimagej/deepimagej"],
       "name": "HPA Nucleus Segmentation (DPNUnet)",
       "nickname": "conscientious-seashell",
       "nickname_icon": "\ud83d\udc1a",
-      "owners": [
-        47882
-      ],
+      "owners": [47882],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.6200999/7690494/rdf.yaml",
       "tags": [
         "torchscript",
@@ -901,12 +797,7 @@
         "pytorch"
       ],
       "type": "model",
-      "versions": [
-        "7690494",
-        "7678300",
-        "6538911",
-        "6224243"
-      ]
+      "versions": ["7690494", "7678300", "6538911", "6224243"]
     },
     {
       "authors": [
@@ -926,16 +817,11 @@
       "download_count": 31788,
       "id": "10.5281/zenodo.6384845",
       "license": "MIT",
-      "links": [
-        "deepimagej/deepimagej",
-        "imjoy/BioImageIO-Packager"
-      ],
+      "links": ["deepimagej/deepimagej", "imjoy/BioImageIO-Packager"],
       "name": "3D UNet Mouse Embryo Live",
       "nickname": "powerful-fish",
       "nickname_icon": "\ud83d\udc1f",
-      "owners": [
-        66700
-      ],
+      "owners": [66700],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.6384845/7774490/rdf.yaml",
       "tags": [
         "3d",
@@ -954,11 +840,7 @@
         "pytorch"
       ],
       "type": "model",
-      "versions": [
-        "7774490",
-        "7701638",
-        "6384846"
-      ]
+      "versions": ["7774490", "7701638", "6384846"]
     },
     {
       "authors": [
@@ -979,16 +861,11 @@
       "download_count": 30887,
       "id": "10.5281/zenodo.6383429",
       "license": "MIT",
-      "links": [
-        "deepimagej/deepimagej",
-        "imjoy/BioImageIO-Packager"
-      ],
+      "links": ["deepimagej/deepimagej", "imjoy/BioImageIO-Packager"],
       "name": "3D UNet Mouse Embryo Fixed",
       "nickname": "loyal-squid",
       "nickname_icon": "\ud83e\udd91",
-      "owners": [
-        66700
-      ],
+      "owners": [66700],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.6383429/7774505/rdf.yaml",
       "tags": [
         "3d",
@@ -1007,11 +884,7 @@
         "pytorch"
       ],
       "type": "model",
-      "versions": [
-        "7774505",
-        "7701632",
-        "6383430"
-      ]
+      "versions": ["7774505", "7701632", "6383430"]
     },
     {
       "authors": [
@@ -1037,9 +910,7 @@
       "name": "EpitheliaAffinityModel",
       "nickname": "wild-whale",
       "nickname_icon": "\ud83d\udc33",
-      "owners": [
-        77626
-      ],
+      "owners": [77626],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.6079314/7695872/rdf.yaml",
       "tags": [
         "torchscript",
@@ -1051,13 +922,7 @@
         "pytorch"
       ],
       "type": "model",
-      "versions": [
-        "7695872",
-        "7689587",
-        "7688686",
-        "6385590",
-        "6079315"
-      ]
+      "versions": ["7695872", "7689587", "7688686", "6385590", "6079315"]
     },
     {
       "authors": [
@@ -1075,15 +940,11 @@
       "download_count": 28326,
       "id": "10.5281/zenodo.6334383",
       "license": "MIT",
-      "links": [
-        "imjoy/BioImageIO-Packager"
-      ],
+      "links": ["imjoy/BioImageIO-Packager"],
       "name": "2D UNet Arabidopsis Ovules",
       "nickname": "pioneering-rhino",
       "nickname_icon": "\ud83e\udd8f",
-      "owners": [
-        66700
-      ],
+      "owners": [66700],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.6334383/7805067/rdf.yaml",
       "tags": [
         "cell-segmentation",
@@ -1098,13 +959,7 @@
         "pytorch"
       ],
       "type": "model",
-      "versions": [
-        "7805067",
-        "7701262",
-        "7697068",
-        "6346500",
-        "6334384"
-      ]
+      "versions": ["7805067", "7701262", "7697068", "6346500", "6334384"]
     },
     {
       "authors": [
@@ -1126,15 +981,11 @@
       "download_count": 25928,
       "id": "10.5281/zenodo.6334881",
       "license": "MIT",
-      "links": [
-        "imjoy/BioImageIO-Packager"
-      ],
+      "links": ["imjoy/BioImageIO-Packager"],
       "name": "2D UNet Arabidopsis Apical Stem Cells",
       "nickname": "laid-back-lobster",
       "nickname_icon": "\ud83e\udd9e",
-      "owners": [
-        66700
-      ],
+      "owners": [66700],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.6334881/7805026/rdf.yaml",
       "tags": [
         "cell-segmentation",
@@ -1148,13 +999,7 @@
         "pytorch"
       ],
       "type": "model",
-      "versions": [
-        "7805026",
-        "7701241",
-        "7696907",
-        "6346477",
-        "6334882"
-      ]
+      "versions": ["7805026", "7701241", "7696907", "6346477", "6334882"]
     },
     {
       "authors": [
@@ -1174,16 +1019,11 @@
       "download_count": 25924,
       "id": "10.5281/zenodo.6334777",
       "license": "MIT",
-      "links": [
-        "deepimagej/deepimagej",
-        "imjoy/BioImageIO-Packager"
-      ],
+      "links": ["deepimagej/deepimagej", "imjoy/BioImageIO-Packager"],
       "name": "3D UNet Lateral Root Primordia Cells",
       "nickname": "thoughtful-turtle",
       "nickname_icon": "\ud83d\udc22",
-      "owners": [
-        66700
-      ],
+      "owners": [66700],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.6334777/7765026/rdf.yaml",
       "tags": [
         "3d",
@@ -1202,13 +1042,7 @@
         "pytorch"
       ],
       "type": "model",
-      "versions": [
-        "7765026",
-        "7701561",
-        "7696952",
-        "6346524",
-        "6334778"
-      ]
+      "versions": ["7765026", "7701561", "7696952", "6346524", "6334778"]
     },
     {
       "authors": [
@@ -1224,16 +1058,11 @@
       "download_count": 25508,
       "id": "10.5281/zenodo.5910854",
       "license": "MIT",
-      "links": [
-        "imjoy/BioImageIO-Packager",
-        "hpa/hpa-kaggle-2021-dataset"
-      ],
+      "links": ["imjoy/BioImageIO-Packager", "hpa/hpa-kaggle-2021-dataset"],
       "name": "HPA Bestfitting InceptionV3",
       "nickname": "straightforward-crocodile",
       "nickname_icon": "\ud83d\udc0a",
-      "owners": [
-        47882
-      ],
+      "owners": [47882],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.5910854/6539073/rdf.yaml",
       "tags": [
         "classification",
@@ -1244,10 +1073,7 @@
         "protein-localization"
       ],
       "type": "model",
-      "versions": [
-        "6539073",
-        "5911832"
-      ]
+      "versions": ["6539073", "5911832"]
     },
     {
       "authors": [
@@ -1270,15 +1096,11 @@
       "download_count": 24353,
       "id": "10.5281/zenodo.6334583",
       "license": "MIT",
-      "links": [
-        "imjoy/BioImageIO-Packager"
-      ],
+      "links": ["imjoy/BioImageIO-Packager"],
       "name": "3D UNet Arabidopsis Ovules",
       "nickname": "passionate-t-rex",
       "nickname_icon": "\ud83e\udd96",
-      "owners": [
-        66700
-      ],
+      "owners": [66700],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.6334583/7805434/rdf.yaml",
       "tags": [
         "3d",
@@ -1330,9 +1152,7 @@
       "name": "EnhancerMitochondriaEM3D",
       "nickname": "independent-shrimp",
       "nickname_icon": "\ud83e\udd90",
-      "owners": [
-        77626
-      ],
+      "owners": [77626],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.6811491/6811492/rdf.yaml",
       "tags": [
         "unet",
@@ -1346,9 +1166,7 @@
         "id": "ilastik/mitoem_segmentation_challenge"
       },
       "type": "model",
-      "versions": [
-        "6811492"
-      ]
+      "versions": ["6811492"]
     },
     {
       "authors": [
@@ -1395,9 +1213,7 @@
       "name": "Small Extracellular Vesicle TEM Segmentation (Fully Residual U-Net)",
       "nickname": "naked-microbe",
       "nickname_icon": "\ud83e\udda0",
-      "owners": [
-        271523
-      ],
+      "owners": [271523],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.6559474/6559475/rdf.yaml",
       "tags": [
         "deepimagej",
@@ -1414,9 +1230,7 @@
         "instance-segmentation"
       ],
       "type": "model",
-      "versions": [
-        "6559475"
-      ]
+      "versions": ["6559475"]
     },
     {
       "authors": [
@@ -1432,15 +1246,11 @@
       "download_count": 21252,
       "id": "10.5281/zenodo.5910163",
       "license": "MIT",
-      "links": [
-        "imjoy/BioImageIO-Packager"
-      ],
+      "links": ["imjoy/BioImageIO-Packager"],
       "name": "HPA Bestfitting Densenet",
       "nickname": "polite-pig",
       "nickname_icon": "\ud83d\udc16",
-      "owners": [
-        47882
-      ],
+      "owners": [47882],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.5910163/5942853/rdf.yaml",
       "tags": [
         "classification",
@@ -1451,9 +1261,7 @@
         "protein-localization"
       ],
       "type": "model",
-      "versions": [
-        "5942853"
-      ]
+      "versions": ["5942853"]
     },
     {
       "authors": [
@@ -1474,9 +1282,7 @@
       "name": "Cells and gland Segmentation (FRUNet)",
       "nickname": "impartial-shark",
       "nickname_icon": "\ud83e\udd88",
-      "owners": [
-        370412
-      ],
+      "owners": [370412],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.6865412/6919253/rdf.yaml",
       "tags": [
         "deepimagej",
@@ -1485,9 +1291,7 @@
         "fourier channel attention"
       ],
       "type": "model",
-      "versions": [
-        "6919253"
-      ]
+      "versions": ["6919253"]
     },
     {
       "authors": [
@@ -1506,15 +1310,11 @@
       "download_count": 19353,
       "id": "10.5281/zenodo.7274275",
       "license": "CC-BY-4.0",
-      "links": [
-        "deepimagej/deepimagej"
-      ],
+      "links": ["deepimagej/deepimagej"],
       "name": "CebraNET Cellular Membranes in Volume SEM",
       "nickname": "joyful-deer",
       "nickname_icon": "\ud83e\udd8c",
-      "owners": [
-        432585
-      ],
+      "owners": [432585],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.7274275/8123818/rdf.yaml",
       "tags": [
         "unet",
@@ -1532,10 +1332,7 @@
         "calu-3"
       ],
       "type": "model",
-      "versions": [
-        "8123818",
-        "7274276"
-      ]
+      "versions": ["8123818", "7274276"]
     },
     {
       "authors": [
@@ -1561,9 +1358,7 @@
       "name": "EM3DBoundaryEnhancer",
       "nickname": "determined-chipmunk",
       "nickname_icon": "\ud83d\udc3f",
-      "owners": [
-        77626
-      ],
+      "owners": [77626],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.6808325/6808413/rdf.yaml",
       "tags": [
         "unet",
@@ -1577,9 +1372,7 @@
         "id": "ilastik/vnc"
       },
       "type": "model",
-      "versions": [
-        "6808413"
-      ]
+      "versions": ["6808413"]
     },
     {
       "authors": [
@@ -1614,16 +1407,11 @@
       "download_count": 14017,
       "id": "10.5281/zenodo.7315440",
       "license": "GPL-3.0",
-      "links": [
-        "Embryonet.de",
-        "imjoy/BioImageIO-Packager"
-      ],
+      "links": ["Embryonet.de", "imjoy/BioImageIO-Packager"],
       "name": "EmbryoNet base model",
       "nickname": "nice-peacock",
       "nickname_icon": "\ud83e\udd9a",
-      "owners": [
-        411780
-      ],
+      "owners": [411780],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.7315440/7315441/rdf.yaml",
       "tags": [
         "classification",
@@ -1634,9 +1422,7 @@
         "developmental-biology"
       ],
       "type": "model",
-      "versions": [
-        "7315441"
-      ]
+      "versions": ["7315441"]
     },
     {
       "authors": [
@@ -1664,9 +1450,7 @@
       "name": "Drosophila epithelia cell boundary segmentation of 2D projections",
       "nickname": "easy-going-sauropod",
       "nickname_icon": "\ud83e\udd95",
-      "owners": [
-        439786
-      ],
+      "owners": [439786],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.7380171/7405349/rdf.yaml",
       "tags": [
         "drosophila",
@@ -1678,9 +1462,7 @@
         "tensorflow"
       ],
       "type": "model",
-      "versions": [
-        "7405349"
-      ]
+      "versions": ["7405349"]
     },
     {
       "authors": [
@@ -1698,15 +1480,11 @@
       "download_count": 12754,
       "id": "10.5281/zenodo.7614645",
       "license": "MIT",
-      "links": [
-        "imjoy/BioImageIO-Packager"
-      ],
+      "links": ["imjoy/BioImageIO-Packager"],
       "name": "HyLFM-Net-stat",
       "nickname": "ambitious-sloth",
       "nickname_icon": "\ud83e\udda5",
-      "owners": [
-        96309
-      ],
+      "owners": [96309],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.7614645/7642674/rdf.yaml",
       "tags": [
         "light-field-microscopy",
@@ -1720,9 +1498,7 @@
         "id": "10.5281/zenodo.7612115"
       },
       "type": "model",
-      "versions": [
-        "7642674"
-      ]
+      "versions": ["7642674"]
     },
     {
       "authors": [
@@ -1743,15 +1519,11 @@
       "download_count": 12566,
       "id": "10.5281/zenodo.7772662",
       "license": "MIT",
-      "links": [
-        "imjoy/BioImageIO-Packager"
-      ],
+      "links": ["imjoy/BioImageIO-Packager"],
       "name": "3D UNet Arabidopsis Ovules Nuclei",
       "nickname": "noisy-fish",
       "nickname_icon": "\ud83d\udc1f",
-      "owners": [
-        66700
-      ],
+      "owners": [66700],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.7772662/7781091/rdf.yaml",
       "tags": [
         "nuclei-segmentation",
@@ -1766,9 +1538,7 @@
         "pytorch"
       ],
       "type": "model",
-      "versions": [
-        "7781091"
-      ]
+      "versions": ["7781091"]
     },
     {
       "authors": [
@@ -1793,16 +1563,11 @@
       "download_count": 10193,
       "id": "10.5281/zenodo.7786492",
       "license": "MIT",
-      "links": [
-        "deepimagej/deepimagej",
-        "imjoy/BioImageIO-Packager"
-      ],
+      "links": ["deepimagej/deepimagej", "imjoy/BioImageIO-Packager"],
       "name": "Mitochondria resolution enhancement Wasserstein GAN",
       "nickname": "organized-cricket",
       "nickname_icon": "\ud83e\udd97",
-      "owners": [
-        271523
-      ],
+      "owners": [271523],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.7786492/7786493/rdf.yaml",
       "tags": [
         "zerocostdl4mic",
@@ -1816,9 +1581,7 @@
         "upsampling"
       ],
       "type": "model",
-      "versions": [
-        "7786493"
-      ]
+      "versions": ["7786493"]
     },
     {
       "authors": [
@@ -1840,15 +1603,11 @@
       "download_count": 8587,
       "id": "10.5281/zenodo.8421755",
       "license": "CC-BY-4.0",
-      "links": [
-        "imjoy/BioImageIO-Packager"
-      ],
+      "links": ["imjoy/BioImageIO-Packager"],
       "name": "StarDist Plant Nuclei 3D ResNet",
       "nickname": "modest-octopus",
       "nickname_icon": "\ud83d\udc19",
-      "owners": [
-        611919
-      ],
+      "owners": [611919],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.8421755/8432366/rdf.yaml",
       "tags": [
         "3d",
@@ -1866,9 +1625,7 @@
         "plant"
       ],
       "type": "model",
-      "versions": [
-        "8432366"
-      ]
+      "versions": ["8432366"]
     },
     {
       "authors": [
@@ -1887,15 +1644,11 @@
       "download_count": 6817,
       "id": "10.5281/zenodo.8064806",
       "license": "Apache-2.0",
-      "links": [
-        "imjoy/BioImageIO-Packager"
-      ],
+      "links": ["imjoy/BioImageIO-Packager"],
       "name": "2D UNet for label-free prediction of mCherry-H2B",
       "nickname": "noisy-hedgehog",
       "nickname_icon": "\ud83e\udd94",
-      "owners": [
-        546538
-      ],
+      "owners": [546538],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.8064806/8073617/rdf.yaml",
       "tags": [
         "label-free",
@@ -1906,9 +1659,7 @@
         "cells"
       ],
       "type": "model",
-      "versions": [
-        "8073617"
-      ]
+      "versions": ["8073617"]
     },
     {
       "authors": [
@@ -1948,9 +1699,7 @@
       "license": "MIT",
       "links": [],
       "name": "Small Extracellular Vesicle TEM Instance Segmentation annotated data",
-      "owners": [
-        271523
-      ],
+      "owners": [271523],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.6559929/6559930/rdf.yaml",
       "source": "https://cbia.fi.muni.cz/research/segmentation/fru-net",
       "tags": [
@@ -1965,9 +1714,7 @@
         "instance-segmentation"
       ],
       "type": "dataset",
-      "versions": [
-        "6559930"
-      ]
+      "versions": ["6559930"]
     },
     {
       "authors": [
@@ -2000,9 +1747,7 @@
       "name": "UniFMIRSuperResolutionOnMicrotubules",
       "nickname": "ambitious-ant",
       "nickname_icon": "\ud83d\udc1c",
-      "owners": [
-        610358
-      ],
+      "owners": [610358],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.8419845/8420081/rdf.yaml",
       "tags": [
         "fluorescence-light-microscopy",
@@ -2011,9 +1756,7 @@
         "image-restoration"
       ],
       "type": "model",
-      "versions": [
-        "8420081"
-      ]
+      "versions": ["8420081"]
     },
     {
       "authors": [
@@ -2043,15 +1786,11 @@
       "download_count": 4537,
       "id": "10.5281/zenodo.8420099",
       "license": "CC-BY-4.0",
-      "links": [
-        "imjoy/BioImageIO-Packager"
-      ],
+      "links": ["imjoy/BioImageIO-Packager"],
       "name": "UniFMIRSuperResolutionOnFactin",
       "nickname": "courteous-otter",
       "nickname_icon": "\ud83e\udda6",
-      "owners": [
-        610358
-      ],
+      "owners": [610358],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.8420099/8420100/rdf.yaml",
       "tags": [
         "fluorescence-light-microscopy",
@@ -2060,9 +1799,7 @@
         "image-restoration"
       ],
       "type": "model",
-      "versions": [
-        "8420100"
-      ]
+      "versions": ["8420100"]
     },
     {
       "authors": [
@@ -2084,15 +1821,11 @@
       "download_count": 3737,
       "id": "10.5281/zenodo.8401064",
       "license": "CC-BY-4.0",
-      "links": [
-        "imjoy/BioImageIO-Packager"
-      ],
+      "links": ["imjoy/BioImageIO-Packager"],
       "name": "PlantSeg Plant Nuclei 3D UNet",
       "nickname": "efficient-chipmunk",
       "nickname_icon": "\ud83d\udc3f",
-      "owners": [
-        611919
-      ],
+      "owners": [611919],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.8401064/8429203/rdf.yaml",
       "tags": [
         "3d",
@@ -2110,10 +1843,7 @@
         "plant"
       ],
       "type": "model",
-      "versions": [
-        "8429203",
-        "8401065"
-      ]
+      "versions": ["8429203", "8401065"]
     },
     {
       "authors": [
@@ -2131,15 +1861,11 @@
       "download_count": 2537,
       "id": "10.5281/zenodo.8142283",
       "license": "MIT",
-      "links": [
-        "imjoy/BioImageIO-Packager"
-      ],
+      "links": ["imjoy/BioImageIO-Packager"],
       "name": "EnhancerBoundaryEM2D",
       "nickname": "amiable-crocodile",
       "nickname_icon": "\ud83d\udc0a",
-      "owners": [
-        582192
-      ],
+      "owners": [582192],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.8142283/8171247/rdf.yaml",
       "tags": [
         "unet",
@@ -2150,9 +1876,7 @@
         "shallow2deep"
       ],
       "type": "model",
-      "versions": [
-        "8171247"
-      ]
+      "versions": ["8171247"]
     },
     {
       "authors": [
@@ -2171,9 +1895,7 @@
       "id": "10.5281/zenodo.7612115",
       "license": "MIT",
       "name": "Hatchling Medaka Heart (HyLFM)",
-      "owners": [
-        96309
-      ],
+      "owners": [96309],
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/10.5281/zenodo.7612115/7612152/rdf.yaml",
       "source": "https://www.ebi.ac.uk/biostudies/bioimages/studies/S-BSST604",
       "tags": [
@@ -2185,9 +1907,7 @@
         "image-reconstruction"
       ],
       "type": "dataset",
-      "versions": [
-        "7612152"
-      ]
+      "versions": ["7612152"]
     },
     {
       "authors": [
@@ -2209,9 +1929,7 @@
       "download_count": 1,
       "download_url": "https://raw.githubusercontent.com/BiaPyX/BiaPy/master/notebooks/semantic_segmentation/BiaPy_3D_Semantic_Segmentation.ipynb",
       "id": "biapy/Notebook_semantic_segmentation_3d",
-      "links": [
-        "biapy/Notebook Preview"
-      ],
+      "links": ["biapy/Notebook Preview"],
       "name": "Semantic Segmentation (3D) - BiaPy",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/biapy/Notebook_semantic_segmentation_3d/latest/rdf.yaml",
       "tags": [
@@ -2230,9 +1948,7 @@
         "3D"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -2313,14 +2029,9 @@
       "name": "BiaPy",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/biapy/biapy/latest/rdf.yaml",
       "source": "https://github.com/BiaPyX",
-      "tags": [
-        "software",
-        "biapy"
-      ],
+      "tags": ["software", "biapy"],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -2342,9 +2053,7 @@
       "download_count": 1,
       "download_url": "https://raw.githubusercontent.com/BiaPyX/BiaPy/master/notebooks/classification/BiaPy_2D_Classification.ipynb",
       "id": "biapy/notebook_classification_2d",
-      "links": [
-        "biapy/Notebook Preview"
-      ],
+      "links": ["biapy/Notebook Preview"],
       "name": "Classification (2D) - BiaPy",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/biapy/notebook_classification_2d/latest/rdf.yaml",
       "tags": [
@@ -2360,9 +2069,7 @@
         "2D"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -2384,9 +2091,7 @@
       "download_count": 1,
       "download_url": "https://raw.githubusercontent.com/BiaPyX/BiaPy/master/notebooks/classification/BiaPy_3D_Classification.ipynb",
       "id": "biapy/notebook_classification_3d",
-      "links": [
-        "biapy/Notebook Preview"
-      ],
+      "links": ["biapy/Notebook Preview"],
       "name": "Classification (3D) - BiaPy",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/biapy/notebook_classification_3d/latest/rdf.yaml",
       "tags": [
@@ -2402,9 +2107,7 @@
         "3D"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -2426,9 +2129,7 @@
       "download_count": 1,
       "download_url": "https://raw.githubusercontent.com/BiaPyX/BiaPy/master/notebooks/denoising/BiaPy_2D_Denoising.ipynb",
       "id": "biapy/notebook_denoising_2d",
-      "links": [
-        "biapy/Notebook Preview"
-      ],
+      "links": ["biapy/Notebook Preview"],
       "name": "Denoising (2D) - BiaPy",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/biapy/notebook_denoising_2d/latest/rdf.yaml",
       "tags": [
@@ -2448,9 +2149,7 @@
         "2D"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -2472,9 +2171,7 @@
       "download_count": 1,
       "download_url": "https://raw.githubusercontent.com/BiaPyX/BiaPy/master/notebooks/denoising/BiaPy_3D_Denoising.ipynb",
       "id": "biapy/notebook_denoising_3d",
-      "links": [
-        "biapy/Notebook Preview"
-      ],
+      "links": ["biapy/Notebook Preview"],
       "name": "Denoising (3D) - BiaPy",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/biapy/notebook_denoising_3d/latest/rdf.yaml",
       "tags": [
@@ -2494,9 +2191,7 @@
         "3D"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -2518,9 +2213,7 @@
       "download_count": 1,
       "download_url": "https://raw.githubusercontent.com/BiaPyX/BiaPy/master/notebooks/detection/BiaPy_2D_Detection.ipynb",
       "id": "biapy/notebook_detection_2d",
-      "links": [
-        "biapy/Notebook Preview"
-      ],
+      "links": ["biapy/Notebook Preview"],
       "name": "Detection (2D) - BiaPy",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/biapy/notebook_detection_2d/latest/rdf.yaml",
       "tags": [
@@ -2539,9 +2232,7 @@
         "2D"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -2563,9 +2254,7 @@
       "download_count": 1,
       "download_url": "https://raw.githubusercontent.com/BiaPyX/BiaPy/master/notebooks/detection/BiaPy_3D_Detection.ipynb",
       "id": "biapy/notebook_detection_3d",
-      "links": [
-        "biapy/Notebook Preview"
-      ],
+      "links": ["biapy/Notebook Preview"],
       "name": "Detection (3D) - BiaPy",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/biapy/notebook_detection_3d/latest/rdf.yaml",
       "tags": [
@@ -2584,9 +2273,7 @@
         "3D"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -2608,9 +2295,7 @@
       "download_count": 1,
       "download_url": "https://raw.githubusercontent.com/BiaPyX/BiaPy/master/notebooks/instance_segmentation/BiaPy_2D_Instance_Segmentation.ipynb",
       "id": "biapy/notebook_instance_segmentation_2d",
-      "links": [
-        "biapy/Notebook Preview"
-      ],
+      "links": ["biapy/Notebook Preview"],
       "name": "Instance Segmentation (2D) - BiaPy",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/biapy/notebook_instance_segmentation_2d/latest/rdf.yaml",
       "tags": [
@@ -2629,9 +2314,7 @@
         "2D"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -2653,9 +2336,7 @@
       "download_count": 1,
       "download_url": "https://raw.githubusercontent.com/BiaPyX/BiaPy/master/notebooks/instance_segmentation/BiaPy_3D_Instance_Segmentation.ipynb",
       "id": "biapy/notebook_instance_segmentation_3d",
-      "links": [
-        "biapy/Notebook Preview"
-      ],
+      "links": ["biapy/Notebook Preview"],
       "name": "Instance Segmentation (3D) - BiaPy",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/biapy/notebook_instance_segmentation_3d/latest/rdf.yaml",
       "tags": [
@@ -2674,9 +2355,7 @@
         "3D"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -2698,9 +2377,7 @@
       "download_count": 1,
       "download_url": "https://raw.githubusercontent.com/BiaPyX/BiaPy/master/notebooks/self-supervised/BiaPy_2D_Self_Supervision.ipynb",
       "id": "biapy/notebook_self_supervision_2d",
-      "links": [
-        "biapy/Notebook Preview"
-      ],
+      "links": ["biapy/Notebook Preview"],
       "name": "Self_Supervision (2D) - BiaPy",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/biapy/notebook_self_supervision_2d/latest/rdf.yaml",
       "tags": [
@@ -2721,9 +2398,7 @@
         "2D"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -2745,9 +2420,7 @@
       "download_count": 1,
       "download_url": "https://raw.githubusercontent.com/BiaPyX/BiaPy/master/notebooks/self-supervised/BiaPy_3D_Self_Supervision.ipynb",
       "id": "biapy/notebook_self_supervision_3d",
-      "links": [
-        "biapy/Notebook Preview"
-      ],
+      "links": ["biapy/Notebook Preview"],
       "name": "Self_Supervision (3D) - BiaPy",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/biapy/notebook_self_supervision_3d/latest/rdf.yaml",
       "tags": [
@@ -2769,9 +2442,7 @@
         "3D"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -2793,9 +2464,7 @@
       "download_count": 1,
       "download_url": "https://raw.githubusercontent.com/BiaPyX/BiaPy/master/notebooks/semantic_segmentation/BiaPy_2D_Semantic_Segmentation.ipynb",
       "id": "biapy/notebook_semantic_segmentation_2d",
-      "links": [
-        "biapy/Notebook Preview"
-      ],
+      "links": ["biapy/Notebook Preview"],
       "name": "Semantic Segmentation (2D) - BiaPy",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/biapy/notebook_semantic_segmentation_2d/latest/rdf.yaml",
       "tags": [
@@ -2814,9 +2483,7 @@
         "2D"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -2838,9 +2505,7 @@
       "download_count": 1,
       "download_url": "https://raw.githubusercontent.com/BiaPyX/BiaPy/master/notebooks/super-resolution/BiaPy_2D_Super_Resolution.ipynb",
       "id": "biapy/notebook_super_resolution_2d",
-      "links": [
-        "biapy/Notebook Preview"
-      ],
+      "links": ["biapy/Notebook Preview"],
       "name": "Super_Resolution (2D) - BiaPy",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/biapy/notebook_super_resolution_2d/latest/rdf.yaml",
       "tags": [
@@ -2864,9 +2529,7 @@
         "2D"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -2888,9 +2551,7 @@
       "download_count": 1,
       "download_url": "https://raw.githubusercontent.com/BiaPyX/BiaPy/master/notebooks/super-resolution/BiaPy_3D_Super_Resolution.ipynb",
       "id": "biapy/notebook_super_resolution_3d",
-      "links": [
-        "biapy/Notebook Preview"
-      ],
+      "links": ["biapy/Notebook Preview"],
       "name": "Super Resolution (3D) - BiaPy",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/biapy/notebook_super_resolution_3d/latest/rdf.yaml",
       "tags": [
@@ -2914,9 +2575,7 @@
         "3D"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -2935,13 +2594,9 @@
       "license": "GPL-3.0-or-later",
       "name": "QuPath",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/bioimageio/qupath/latest/rdf.yaml",
-      "tags": [
-        "qupath"
-      ],
+      "tags": ["qupath"],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -2963,13 +2618,9 @@
       "id": "bioimageio/stardist",
       "name": "StarDist",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/bioimageio/stardist/latest/rdf.yaml",
-      "tags": [
-        "stardist"
-      ],
+      "tags": ["stardist"],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -3012,9 +2663,7 @@
       "description": "Ready to use notebook for the segmentation of small extrcaellular vesicles in transmission electron microscopy (TEM) images. The notebook is optimized to use it in Google Colaboratory. It will download the original code and dataset, and make the inference connecting with Google's GPU.",
       "download_count": 1,
       "id": "deepimagej/EVsTEMsegmentationFRUNet",
-      "links": [
-        "deepimagej/FRUNet2DsEVSegmentation"
-      ],
+      "links": ["deepimagej/FRUNet2DsEVSegmentation"],
       "name": "Small extracellular vesicle instance segmentation (FRU-Net)",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/deepimagej/EVsTEMsegmentationFRUNet/latest/rdf.yaml",
       "source": "https://raw.githubusercontent.com/BIIG-UC3M/FRU-Net-TEM-segmentation/master/FRUnet_TEM_Exosomes_sEV.ipynb",
@@ -3029,9 +2678,7 @@
         "pipeline"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -3062,9 +2709,7 @@
         "digital pathology"
       ],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -3082,15 +2727,9 @@
       "name": "deepImageJ",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/deepimagej/deepimagej/latest/rdf.yaml",
       "source": "https://raw.githubusercontent.com/deepimagej/models/master/src/deepimagej-app.imjoy.html",
-      "tags": [
-        "software",
-        "bioengine",
-        "deepimagej"
-      ],
+      "tags": ["software", "bioengine", "deepimagej"],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -3121,9 +2760,7 @@
         "superresolution"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -3150,9 +2787,7 @@
       "description": "Easy example to define a 2D U-Net for segmentation with Keras and import it into DeepImageJ format",
       "download_count": 1,
       "id": "deepimagej/unet-pancreaticcellsegmentation",
-      "links": [
-        "deepimagej/UNet2DPancreaticSegmentation"
-      ],
+      "links": ["deepimagej/UNet2DPancreaticSegmentation"],
       "name": "2D U-Net for binary segmentation",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/deepimagej/unet-pancreaticcellsegmentation/latest/rdf.yaml",
       "source": "https://raw.githubusercontent.com/deepimagej/models/master/u-net_pancreatic_segmentation/U_Net_PhC_C2DL_PSC_segmentation.ipynb",
@@ -3165,9 +2800,7 @@
         "cell-segmentation"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -3239,9 +2872,7 @@
         "zerocostdl4mic"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -3269,9 +2900,7 @@
       "download_count": 1,
       "download_url": "https://colab.research.google.com/github/HenriquesLab/DL4MicEverywhere/blob/main/notebooks/Bespoke_notebooks/bioimageio-pytorch/load_bioimageio_pytorch.ipynb",
       "id": "dl4miceverywhere/Notebook_bioimageio_pytorch",
-      "links": [
-        "dl4miceverywhere/Notebook Preview"
-      ],
+      "links": ["dl4miceverywhere/Notebook Preview"],
       "name": "General BioImageIO notebook - PyTorch",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/dl4miceverywhere/Notebook_bioimageio_pytorch/latest/rdf.yaml",
       "tags": [
@@ -3283,9 +2912,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -3313,9 +2940,7 @@
       "download_count": 1,
       "download_url": "https://colab.research.google.com/github/HenriquesLab/DL4MicEverywhere/blob/main/notebooks/Bespoke_notebooks/bioimageio-tensorflow/load_bioimageio_tensorflow.ipynb",
       "id": "dl4miceverywhere/Notebook_bioimageio_tensorflow",
-      "links": [
-        "dl4miceverywhere/Notebook Preview"
-      ],
+      "links": ["dl4miceverywhere/Notebook Preview"],
       "name": "General BioImageIO notebook - TensorFlow",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/dl4miceverywhere/Notebook_bioimageio_tensorflow/latest/rdf.yaml",
       "tags": [
@@ -3327,9 +2952,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -3344,14 +2967,9 @@
       "name": "Fiji",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/fiji/Fiji/latest/rdf.yaml",
       "source": "https://fiji.sc/",
-      "tags": [
-        "fiji",
-        "software"
-      ],
+      "tags": ["fiji", "software"],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "badges": [],
@@ -3365,13 +2983,9 @@
       "name": "HPA-Classification",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/hpa/HPA-Classification/latest/rdf.yaml",
       "source": "https://raw.githubusercontent.com/imjoy-team/imjoy-plugins/master/repository/HPA-Classification.imjoy.html",
-      "tags": [
-        "bioengine"
-      ],
+      "tags": ["bioengine"],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -3411,9 +3025,7 @@
         "instance-segmentation"
       ],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -3441,9 +3053,7 @@
         "classification"
       ],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -3461,14 +3071,9 @@
       "name": "Icy",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/icy/icy/latest/rdf.yaml",
       "source": "https://gitlab.pasteur.fr/bia/",
-      "tags": [
-        "icy",
-        "bioimage.io"
-      ],
+      "tags": ["icy", "bioimage.io"],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -3493,9 +3098,7 @@
         "3D"
       ],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -3526,9 +3129,7 @@
         "instance-segmentation"
       ],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -3556,9 +3157,7 @@
         "3D"
       ],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -3576,14 +3175,9 @@
       "name": "ilastik",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/ilastik/ilastik/latest/rdf.yaml",
       "source": "https://raw.githubusercontent.com/ilastik/bioimage-io-resources/main/src/ilastik-app.imjoy.html",
-      "tags": [
-        "software",
-        "bioengine"
-      ],
+      "tags": ["software", "bioengine"],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -3610,9 +3204,7 @@
         "isbi2012-challenge"
       ],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -3638,9 +3230,7 @@
         "instance-segmentation"
       ],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -3666,9 +3256,7 @@
         "instance-segmentation"
       ],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -3685,13 +3273,9 @@
       "name": "Mutex Watershed Plugin",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/ilastik/mws-segmentation/latest/rdf.yaml",
       "source": "https://raw.githubusercontent.com/ilastik/bioimage-io-resources/main/src/mws-segmentation.imjoy.html",
-      "tags": [
-        "bioengine"
-      ],
+      "tags": ["bioengine"],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -3717,9 +3301,7 @@
         "3D"
       ],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -3745,9 +3327,7 @@
         "3D"
       ],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -3775,9 +3355,7 @@
         "3D"
       ],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -3803,9 +3381,7 @@
         "2D"
       ],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -3830,9 +3406,7 @@
         "2D"
       ],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -3850,16 +3424,9 @@
       "name": "2D UNet Training",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/ilastik/torch-em-2d-unet-notebook/latest/rdf.yaml",
       "source": "https://raw.githubusercontent.com/constantinpape/torch-em/main/experiments/2D-UNet-Training.ipynb",
-      "tags": [
-        "instance-segmentation",
-        "semantic-segmentation",
-        "u-net",
-        "2d"
-      ],
+      "tags": ["instance-segmentation", "semantic-segmentation", "u-net", "2d"],
       "type": "notebook",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -3877,16 +3444,9 @@
       "name": "3D UNet Training",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/ilastik/torch-em-3d-unet-notebook/latest/rdf.yaml",
       "source": "https://raw.githubusercontent.com/constantinpape/torch-em/main/experiments/3D-UNet-Training.ipynb",
-      "tags": [
-        "instance-segmentation",
-        "semantic-segmentation",
-        "u-net",
-        "3d"
-      ],
+      "tags": ["instance-segmentation", "semantic-segmentation", "u-net", "3d"],
       "type": "notebook",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -3911,9 +3471,7 @@
         "instance-segmentation"
       ],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "badges": [],
@@ -3925,13 +3483,9 @@
       "name": "BioImageIO-Packager",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/imjoy/BioImageIO-Packager/latest/rdf.yaml",
       "source": "https://raw.githubusercontent.com/imjoy-team/bioimage-io-models/master/src/bioimageio-packager.imjoy.html",
-      "tags": [
-        "bioengine"
-      ],
+      "tags": ["bioengine"],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "badges": [],
@@ -3943,13 +3497,9 @@
       "name": "GenericBioEngineApp",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/imjoy/GenericBioEngineApp/latest/rdf.yaml",
       "source": "https://raw.githubusercontent.com/imjoy-team/bioimage-io-models/master/src/generic-bioengine-app.imjoy.html",
-      "tags": [
-        "bioengine"
-      ],
+      "tags": ["bioengine"],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "badges": [],
@@ -3961,13 +3511,9 @@
       "name": "HPA Single Cell",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/imjoy/HPA-Single-Cell/latest/rdf.yaml",
       "source": "https://raw.githubusercontent.com/imjoy-team/bioimage-io-models/master/src/hpa-single-cell-bioengine.imjoy.html",
-      "tags": [
-        "bioengine"
-      ],
+      "tags": ["bioengine"],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "badges": [],
@@ -3979,15 +3525,9 @@
       "name": "ImJoy",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/imjoy/ImJoy/latest/rdf.yaml",
       "source": "https://raw.githubusercontent.com/imjoy-team/bioimage-io-models/master/src/imjoy-app.imjoy.html",
-      "tags": [
-        "software",
-        "imjoy",
-        "bioengine"
-      ],
+      "tags": ["software", "imjoy", "bioengine"],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "badges": [],
@@ -3999,14 +3539,9 @@
       "name": "ImageJ.JS",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/imjoy/ImageJ.JS/latest/rdf.yaml",
       "source": "https://raw.githubusercontent.com/imjoy-team/bioimage-io-models/master/src/imagej-js.imjoy.html",
-      "tags": [
-        "software",
-        "bioengine"
-      ],
+      "tags": ["software", "bioengine"],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4022,19 +3557,13 @@
       "download_url": "https://downloads.openmicroscopy.org/images/Vectra-QPTIFF/perkinelmer/PKI_scans/LuCa-7color_Scan1.qptiff",
       "id": "imjoy/LuCa-7color",
       "license": "CC-BY-4.0",
-      "links": [
-        "imjoy/vizarr"
-      ],
+      "links": ["imjoy/vizarr"],
       "name": "LuCa-7color",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/imjoy/LuCa-7color/latest/rdf.yaml",
       "source": "https://viv-demo.storage.googleapis.com/LuCa-7color_Scan1/data.zarr/0",
-      "tags": [
-        "OME-TIFF"
-      ],
+      "tags": ["OME-TIFF"],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "badges": [],
@@ -4046,13 +3575,9 @@
       "name": "vizarr",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/imjoy/vizarr/latest/rdf.yaml",
       "source": "https://raw.githubusercontent.com/imjoy-team/bioimage-io-models/master/src/vizarr.imjoy.html",
-      "tags": [
-        "bioengine"
-      ],
+      "tags": ["bioengine"],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4070,14 +3595,9 @@
       "name": "QuPath",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/qupath/QuPath/latest/rdf.yaml",
       "source": "https://github.com/qupath",
-      "tags": [
-        "qupath",
-        "bioimage.io"
-      ],
+      "tags": ["qupath", "bioimage.io"],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4100,14 +3620,9 @@
       "name": "StarDist",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/stardist/stardist/latest/rdf.yaml",
       "source": "https://github.com/stardist",
-      "tags": [
-        "stardist",
-        "bioimage.io"
-      ],
+      "tags": ["stardist", "bioimage.io"],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4124,16 +3639,9 @@
       "id": "zero/Dataset_CARE_2D_ZeroCostDL4Mic",
       "name": "CARE (2D) example training and test dataset - ZeroCostDL4Mic",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Dataset_CARE_2D_ZeroCostDL4Mic/latest/rdf.yaml",
-      "tags": [
-        "CARE",
-        "denoising",
-        "ZeroCostDL4Mic",
-        "2D"
-      ],
+      "tags": ["CARE", "denoising", "ZeroCostDL4Mic", "2D"],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4153,17 +3661,9 @@
       "id": "zero/Dataset_CARE_2D_coli_DeepBacs",
       "name": "Escherichia coli nucleoid denoising dataset - DeepBacs",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Dataset_CARE_2D_coli_DeepBacs/latest/rdf.yaml",
-      "tags": [
-        "Noise2Void",
-        "CARE",
-        "denoising",
-        "DeepBacs",
-        "2D"
-      ],
+      "tags": ["Noise2Void", "CARE", "denoising", "DeepBacs", "2D"],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4180,16 +3680,9 @@
       "id": "zero/Dataset_CARE_3D_ZeroCostDL4Mic",
       "name": "CARE (3D) example training and test dataset - ZeroCostDL4Mic",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Dataset_CARE_3D_ZeroCostDL4Mic/latest/rdf.yaml",
-      "tags": [
-        "CARE",
-        "denoising",
-        "ZeroCostDL4Mic",
-        "3D"
-      ],
+      "tags": ["CARE", "denoising", "ZeroCostDL4Mic", "3D"],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4206,14 +3699,9 @@
       "id": "zero/Dataset_CycleGAN_ZeroCostDL4Mic",
       "name": "CycleGAN example training and test dataset - ZeroCostDL4Mic",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Dataset_CycleGAN_ZeroCostDL4Mic/latest/rdf.yaml",
-      "tags": [
-        "CycleGAN",
-        "ZeroCostDL4Mic"
-      ],
+      "tags": ["CycleGAN", "ZeroCostDL4Mic"],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4233,16 +3721,9 @@
       "id": "zero/Dataset_Deep-STORM_ZeroCostDL4Mic",
       "name": "Deep-STORM training and example dataset - ZeroCostDL4Mic",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Dataset_Deep-STORM_ZeroCostDL4Mic/latest/rdf.yaml",
-      "tags": [
-        "SMLM",
-        "Deep-STORM",
-        "ZeroCostDL4Mic",
-        "2D"
-      ],
+      "tags": ["SMLM", "Deep-STORM", "ZeroCostDL4Mic", "2D"],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4265,16 +3746,9 @@
       "id": "zero/Dataset_Noise2Void_2D_ZeroCostDL4Mic",
       "name": "Noise2Void (2D) example training and test dataset - ZeroCostDL4Mic",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Dataset_Noise2Void_2D_ZeroCostDL4Mic/latest/rdf.yaml",
-      "tags": [
-        "Noise2Void",
-        "denoising",
-        "ZeroCostDL4Mic",
-        "2D"
-      ],
+      "tags": ["Noise2Void", "denoising", "ZeroCostDL4Mic", "2D"],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4294,16 +3768,9 @@
       "id": "zero/Dataset_Noise2Void_2D_subtilis_DeepBacs",
       "name": "Bacillus subtilis denoising dataset - DeepBacs",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Dataset_Noise2Void_2D_subtilis_DeepBacs/latest/rdf.yaml",
-      "tags": [
-        "Noise2Void",
-        "denoising",
-        "DeepBacs",
-        "2D"
-      ],
+      "tags": ["Noise2Void", "denoising", "DeepBacs", "2D"],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4320,16 +3787,9 @@
       "id": "zero/Dataset_Noise2Void_3D_ZeroCostDL4Mic",
       "name": "Noise2Void (3D) example training and test dataset - ZeroCostDL4Mic",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Dataset_Noise2Void_3D_ZeroCostDL4Mic/latest/rdf.yaml",
-      "tags": [
-        "Noise2Void",
-        "denoising",
-        "ZeroCostDL4Mic",
-        "3D"
-      ],
+      "tags": ["Noise2Void", "denoising", "ZeroCostDL4Mic", "3D"],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4354,9 +3814,7 @@
         "ZeroCostDL4Mic"
       ],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4376,16 +3834,9 @@
       "id": "zero/Dataset_SplineDist_2D_DeepBacs",
       "name": "Escherichia coli bright field segmentation dataset - DeepBacs",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Dataset_SplineDist_2D_DeepBacs/latest/rdf.yaml",
-      "tags": [
-        "StarDist",
-        "segmentation",
-        "DeepBacs",
-        "2D"
-      ],
+      "tags": ["StarDist", "segmentation", "DeepBacs", "2D"],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4417,16 +3868,9 @@
       "id": "zero/Dataset_StarDist_2D_DeepBacs",
       "name": "Mixed segmentation dataset - DeepBacs",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Dataset_StarDist_2D_DeepBacs/latest/rdf.yaml",
-      "tags": [
-        "StarDist",
-        "segmentation",
-        "DeepBacs",
-        "2D"
-      ],
+      "tags": ["StarDist", "segmentation", "DeepBacs", "2D"],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4446,16 +3890,9 @@
       "id": "zero/Dataset_StarDist_2D_ZeroCostDL4Mic_2D",
       "name": "StarDist (2D) example training and test dataset - ZeroCostDL4Mic",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Dataset_StarDist_2D_ZeroCostDL4Mic_2D/latest/rdf.yaml",
-      "tags": [
-        "StarDist",
-        "segmentation",
-        "ZeroCostDL4Mic",
-        "2D"
-      ],
+      "tags": ["StarDist", "segmentation", "ZeroCostDL4Mic", "2D"],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4472,14 +3909,9 @@
       "id": "zero/Dataset_StarDist_Fluo_ZeroCostDL4Mic",
       "name": "Combining StarDist and TrackMate example 1 - Breast cancer cell dataset",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Dataset_StarDist_Fluo_ZeroCostDL4Mic/latest/rdf.yaml",
-      "tags": [
-        "StarDist",
-        "ZeroCostDL4Mic"
-      ],
+      "tags": ["StarDist", "ZeroCostDL4Mic"],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4499,14 +3931,9 @@
       "id": "zero/Dataset_StarDist_brightfield2_ZeroCostDL4Mic",
       "name": "Combining StarDist and TrackMate example 3 - Flow chamber dataset",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Dataset_StarDist_brightfield2_ZeroCostDL4Mic/latest/rdf.yaml",
-      "tags": [
-        "StarDist",
-        "ZeroCostDL4Mic"
-      ],
+      "tags": ["StarDist", "ZeroCostDL4Mic"],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4526,14 +3953,9 @@
       "id": "zero/Dataset_StarDist_brightfield_ZeroCostDL4Mic",
       "name": "Combining StarDist and TrackMate example 2 - T cell dataset",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Dataset_StarDist_brightfield_ZeroCostDL4Mic/latest/rdf.yaml",
-      "tags": [
-        "StarDist",
-        "ZeroCostDL4Mic"
-      ],
+      "tags": ["StarDist", "ZeroCostDL4Mic"],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4556,14 +3978,9 @@
       "id": "zero/Dataset_StarDist_fluo2_ZeroCostDL4Mic",
       "name": "training dataset for automated tracking of MDA-MB-231 and BT20 cells",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Dataset_StarDist_fluo2_ZeroCostDL4Mic/latest/rdf.yaml",
-      "tags": [
-        "StarDist",
-        "ZeroCostDL4Mic"
-      ],
+      "tags": ["StarDist", "ZeroCostDL4Mic"],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4583,16 +4000,9 @@
       "id": "zero/Dataset_U-Net_2D_DeepBacs",
       "name": "Escherichia coli bright field segmentation dataset - DeepBacs",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Dataset_U-Net_2D_DeepBacs/latest/rdf.yaml",
-      "tags": [
-        "U-Net",
-        "segmentation",
-        "DeepBacs",
-        "2D"
-      ],
+      "tags": ["U-Net", "segmentation", "DeepBacs", "2D"],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4612,17 +4022,9 @@
       "id": "zero/Dataset_U-Net_2D_multilabel_DeepBacs",
       "name": "Multi-label U-Net training dataset (Bacillus subtilis) - DeepBacs",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Dataset_U-Net_2D_multilabel_DeepBacs/latest/rdf.yaml",
-      "tags": [
-        "U-Net",
-        "multilabel",
-        "segmentation",
-        "DeepBacs",
-        "2D"
-      ],
+      "tags": ["U-Net", "multilabel", "segmentation", "DeepBacs", "2D"],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4642,14 +4044,9 @@
       "id": "zero/Dataset_YOLOv2_ZeroCostDL4Mic",
       "name": "YoloV2 example training and test dataset - ZeroCostDL4Mic",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Dataset_YOLOv2_ZeroCostDL4Mic/latest/rdf.yaml",
-      "tags": [
-        "YOLOv2",
-        "ZeroCostDL4Mic"
-      ],
+      "tags": ["YOLOv2", "ZeroCostDL4Mic"],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4669,16 +4066,9 @@
       "id": "zero/Dataset_YOLOv2_antibiotic_DeepBacs",
       "name": "Escherichia coli antibiotic phenotyping object detection dataset - DeepBacs",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Dataset_YOLOv2_antibiotic_DeepBacs/latest/rdf.yaml",
-      "tags": [
-        "YOLOv2",
-        "object detection",
-        "DeepBacs",
-        "2D"
-      ],
+      "tags": ["YOLOv2", "object detection", "DeepBacs", "2D"],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4698,16 +4088,9 @@
       "id": "zero/Dataset_YOLOv2_coli_DeepBacs",
       "name": "Escherichia coli growth stage object detection dataset - DeepBacs",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Dataset_YOLOv2_coli_DeepBacs/latest/rdf.yaml",
-      "tags": [
-        "YOLOv2",
-        "object detection",
-        "DeepBacs",
-        "2D"
-      ],
+      "tags": ["YOLOv2", "object detection", "DeepBacs", "2D"],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4724,16 +4107,9 @@
       "id": "zero/Dataset_fnet_3D_ZeroCostDL4Mic",
       "name": "Label-free prediction (fnet) example training and test dataset - ZeroCostDL4Mic",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Dataset_fnet_3D_ZeroCostDL4Mic/latest/rdf.yaml",
-      "tags": [
-        "fnet",
-        "labelling",
-        "ZeroCostDL4Mic",
-        "3D"
-      ],
+      "tags": ["fnet", "labelling", "ZeroCostDL4Mic", "3D"],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4753,17 +4129,9 @@
       "id": "zero/Dataset_fnet_DeepBacs",
       "name": "Artificial labeling of E. coli membranes dataset - DeepBacs",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Dataset_fnet_DeepBacs/latest/rdf.yaml",
-      "tags": [
-        "fnet",
-        "CARE",
-        "artificial labelling",
-        "DeepBacs",
-        "2D"
-      ],
+      "tags": ["fnet", "CARE", "artificial labelling", "DeepBacs", "2D"],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4780,14 +4148,9 @@
       "id": "zero/Dataset_pix2pix_ZeroCostDL4Mic",
       "name": "pix2pix example training and test dataset - ZeroCostDL4Mic",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Dataset_pix2pix_ZeroCostDL4Mic/latest/rdf.yaml",
-      "tags": [
-        "pix2pix",
-        "ZeroCostDL4Mic"
-      ],
+      "tags": ["pix2pix", "ZeroCostDL4Mic"],
       "type": "dataset",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4809,9 +4172,7 @@
       "download_count": 1,
       "download_url": "https://raw.githubusercontent.com/HenriquesLab/ZeroCostDL4Mic/master/Tools/Augmentor_ZeroCostDL4Mic.ipynb",
       "id": "zero/Notebook_Augmentor_ZeroCostDL4Mic",
-      "links": [
-        "zero/Notebook Preview"
-      ],
+      "links": ["zero/Notebook Preview"],
       "name": "Augmentor - ZeroCostDL4Mic",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Notebook_Augmentor_ZeroCostDL4Mic/latest/rdf.yaml",
       "tags": [
@@ -4823,9 +4184,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4868,9 +4227,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4892,10 +4249,7 @@
       "download_count": 1,
       "download_url": "https://raw.githubusercontent.com/HenriquesLab/ZeroCostDL4Mic/master/Colab_notebooks/CARE_3D_ZeroCostDL4Mic.ipynb",
       "id": "zero/Notebook_CARE_3D_ZeroCostDL4Mic",
-      "links": [
-        "zero/Notebook Preview",
-        "zero/Dataset_CARE_3D_ZeroCostDL4Mic"
-      ],
+      "links": ["zero/Notebook Preview", "zero/Dataset_CARE_3D_ZeroCostDL4Mic"],
       "name": "CARE (3D) - ZeroCostDL4Mic",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Notebook_CARE_3D_ZeroCostDL4Mic/latest/rdf.yaml",
       "tags": [
@@ -4908,9 +4262,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4955,9 +4307,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -4994,9 +4344,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -5018,9 +4366,7 @@
       "download_count": 1,
       "download_url": "https://raw.githubusercontent.com/HenriquesLab/ZeroCostDL4Mic/master/Colab_notebooks/DFCAN_ZeroCostDL4Mic.ipynb",
       "id": "zero/Notebook_DFCAN_ZeroCostDL4Mic",
-      "links": [
-        "zero/Notebook Preview"
-      ],
+      "links": ["zero/Notebook Preview"],
       "name": "DFCAN - ZeroCostDL4Mic",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Notebook_DFCAN_ZeroCostDL4Mic/latest/rdf.yaml",
       "tags": [
@@ -5032,9 +4378,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -5056,9 +4400,7 @@
       "download_count": 1,
       "download_url": "https://raw.githubusercontent.com/HenriquesLab/ZeroCostDL4Mic/master/Colab_notebooks/DRMIME_2D_ZeroCostDL4Mic.ipynb",
       "id": "zero/Notebook_DRMIME_ZeroCostDL4Mic",
-      "links": [
-        "zero/Notebook Preview"
-      ],
+      "links": ["zero/Notebook Preview"],
       "name": "DRMIME - ZeroCostDL4Mic",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Notebook_DRMIME_ZeroCostDL4Mic/latest/rdf.yaml",
       "tags": [
@@ -5070,9 +4412,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -5113,9 +4453,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -5154,9 +4492,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -5196,9 +4532,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -5220,9 +4554,7 @@
       "download_count": 1,
       "download_url": "https://raw.githubusercontent.com/HenriquesLab/ZeroCostDL4Mic/master/Colab_notebooks/DenoiSeg_ZeroCostDL4Mic.ipynb",
       "id": "zero/Notebook_DenoiSeg_2D_ZeroCostDL4Mic",
-      "links": [
-        "zero/Notebook Preview"
-      ],
+      "links": ["zero/Notebook Preview"],
       "name": "DenoiSeg (2D) - ZeroCostDL4Mic",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Notebook_DenoiSeg_2D_ZeroCostDL4Mic/latest/rdf.yaml",
       "tags": [
@@ -5234,9 +4566,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -5276,9 +4606,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -5319,9 +4647,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -5347,9 +4673,7 @@
       "download_count": 1,
       "download_url": "https://raw.githubusercontent.com/HenriquesLab/ZeroCostDL4Mic/master/Colab_notebooks/ZeroCostDL4Mic_Interactive_annotations_Cellpose.ipynb",
       "id": "zero/Notebook_Interactive_Segmentation_Kaibu_2D_ZeroCostDL4Mic",
-      "links": [
-        "zero/Notebook Preview"
-      ],
+      "links": ["zero/Notebook Preview"],
       "name": "Interactive Segmentation - Kaibu (2D) - ZeroCostDL4Mic",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Notebook_Interactive_Segmentation_Kaibu_2D_ZeroCostDL4Mic/latest/rdf.yaml",
       "tags": [
@@ -5361,9 +4685,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -5385,9 +4707,7 @@
       "download_count": 1,
       "download_url": "https://raw.githubusercontent.com/HenriquesLab/ZeroCostDL4Mic/master/Colab_notebooks/MaskRCNN_ZeroCostDL4Mic.ipynb",
       "id": "zero/Notebook_MaskRCNN_ZeroCostDL4Mic",
-      "links": [
-        "zero/Notebook Preview"
-      ],
+      "links": ["zero/Notebook Preview"],
       "name": "MaskRCNN - ZeroCostDL4Mic",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Notebook_MaskRCNN_ZeroCostDL4Mic/latest/rdf.yaml",
       "tags": [
@@ -5399,9 +4719,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -5443,9 +4761,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -5484,9 +4800,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -5508,9 +4822,7 @@
       "download_count": 1,
       "download_url": "https://raw.githubusercontent.com/HenriquesLab/ZeroCostDL4Mic/master/Tools/Quality_Control_ZeroCostDL4Mic.ipynb",
       "id": "zero/Notebook_Quality_Control_ZeroCostDL4Mic",
-      "links": [
-        "zero/Notebook Preview"
-      ],
+      "links": ["zero/Notebook Preview"],
       "name": "Quality Control - ZeroCostDL4Mic",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Notebook_Quality_Control_ZeroCostDL4Mic/latest/rdf.yaml",
       "tags": [
@@ -5521,9 +4833,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -5545,10 +4855,7 @@
       "download_count": 1,
       "download_url": "https://raw.githubusercontent.com/HenriquesLab/ZeroCostDL4Mic/master/Colab_notebooks/3D_RCAN_ZeroCostDL4Mic.ipynb",
       "id": "zero/Notebook_RCAN_3D_ZeroCostDL4Mic",
-      "links": [
-        "zero/Notebook Preview",
-        "zero/Dataset_CARE_3D_ZeroCostDL4Mic"
-      ],
+      "links": ["zero/Notebook Preview", "zero/Dataset_CARE_3D_ZeroCostDL4Mic"],
       "name": "RCAN (3D) - ZeroCostDL4Mic",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Notebook_RCAN_3D_ZeroCostDL4Mic/latest/rdf.yaml",
       "tags": [
@@ -5561,9 +4868,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -5603,9 +4908,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -5648,9 +4951,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -5696,9 +4997,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -5720,9 +5019,7 @@
       "download_count": 1,
       "download_url": "https://raw.githubusercontent.com/HenriquesLab/ZeroCostDL4Mic/master/Colab_notebooks/StarDist_3D_ZeroCostDL4Mic.ipynb",
       "id": "zero/Notebook_StarDist_3D_ZeroCostDL4Mic",
-      "links": [
-        "zero/Notebook Preview"
-      ],
+      "links": ["zero/Notebook Preview"],
       "name": "StarDist (3D) - ZeroCostDL4Mic",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Notebook_StarDist_3D_ZeroCostDL4Mic/latest/rdf.yaml",
       "tags": [
@@ -5735,9 +5032,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -5759,10 +5054,7 @@
       "download_count": 1,
       "download_url": "https://raw.githubusercontent.com/HenriquesLab/ZeroCostDL4Mic/master/Colab_notebooks/U-Net_2D_ZeroCostDL4Mic.ipynb",
       "id": "zero/Notebook_U-Net_2D_ZeroCostDL4Mic",
-      "links": [
-        "zero/Notebook Preview",
-        "zero/Dataset_U-Net_2D_DeepBacs"
-      ],
+      "links": ["zero/Notebook Preview", "zero/Dataset_U-Net_2D_DeepBacs"],
       "name": "U-Net (2D) - ZeroCostDL4Mic",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Notebook_U-Net_2D_ZeroCostDL4Mic/latest/rdf.yaml",
       "tags": [
@@ -5775,9 +5067,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -5818,9 +5108,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -5842,9 +5130,7 @@
       "download_count": 1,
       "download_url": "https://raw.githubusercontent.com/HenriquesLab/ZeroCostDL4Mic/master/Colab_notebooks/U-Net_3D_ZeroCostDL4Mic.ipynb",
       "id": "zero/Notebook_U-Net_3D_ZeroCostDL4Mic",
-      "links": [
-        "zero/Notebook Preview"
-      ],
+      "links": ["zero/Notebook Preview"],
       "name": "U-Net (3D) - ZeroCostDL4Mic",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Notebook_U-Net_3D_ZeroCostDL4Mic/latest/rdf.yaml",
       "tags": [
@@ -5857,9 +5143,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -5899,9 +5183,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -5923,10 +5205,7 @@
       "download_count": 1,
       "download_url": "https://raw.githubusercontent.com/HenriquesLab/ZeroCostDL4Mic/master/Colab_notebooks/fnet_2D_ZeroCostDL4Mic.ipynb",
       "id": "zero/Notebook_fnet_2D_ZeroCostDL4Mic",
-      "links": [
-        "zero/Notebook Preview",
-        "zero/Dataset_fnet_DeepBacs"
-      ],
+      "links": ["zero/Notebook Preview", "zero/Dataset_fnet_DeepBacs"],
       "name": "Label-free Prediction - fnet - (2D) ZeroCostDL4Mic",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Notebook_fnet_2D_ZeroCostDL4Mic/latest/rdf.yaml",
       "tags": [
@@ -5939,9 +5218,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -5963,10 +5240,7 @@
       "download_count": 1,
       "download_url": "https://raw.githubusercontent.com/HenriquesLab/ZeroCostDL4Mic/master/Colab_notebooks/fnet_3D_ZeroCostDL4Mic.ipynb",
       "id": "zero/Notebook_fnet_3D_ZeroCostDL4Mic",
-      "links": [
-        "zero/Notebook Preview",
-        "zero/Dataset_fnet_3D_ZeroCostDL4Mic"
-      ],
+      "links": ["zero/Notebook Preview", "zero/Dataset_fnet_3D_ZeroCostDL4Mic"],
       "name": "Label-free Prediction - fnet - (3D) ZeroCostDL4Mic",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Notebook_fnet_3D_ZeroCostDL4Mic/latest/rdf.yaml",
       "tags": [
@@ -5979,9 +5253,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -6004,10 +5276,7 @@
       "download_count": 1,
       "download_url": "https://raw.githubusercontent.com/HenriquesLab/ZeroCostDL4Mic/master/Colab_notebooks/pix2pix_ZeroCostDL4Mic.ipynb",
       "id": "zero/Notebook_pix2pix_2D_ZeroCostDL4Mic",
-      "links": [
-        "zero/Notebook Preview",
-        "zero/Dataset_pix2pix_ZeroCostDL4Mic"
-      ],
+      "links": ["zero/Notebook Preview", "zero/Dataset_pix2pix_ZeroCostDL4Mic"],
       "name": "pix2pix (2D) - ZeroCostDL4Mic",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/Notebook_pix2pix_2D_ZeroCostDL4Mic/latest/rdf.yaml",
       "tags": [
@@ -6019,9 +5288,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [
@@ -6043,9 +5310,7 @@
       "download_count": 1,
       "download_url": "https://raw.githubusercontent.com/HenriquesLab/ZeroCostDL4Mic/master/Colab_notebooks/WGAN_ZeroCostDL4Mic.ipynb",
       "id": "zero/WGAN_ZeroCostDL4Mic.ipynb",
-      "links": [
-        "zero/Notebook Preview"
-      ],
+      "links": ["zero/Notebook Preview"],
       "name": "WGAN - ZeroCostDL4Mic",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/WGAN_ZeroCostDL4Mic.ipynb/latest/rdf.yaml",
       "tags": [
@@ -6057,9 +5322,7 @@
         "dl4miceverywhere"
       ],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     },
     {
       "authors": [],
@@ -6072,16 +5335,9 @@
       "name": "Notebook Preview",
       "rdf_source": "https://bioimage-io.github.io/collection-bioimage-io/rdfs/zero/notebook_preview/latest/rdf.yaml",
       "source": "https://raw.githubusercontent.com/bioimage-io/nbpreview/master/notebook-preview.imjoy.html",
-      "tags": [
-        "imjoy",
-        "notebook",
-        "jupyter",
-        "bioengine"
-      ],
+      "tags": ["imjoy", "notebook", "jupyter", "bioengine"],
       "type": "application",
-      "versions": [
-        "latest"
-      ]
+      "versions": ["latest"]
     }
   ],
   "config": {
@@ -6112,12 +5368,7 @@
         "logo": "https://raw.githubusercontent.com/bioimage-io/bioimage.io/main/public/static/img/bioimage-io-icon.svg",
         "name": "BioImage.IO",
         "repository": "bioimage-io/bioimage-io-resources",
-        "resource_types": [
-          "model",
-          "application",
-          "notebook",
-          "dataset"
-        ],
+        "resource_types": ["model", "application", "notebook", "dataset"],
         "splash_feature_list": [
           "Integrate with Fiji, Ilastik, ImJoy",
           "Try model instantly with BioEngine",
@@ -6140,17 +5391,11 @@
         "logo": "https://raw.githubusercontent.com/HenriquesLab/ZeroCostDL4Mic/master/Wiki_files/ZeroCostLogo.png",
         "name": "ZeroCostDL4Mic",
         "repository": "HenriquesLab/ZeroCostDL4Mic",
-        "resource_types": [
-          "model",
-          "application",
-          "dataset"
-        ],
+        "resource_types": ["model", "application", "dataset"],
         "splash_feature_list": [],
         "splash_subtitle": "A Google Colab based no-cost toolbox to explore Deep-Learning in Microscopy",
         "splash_title": "ZeroCostDL4Mic",
-        "tags": [
-          "ZeroCostDL4Mic"
-        ],
+        "tags": ["ZeroCostDL4Mic"],
         "url_root": "https://raw.githubusercontent.com/oeway/ZeroCostDL4Mic/master",
         "version": "1.7.1"
       },
@@ -6189,17 +5434,11 @@
         "logo": "https://raw.githubusercontent.com/deepimagej/models/master/logos/logo.png",
         "name": "DeepImageJ",
         "repository": "deepimagej/models",
-        "resource_types": [
-          "model",
-          "notebook",
-          "application"
-        ],
+        "resource_types": ["model", "notebook", "application"],
         "splash_feature_list": null,
         "splash_subtitle": "A user-friendly plugin to run deep learning models in ImageJ",
         "splash_title": "deepImageJ",
-        "tags": [
-          "deepimagej"
-        ],
+        "tags": ["deepimagej"],
         "test_summaries": {
           "deploy_branch": "gh-pages",
           "deploy_folder": ".",
@@ -6233,16 +5472,11 @@
         "logo": "https://fiji.sc/site/logo.png",
         "name": "Fiji",
         "repository": "bioimage-io/fiji-bioimage-io",
-        "resource_types": [
-          "model",
-          "notebook"
-        ],
+        "resource_types": ["model", "notebook"],
         "splash_feature_list": [],
         "splash_subtitle": "Fiji is just ImageJ",
         "splash_title": "Fiji",
-        "tags": [
-          "fiji"
-        ],
+        "tags": ["fiji"],
         "url_root": "https://raw.githubusercontent.com/oeway/ZeroCostDL4Mic/master"
       },
       {
@@ -6270,10 +5504,7 @@
         "logo": "https://imjoy.io/static/img/imjoy-icon.svg",
         "name": "ImJoy",
         "repository": "imjoy-team/bioimage-io-resources",
-        "resource_types": [
-          "notebook",
-          "application"
-        ],
+        "resource_types": ["notebook", "application"],
         "splash_feature_list": [
           "Minimal and flexible plugin powered web application",
           "Server-less progressive web application with offline support",
@@ -6281,9 +5512,7 @@
         ],
         "splash_subtitle": "Deep Learning Made Easy!",
         "splash_title": "ImJoy",
-        "tags": [
-          "imjoy"
-        ],
+        "tags": ["imjoy"],
         "url_root": "https://raw.githubusercontent.com/imjoy-team/bioimage-io-models/master"
       },
       {
@@ -6297,15 +5526,11 @@
         "logo": "https://raw.githubusercontent.com/ilastik/bioimage-io-resources/main/image/ilastik-fist-icon.png",
         "name": "ilastik",
         "repository": "ilastik/bioimage-io-resources",
-        "resource_types": [
-          "application"
-        ],
+        "resource_types": ["application"],
         "splash_feature_list": null,
         "splash_subtitle": "the interactive learning and segmentation toolkit",
         "splash_title": "ilastik",
-        "tags": [
-          "ilastik"
-        ],
+        "tags": ["ilastik"],
         "test_summaries": {
           "deploy_branch": "gh-pages",
           "deploy_folder": "test_summaries",
@@ -6345,16 +5570,11 @@
         "logo": "https://raw.githubusercontent.com/bioimage-io/tfjs-bioimage-io/master/apps/hpa-logo.gif",
         "name": "HPA",
         "repository": "CellProfiling/HPA-model-zoo",
-        "resource_types": [
-          "model",
-          "application"
-        ],
+        "resource_types": ["model", "application"],
         "splash_feature_list": [],
         "splash_subtitle": null,
         "splash_title": "The Human Protein Atlas",
-        "tags": [
-          "hpa"
-        ]
+        "tags": ["hpa"]
       },
       {
         "background_image": "static/img/zoo-background.svg",
@@ -6367,16 +5587,11 @@
         "logo": "https://raw.githubusercontent.com/Icy-imaging/icy-bioimage-io/main/icy_logo.svg",
         "name": "Icy",
         "repository": "Icy-imaging/icy-bioimage-io",
-        "resource_types": [
-          "application",
-          "model"
-        ],
+        "resource_types": ["application", "model"],
         "splash_feature_list": null,
         "splash_subtitle": "Icy is an open community platform for bioimage informatics",
         "splash_title": "Icy",
-        "tags": [
-          "icy"
-        ],
+        "tags": ["icy"],
         "url_root": "https://github.com/Icy-imaging/icy-bioimage-io/blob/main"
       },
       {
@@ -6390,16 +5605,11 @@
         "logo": "https://raw.githubusercontent.com/qupath/qupath-bioimage-io/main/logos/QuPath_256.png",
         "name": "QuPath",
         "repository": "qupath/qupath-bioimage-io",
-        "resource_types": [
-          "application",
-          "model"
-        ],
+        "resource_types": ["application", "model"],
         "splash_feature_list": null,
         "splash_subtitle": "QuPath is open-source software for bioimage analysis and digital pathology",
         "splash_title": "QuPath",
-        "tags": [
-          "qupath"
-        ],
+        "tags": ["qupath"],
         "url_root": "https://github.com/qupath/qupath-bioimage-io"
       },
       {
@@ -6432,16 +5642,11 @@
         "logo": "https://raw.githubusercontent.com/stardist/stardist-bioimage-io/main/logos/stardist_256.png",
         "name": "StarDist",
         "repository": "stardist/stardist-bioimage-io",
-        "resource_types": [
-          "application",
-          "model"
-        ],
+        "resource_types": ["application", "model"],
         "splash_feature_list": null,
         "splash_subtitle": "StarDist - object detection with star-convex shapes",
         "splash_title": "StarDist",
-        "tags": [
-          "stardist"
-        ],
+        "tags": ["stardist"],
         "url_root": "https://github.com/stardist/stardist-bioimage-io"
       },
       {
@@ -6469,16 +5674,11 @@
         "logo": "https://raw.githubusercontent.com/BiaPyX/BiaPy-bioimage-io/main/logos/BiaPy_256.png",
         "name": "BiaPy",
         "repository": "BiaPyX/BiaPy-bioimage-io",
-        "resource_types": [
-          "model",
-          "application"
-        ],
+        "resource_types": ["model", "application"],
         "splash_feature_list": [],
         "splash_subtitle": "BiaPy is an open source Python library for building bioimage analysis pipelines",
         "splash_title": "BiaPy",
-        "tags": [
-          "BiaPy"
-        ],
+        "tags": ["BiaPy"],
         "url_root": "https://github.com/BiaPyX/BiaPy-bioimage-io",
         "version": "3.1.0"
       },
@@ -6493,24 +5693,15 @@
         "logo": "https://raw.githubusercontent.com/HenriquesLab/DL4MicEverywhere-bioimage-io/main/logo/dl4miceverywhere-logo-small.png",
         "name": "DL4MicEverywhere",
         "repository": "HenriquesLab/DL4MicEverywhere-bioimage-io",
-        "resource_types": [
-          "application",
-          "model"
-        ],
+        "resource_types": ["application", "model"],
         "splash_feature_list": null,
         "splash_subtitle": "DL4MicEverywhere is an open-source and user-friendly platform of deep learning techniques for bioimage analysis that ensures the portability and reproducibility of the methods.",
         "splash_title": "DL4MicEverywhere",
-        "tags": [
-          "dl4miceverywhere"
-        ],
+        "tags": ["dl4miceverywhere"],
         "url_root": "https://github.com/HenriquesLab/DL4MicEverywhere-bioimage-io"
       }
     ],
-    "resource_types": [
-      "model",
-      "application",
-      "dataset"
-    ],
+    "resource_types": ["model", "application", "dataset"],
     "splash_feature_list": [
       "Integrate with Fiji, Ilastik, ImJoy",
       "Try model instantly with BioEngine",

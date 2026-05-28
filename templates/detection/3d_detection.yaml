@@ -1,61 +1,61 @@
 # BiaPy version: 3.6.7
 
 SYSTEM:
-    NUM_CPUS: -1
+  NUM_CPUS: -1
 
 PROBLEM:
-    TYPE: DETECTION
-    NDIM: 3D
-    DETECTION: 
-        CENTRAL_POINT_DILATION: [0]
+  TYPE: DETECTION
+  NDIM: 3D
+  DETECTION:
+    CENTRAL_POINT_DILATION: [0]
 
-DATA: 
-    PATCH_SIZE: (64, 64, 64, 1)
-    TRAIN:
-        PATH: /path/to/data
-        GT_PATH: /path/to/data
-        IN_MEMORY: True
-    VAL:
-        FROM_TRAIN: True
-        SPLIT_TRAIN: 0.1
-    TEST:
-        RESOLUTION: (1,1,1)
-        PATH: /path/to/data
-        GT_PATH: /path/to/data
-        IN_MEMORY: True
-        LOAD_GT: True
-        PADDING: (18,18,18)
-                
+DATA:
+  PATCH_SIZE: (64, 64, 64, 1)
+  TRAIN:
+    PATH: /path/to/data
+    GT_PATH: /path/to/data
+    IN_MEMORY: True
+  VAL:
+    FROM_TRAIN: True
+    SPLIT_TRAIN: 0.1
+  TEST:
+    RESOLUTION: (1,1,1)
+    PATH: /path/to/data
+    GT_PATH: /path/to/data
+    IN_MEMORY: True
+    LOAD_GT: True
+    PADDING: (18,18,18)
+
 AUGMENTOR:
-    DA_PROB: 0.5
-    ENABLE: True
-    VFLIP: True
-    HFLIP: True
-    ZFLIP: True
+  DA_PROB: 0.5
+  ENABLE: True
+  VFLIP: True
+  HFLIP: True
+  ZFLIP: True
 
 MODEL:
-    ARCHITECTURE: unet
-    FEATURE_MAPS: [18, 36, 48, 64]
-    LOAD_CHECKPOINT: False
+  ARCHITECTURE: unet
+  FEATURE_MAPS: [18, 36, 48, 64]
+  LOAD_CHECKPOINT: False
 
 TRAIN:
-    ENABLE: True
-    OPTIMIZER: ADAMW
-    LR: 1.E-3
-    BATCH_SIZE: 8
-    EPOCHS: 150
-    PATIENCE: 20
-    LR_SCHEDULER:
-        NAME: 'warmupcosine'    # use warm up cosine decay learning rate scheduler
-        MIN_LR: 0.0
-        WARMUP_COSINE_DECAY_EPOCHS: 0
-  
+  ENABLE: True
+  OPTIMIZER: ADAMW
+  LR: 1.E-3
+  BATCH_SIZE: 8
+  EPOCHS: 150
+  PATIENCE: 20
+  LR_SCHEDULER:
+    NAME: "warmupcosine" # use warm up cosine decay learning rate scheduler
+    MIN_LR: 0.0
+    WARMUP_COSINE_DECAY_EPOCHS: 0
+
 TEST:
-    ENABLE: True
-    VERBOSE: True
-    AUGMENTATION: False
-    DET_TOLERANCE: 3
-    DET_MIN_TH_TO_BE_PEAK: 0.20
-    POST_PROCESSING:
-        REMOVE_CLOSE_POINTS: True
-        REMOVE_CLOSE_POINTS_RADIUS: 3.0
+  ENABLE: True
+  VERBOSE: True
+  AUGMENTATION: False
+  DET_TOLERANCE: 3
+  DET_MIN_TH_TO_BE_PEAK: 0.20
+  POST_PROCESSING:
+    REMOVE_CLOSE_POINTS: True
+    REMOVE_CLOSE_POINTS_RADIUS: 3.0

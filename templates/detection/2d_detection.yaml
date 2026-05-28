@@ -1,63 +1,63 @@
 # BiaPy version: 3.6.7
 
 SYSTEM:
-    NUM_CPUS: -1
+  NUM_CPUS: -1
 
 PROBLEM:
-    TYPE: DETECTION
-    NDIM: 2D
-    DETECTION:
-        CENTRAL_POINT_DILATION: [3]
+  TYPE: DETECTION
+  NDIM: 2D
+  DETECTION:
+    CENTRAL_POINT_DILATION: [3]
 
 DATA:
-    PATCH_SIZE: (256, 256, 1)
-    REFLECT_TO_COMPLETE_SHAPE: True
-    TRAIN:
-        PATH: /path/to/data
-        GT_PATH: /path/to/data
-        IN_MEMORY: True
-    VAL:
-        FROM_TRAIN: True
-        SPLIT_TRAIN: 0.2
-    TEST:
-        RESOLUTION: (1,1)
-        PATH: /path/to/data
-        GT_PATH: /path/to/data
-        IN_MEMORY: False
-        LOAD_GT: True
-        PADDING: (32,32)
+  PATCH_SIZE: (256, 256, 1)
+  REFLECT_TO_COMPLETE_SHAPE: True
+  TRAIN:
+    PATH: /path/to/data
+    GT_PATH: /path/to/data
+    IN_MEMORY: True
+  VAL:
+    FROM_TRAIN: True
+    SPLIT_TRAIN: 0.2
+  TEST:
+    RESOLUTION: (1,1)
+    PATH: /path/to/data
+    GT_PATH: /path/to/data
+    IN_MEMORY: False
+    LOAD_GT: True
+    PADDING: (32,32)
 
 AUGMENTOR:
-    DA_PROB: 0.5
-    ENABLE: True
-    VFLIP: True
-    HFLIP: True
+  DA_PROB: 0.5
+  ENABLE: True
+  VFLIP: True
+  HFLIP: True
 
 MODEL:
-    ARCHITECTURE: resunet
-    LOAD_CHECKPOINT: False
+  ARCHITECTURE: resunet
+  LOAD_CHECKPOINT: False
 
 LOSS:
   TYPE: CE
 
 TRAIN:
-    ENABLE: True
-    OPTIMIZER: ADAMW
-    LR: 1.E-3
-    BATCH_SIZE: 8
-    EPOCHS: 100
-    PATIENCE: 20
-    LR_SCHEDULER:
-        NAME: 'reduceonplateau'    # use reduce-on-plateau learning rate scheduler
-        REDUCEONPLATEAU_FACTOR: 0.5
-        REDUCEONPLATEAU_PATIENCE: 5
-        MIN_LR: 0.00001
+  ENABLE: True
+  OPTIMIZER: ADAMW
+  LR: 1.E-3
+  BATCH_SIZE: 8
+  EPOCHS: 100
+  PATIENCE: 20
+  LR_SCHEDULER:
+    NAME: "reduceonplateau" # use reduce-on-plateau learning rate scheduler
+    REDUCEONPLATEAU_FACTOR: 0.5
+    REDUCEONPLATEAU_PATIENCE: 5
+    MIN_LR: 0.00001
 
 TEST:
-    ENABLE: True                                                                                                        
-    AUGMENTATION: False                                                                                                 
-    DET_TOLERANCE: 10                                                                                             
-    DET_MIN_TH_TO_BE_PEAK: 0.5
-    POST_PROCESSING:                                                                                                    
-        REMOVE_CLOSE_POINTS: True                                                                                       
-        REMOVE_CLOSE_POINTS_RADIUS: 3 
+  ENABLE: True
+  AUGMENTATION: False
+  DET_TOLERANCE: 10
+  DET_MIN_TH_TO_BE_PEAK: 0.5
+  POST_PROCESSING:
+    REMOVE_CLOSE_POINTS: True
+    REMOVE_CLOSE_POINTS_RADIUS: 3

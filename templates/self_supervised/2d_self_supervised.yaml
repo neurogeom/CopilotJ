@@ -1,46 +1,46 @@
 # BiaPy version: 3.6.7
 
 SYSTEM:
-    NUM_CPUS: -1
+  NUM_CPUS: -1
 
 PROBLEM:
-    TYPE: SELF_SUPERVISED
-    NDIM: 2D
-    SELF_SUPERVISED:
-        PRETEXT_TASK: 'crappify'
-  
-DATA: 
-    PATCH_SIZE: (256, 256, 1)
-    TRAIN:                                                                                                              
-        PATH: /path/to/data
-        IN_MEMORY: True
-    VAL:
-        SPLIT_TRAIN: 0.1
-    TEST:                                                                                                               
-        IN_MEMORY: True
-        PATH: /path/to/data
-        PADDING: (32,32)
+  TYPE: SELF_SUPERVISED
+  NDIM: 2D
+  SELF_SUPERVISED:
+    PRETEXT_TASK: "crappify"
+
+DATA:
+  PATCH_SIZE: (256, 256, 1)
+  TRAIN:
+    PATH: /path/to/data
+    IN_MEMORY: True
+  VAL:
+    SPLIT_TRAIN: 0.1
+  TEST:
+    IN_MEMORY: True
+    PATH: /path/to/data
+    PADDING: (32,32)
 
 AUGMENTOR:
-    ENABLE: True
-    DA_PROB: 0.5
-    RANDOM_ROT: True
-    VFLIP: True
-    HFLIP: True
+  ENABLE: True
+  DA_PROB: 0.5
+  RANDOM_ROT: True
+  VFLIP: True
+  HFLIP: True
 
 MODEL:
-    ARCHITECTURE: unet
-    LOAD_CHECKPOINT: False
+  ARCHITECTURE: unet
+  LOAD_CHECKPOINT: False
 
 TRAIN:
-    ENABLE: True
-    OPTIMIZER: ADAMW
-    LR: 1.E-4
-    BATCH_SIZE: 6
-    EPOCHS: 100
-    PATIENCE: 20
-  
+  ENABLE: True
+  OPTIMIZER: ADAMW
+  LR: 1.E-4
+  BATCH_SIZE: 6
+  EPOCHS: 100
+  PATIENCE: 20
+
 TEST:
-    ENABLE: True
-    AUGMENTATION: False
-    FULL_IMG: False
+  ENABLE: True
+  AUGMENTATION: False
+  FULL_IMG: False

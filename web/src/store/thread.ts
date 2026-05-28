@@ -8,7 +8,14 @@ import dayjs, { Dayjs } from "dayjs";
 import { acceptHMRUpdate, defineStore } from "pinia";
 import { computed, markRaw, reactive, ref } from "vue";
 import type { ThreadConfig, ThreadConfigQuery, ToolCall, OptimizePromptResponse } from "../apis";
-import { deleteThread, newThread, newThreadPost, updateThreadConfig, optimizePrompt as optimizePromptApi, optimizePromptBeforeThread } from "../apis";
+import {
+  deleteThread,
+  newThread,
+  newThreadPost,
+  updateThreadConfig,
+  optimizePrompt as optimizePromptApi,
+  optimizePromptBeforeThread,
+} from "../apis";
 import { useSettings } from "../store";
 
 export type PostText = {
@@ -61,7 +68,9 @@ export function useThread(): {
   const optimizing = ref(false);
   const abortController = ref<AbortController | null>(null);
 
-  const sendable = computed(() => !loading.value && !optimizing.value && (status.value === "init" || status.value === "started"));
+  const sendable = computed(
+    () => !loading.value && !optimizing.value && (status.value === "init" || status.value === "started"),
+  );
 
   const config = useSettings();
 

@@ -1,51 +1,51 @@
 # BiaPy version: 3.6.7
 
 SYSTEM:
-    NUM_CPUS: -1
+  NUM_CPUS: -1
 
 PROBLEM:
-    TYPE: SUPER_RESOLUTION
-    NDIM: 2D
-    SUPER_RESOLUTION:
-        UPSCALING: (2,2)
-  
-DATA: 
-    PATCH_SIZE: (128, 128, 1)
-    NORMALIZATION:
-        TYPE: 'div'
-    TRAIN:                                                                                                              
-        PATH: /path/to/data
-        GT_PATH: /path/to/data
-        IN_MEMORY: True
-    VAL:
-        FROM_TRAIN: True
-        SPLIT_TRAIN: 0.1
-    TEST:                                                                                                               
-        IN_MEMORY: True
-        LOAD_GT: True
-        PATH: /path/to/data
-        GT_PATH: /path/to/data
-        PADDING: (16,16)
+  TYPE: SUPER_RESOLUTION
+  NDIM: 2D
+  SUPER_RESOLUTION:
+    UPSCALING: (2,2)
+
+DATA:
+  PATCH_SIZE: (128, 128, 1)
+  NORMALIZATION:
+    TYPE: "div"
+  TRAIN:
+    PATH: /path/to/data
+    GT_PATH: /path/to/data
+    IN_MEMORY: True
+  VAL:
+    FROM_TRAIN: True
+    SPLIT_TRAIN: 0.1
+  TEST:
+    IN_MEMORY: True
+    LOAD_GT: True
+    PATH: /path/to/data
+    GT_PATH: /path/to/data
+    PADDING: (16,16)
 
 AUGMENTOR:
-    ENABLE: True
-    DA_PROB: 0.5
-    VFLIP: True
-    HFLIP: True
-    ROT90: True
+  ENABLE: True
+  DA_PROB: 0.5
+  VFLIP: True
+  HFLIP: True
+  ROT90: True
 
 MODEL:
-    ARCHITECTURE: rcan
-    LOAD_CHECKPOINT: False
+  ARCHITECTURE: rcan
+  LOAD_CHECKPOINT: False
 
 TRAIN:
-    ENABLE: True
-    OPTIMIZER: ADAMW
-    LR: 1.E-4
-    BATCH_SIZE: 8
-    EPOCHS: 50
-    PATIENCE: 10
-  
+  ENABLE: True
+  OPTIMIZER: ADAMW
+  LR: 1.E-4
+  BATCH_SIZE: 8
+  EPOCHS: 50
+  PATIENCE: 10
+
 TEST:
-    ENABLE: True
-    AUGMENTATION: False
+  ENABLE: True
+  AUGMENTATION: False

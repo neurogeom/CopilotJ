@@ -178,12 +178,12 @@ After updating `.env.local`, restart the CopilotJ core server for changes to tak
 
 #### Provider quick reference
 
-| Provider | API endpoint | Buy credits | Manage API keys | Available models |
-|---|---|---|---|---|
-| OpenAI | `https://api.openai.com/v1` | [OpenAI Billing](https://platform.openai.com/settings/organization/billing/overview) | [OpenAI API keys](https://platform.openai.com/settings/organization/api-keys) | [OpenAI models](https://developers.openai.com/api/docs/models) |
-| Anthropic | `https://api.anthropic.com/v1` | [Anthropic Billing](https://platform.claude.com/settings/billing) | [Anthropic API keys](https://platform.claude.com/settings/keys) | [Claude models](https://platform.claude.com/docs/en/about-claude/models/overview) |
-| Google | `https://generativelanguage.googleapis.com/v1beta/openai/` | [Google AI Billing](https://aistudio.google.com/billing) | [Google API keys](https://aistudio.google.com/api-keys) | [Gemini models](https://ai.google.dev/gemini-api/docs/models) |
-| Ollama | `http://localhost:11434` | free (local) | n/a | [Ollama model library](https://ollama.com/library) |
+| Provider  | API endpoint                                               | Buy credits                                                                          | Manage API keys                                                               | Available models                                                                  |
+| --------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| OpenAI    | `https://api.openai.com/v1`                                | [OpenAI Billing](https://platform.openai.com/settings/organization/billing/overview) | [OpenAI API keys](https://platform.openai.com/settings/organization/api-keys) | [OpenAI models](https://developers.openai.com/api/docs/models)                    |
+| Anthropic | `https://api.anthropic.com/v1`                             | [Anthropic Billing](https://platform.claude.com/settings/billing)                    | [Anthropic API keys](https://platform.claude.com/settings/keys)               | [Claude models](https://platform.claude.com/docs/en/about-claude/models/overview) |
+| Google    | `https://generativelanguage.googleapis.com/v1beta/openai/` | [Google AI Billing](https://aistudio.google.com/billing)                             | [Google API keys](https://aistudio.google.com/api-keys)                       | [Gemini models](https://ai.google.dev/gemini-api/docs/models)                     |
+| Ollama    | `http://localhost:11434`                                   | free (local)                                                                         | n/a                                                                           | [Ollama model library](https://ollama.com/library)                                |
 
 #### Option A1: OpenAI
 
@@ -240,7 +240,7 @@ COPILOTJ_VLM_API_KEY=AIza-xxxxxxxx
 
 [Ollama](https://ollama.com) runs models locally on your own hardware, with no data sent to external servers and no per-request cost. CopilotJ supports Ollama models via the `ollama/` prefix.
 
-**Important caveat:** CopilotJ's agentic workflows require strong multi-step reasoning and reliable tool-calling. As of early 2026, locally available Ollama models — including large models — have not proven capable enough to reliably complete CopilotJ's workflows out of the box. They tend to fail at tool orchestration, lose context across steps, or produce malformed tool calls. Ollama support is functional, but results will be significantly worse than with a frontier cloud model. This is a limitation of current local model capability, not of CopilotJ itself. With careful model selection and prompt tuning it may be possible to get acceptable results; if you experiment, the most capable models for tool-use tasks as of early 2026   include **qwen3** (Alibaba), **gemma3** (Google), **llama3.3** (Meta), and **phi4** (Microsoft) — prefer the largest variant your hardware can run. You can check the [Ollama model library](https://ollama.com/library) for new releases.
+**Important caveat:** CopilotJ's agentic workflows require strong multi-step reasoning and reliable tool-calling. As of early 2026, locally available Ollama models — including large models — have not proven capable enough to reliably complete CopilotJ's workflows out of the box. They tend to fail at tool orchestration, lose context across steps, or produce malformed tool calls. Ollama support is functional, but results will be significantly worse than with a frontier cloud model. This is a limitation of current local model capability, not of CopilotJ itself. With careful model selection and prompt tuning it may be possible to get acceptable results; if you experiment, the most capable models for tool-use tasks as of early 2026 include **qwen3** (Alibaba), **gemma3** (Google), **llama3.3** (Meta), and **phi4** (Microsoft) — prefer the largest variant your hardware can run. You can check the [Ollama model library](https://ollama.com/library) for new releases.
 
 **Prerequisites:** Before configuring CopilotJ to use an Ollama model, make sure Ollama itself is installed and running, and that you have pulled the desired model:
 

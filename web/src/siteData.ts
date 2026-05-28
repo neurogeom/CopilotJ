@@ -203,32 +203,116 @@ export const ORGS = [
 
 export const TOOLS = [
   // Root directory tools
-  { name: "Bio-Formats", logo: new URL("./assets/tools/logo_bioformats.png", import.meta.url).href, link: "https://www.openmicroscopy.org/bio-formats/" },
-  { name: "BioImage.IO", logo: new URL("./assets/tools/logo_bioimage-io-icon.svg", import.meta.url).href, link: "https://bioimage.io/" },
+  {
+    name: "Bio-Formats",
+    logo: new URL("./assets/tools/logo_bioformats.png", import.meta.url).href,
+    link: "https://www.openmicroscopy.org/bio-formats/",
+  },
+  {
+    name: "BioImage.IO",
+    logo: new URL("./assets/tools/logo_bioimage-io-icon.svg", import.meta.url).href,
+    link: "https://bioimage.io/",
+  },
   { name: "BoneJ", logo: new URL("./assets/tools/logo_bonej.png", import.meta.url).href, link: "https://bonej.org/" },
-  { name: "Cellpose", logo: new URL("./assets/tools/logo_cellpose.png", import.meta.url).href, link: "https://www.cellpose.org/" },
-  { name: "CLIJ2", logo: new URL("./assets/tools/clij2_logo.png", import.meta.url).href, link: "https://clij.github.io/" },
-  { name: "CSBDeep", logo: new URL("./assets/tools/logo_csbdeep.png", import.meta.url).href, link: "https://csbdeep.bioimagecomputing.com/" },
-  { name: "DeepImageJ", logo: new URL("./assets/tools/logo_deepimagej.png", import.meta.url).href, link: "https://deepimagej.github.io/" },
-  { name: "FLIMLib", logo: new URL("./assets/tools/logo_flimlib.png", import.meta.url).href, link: "https://flimlib.github.io/" },
-  { name: "Image.sc Forum", logo: new URL("./assets/tools/logo_imagesc.png", import.meta.url).href, link: "https://forum.image.sc/" },
-  { name: "ImgLib2", logo: new URL("./assets/tools/logo_imglib2.png", import.meta.url).href, link: "https://imglib2.net/" },
-  { name: "OMERO", logo: new URL("./assets/tools/logo_omero.png", import.meta.url).href, link: "https://www.openmicroscopy.org/omero/" },
-  { name: "StarDist", logo: new URL("./assets/tools/logo_stardist.png", import.meta.url).href, link: "https://github.com/stardist/stardist" },
-  { name: "TrackMate", logo: new URL("./assets/tools/logo_trackmate.png", import.meta.url).href, link: "https://imagej.net/plugins/trackmate/" },
+  {
+    name: "Cellpose",
+    logo: new URL("./assets/tools/logo_cellpose.png", import.meta.url).href,
+    link: "https://www.cellpose.org/",
+  },
+  {
+    name: "CLIJ2",
+    logo: new URL("./assets/tools/clij2_logo.png", import.meta.url).href,
+    link: "https://clij.github.io/",
+  },
+  {
+    name: "CSBDeep",
+    logo: new URL("./assets/tools/logo_csbdeep.png", import.meta.url).href,
+    link: "https://csbdeep.bioimagecomputing.com/",
+  },
+  {
+    name: "DeepImageJ",
+    logo: new URL("./assets/tools/logo_deepimagej.png", import.meta.url).href,
+    link: "https://deepimagej.github.io/",
+  },
+  {
+    name: "FLIMLib",
+    logo: new URL("./assets/tools/logo_flimlib.png", import.meta.url).href,
+    link: "https://flimlib.github.io/",
+  },
+  {
+    name: "Image.sc Forum",
+    logo: new URL("./assets/tools/logo_imagesc.png", import.meta.url).href,
+    link: "https://forum.image.sc/",
+  },
+  {
+    name: "ImgLib2",
+    logo: new URL("./assets/tools/logo_imglib2.png", import.meta.url).href,
+    link: "https://imglib2.net/",
+  },
+  {
+    name: "OMERO",
+    logo: new URL("./assets/tools/logo_omero.png", import.meta.url).href,
+    link: "https://www.openmicroscopy.org/omero/",
+  },
+  {
+    name: "StarDist",
+    logo: new URL("./assets/tools/logo_stardist.png", import.meta.url).href,
+    link: "https://github.com/stardist/stardist",
+  },
+  {
+    name: "TrackMate",
+    logo: new URL("./assets/tools/logo_trackmate.png", import.meta.url).href,
+    link: "https://imagej.net/plugins/trackmate/",
+  },
 
   // Python tools
-  { name: "BiaPy", logo: new URL("./assets/tools/python/logo_biapy.png", import.meta.url).href, link: "https://biapy.readthedocs.io/" },
-  { name: "Python", logo: new URL("./assets/tools/python/logo_python.png", import.meta.url).href, link: "https://www.python.org/" },
-  { name: "PyTorch", logo: new URL("./assets/tools/python/logo_pytorch.svg", import.meta.url).href, link: "https://pytorch.org/" },
-  { name: "TensorFlow", logo: new URL("./assets/tools/python/logo_tensorflow.svg", import.meta.url).href, link: "https://www.tensorflow.org/" },
-  { name: "OpenCV", logo: new URL("./assets/tools/python/logo_opencv.png", import.meta.url).href, link: "https://opencv.org/" },
+  {
+    name: "BiaPy",
+    logo: new URL("./assets/tools/python/logo_biapy.png", import.meta.url).href,
+    link: "https://biapy.readthedocs.io/",
+  },
+  {
+    name: "Python",
+    logo: new URL("./assets/tools/python/logo_python.png", import.meta.url).href,
+    link: "https://www.python.org/",
+  },
+  {
+    name: "PyTorch",
+    logo: new URL("./assets/tools/python/logo_pytorch.svg", import.meta.url).href,
+    link: "https://pytorch.org/",
+  },
+  {
+    name: "TensorFlow",
+    logo: new URL("./assets/tools/python/logo_tensorflow.svg", import.meta.url).href,
+    link: "https://www.tensorflow.org/",
+  },
+  {
+    name: "OpenCV",
+    logo: new URL("./assets/tools/python/logo_opencv.png", import.meta.url).href,
+    link: "https://opencv.org/",
+  },
 
   // Research tools
-  { name: "DuckDuckGo", logo: new URL("./assets/tools/research/logo_ddg.svg", import.meta.url).href, link: "https://duckduckgo.com/" },
-  { name: "Google", logo: new URL("./assets/tools/research/logo_google.png", import.meta.url).href, link: "https://www.google.com/" },
-  { name: "Tavily", logo: new URL("./assets/tools/research/logo_tavily.svg", import.meta.url).href, link: "https://tavily.com/" },
-  { name: "Wikipedia", logo: new URL("./assets/tools/research/logo_wikipedia.png", import.meta.url).href, link: "https://www.wikipedia.org/" },
+  {
+    name: "DuckDuckGo",
+    logo: new URL("./assets/tools/research/logo_ddg.svg", import.meta.url).href,
+    link: "https://duckduckgo.com/",
+  },
+  {
+    name: "Google",
+    logo: new URL("./assets/tools/research/logo_google.png", import.meta.url).href,
+    link: "https://www.google.com/",
+  },
+  {
+    name: "Tavily",
+    logo: new URL("./assets/tools/research/logo_tavily.svg", import.meta.url).href,
+    link: "https://tavily.com/",
+  },
+  {
+    name: "Wikipedia",
+    logo: new URL("./assets/tools/research/logo_wikipedia.png", import.meta.url).href,
+    link: "https://www.wikipedia.org/",
+  },
 
   // // LLM tools
   // { name: "DeepSeek", logo: new URL("./assets/tools/llms/logo_deepseek.png", import.meta.url).href, link: "https://www.deepseek.com/" },
