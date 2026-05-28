@@ -1,52 +1,52 @@
 # BiaPy version: 3.6.7
 
 SYSTEM:
-    NUM_CPUS: -1
+  NUM_CPUS: -1
 
 PROBLEM:
-    TYPE: IMAGE_TO_IMAGE
-    NDIM: 3D
+  TYPE: IMAGE_TO_IMAGE
+  NDIM: 3D
 
-DATA: 
-    PATCH_SIZE: (32, 64, 64, 1)
-    TRAIN:
-        PATH: /path/to/data
-        GT_PATH: /path/to/data
-        IN_MEMORY: True
-    VAL:
-        FROM_TRAIN: True
-        SPLIT_TRAIN: 0.2
-    TEST:                                                                                                               
-        PATH: /path/to/data
-        GT_PATH: /path/to/data
-        IN_MEMORY: False
-        LOAD_GT: True
-        PADDING: (4,8,8)
+DATA:
+  PATCH_SIZE: (32, 64, 64, 1)
+  TRAIN:
+    PATH: /path/to/data
+    GT_PATH: /path/to/data
+    IN_MEMORY: True
+  VAL:
+    FROM_TRAIN: True
+    SPLIT_TRAIN: 0.2
+  TEST:
+    PATH: /path/to/data
+    GT_PATH: /path/to/data
+    IN_MEMORY: False
+    LOAD_GT: True
+    PADDING: (4,8,8)
 
 AUGMENTOR:
-    ENABLE: True
-    VFLIP: True
-    HFLIP: True
-    ZFLIP: True
-    DROPOUT: True
-    GRIDMASK: True
-    CUTOUT: True
+  ENABLE: True
+  VFLIP: True
+  HFLIP: True
+  ZFLIP: True
+  DROPOUT: True
+  GRIDMASK: True
+  CUTOUT: True
 
 MODEL:
-    ARCHITECTURE: resunet
-    Z_DOWN: [1,1,1,1]
-    LOAD_CHECKPOINT: False
+  ARCHITECTURE: resunet
+  Z_DOWN: [1, 1, 1, 1]
+  LOAD_CHECKPOINT: False
 
 TRAIN:
-    ENABLE: True
-    OPTIMIZER: ADAMW
-    LR: 1.E-3
-    BATCH_SIZE: 6
-    EPOCHS: 20
-    PATIENCE: 20
-    LR_SCHEDULER:
-        NAME: 'onecycle'    # use one-cycle learning rate scheduler
+  ENABLE: True
+  OPTIMIZER: ADAMW
+  LR: 1.E-3
+  BATCH_SIZE: 6
+  EPOCHS: 20
+  PATIENCE: 20
+  LR_SCHEDULER:
+    NAME: "onecycle" # use one-cycle learning rate scheduler
 
 TEST:
-    ENABLE: True
-    FULL_IMG: False
+  ENABLE: True
+  FULL_IMG: False

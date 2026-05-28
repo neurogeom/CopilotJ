@@ -1,8 +1,11 @@
 # TensorFlow models in DeepImageJ
+
 ## Export a TensorFlow (or Keras) model
+
 DeepImageJ can load TensorFlow models thanks to the TensorFlow Java API developed by the TensorFlow team:
-* TensorFlow Java: https://www.tensorflow.org/install/lang_java_legacy
-* GitHub repository for TensorFlow models >= 2.3.1: https://github.com/tensorflow/java
+
+- TensorFlow Java: https://www.tensorflow.org/install/lang_java_legacy
+- GitHub repository for TensorFlow models >= 2.3.1: https://github.com/tensorflow/java
 
 As deepImageJ is synchronized with ImageJ's TensorFlow manager, it can only load TensorFlow models until version 1.15. Exceptionally, some TensorFlow models trained with versions <= 2.2 can be loaded.
 
@@ -22,11 +25,13 @@ signature_def_map = {saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_D
 builder.add_meta_graph_and_variables(get_session(), [saved_model.tag_constants.SERVING], signature_def_map=signature_def_map)
 builder.save()
 ```
+
 Note that the TensorFlow Java API calls to the same con in C++ as the TensorFlow library in Python, so the performance of the models in deepImageJ is ensured.
 
 ##Load a TensorFlow model in Python saved as `saved_model` bundled model
 
 The information you need to load a tensorflow model in Tensorflow 1.15 or earlier versions:
+
 - Path to the model that contains a `saved_model.pb` file and the `variables` folder.
 - Name of the input tensor.
 - Name of the output tensor.

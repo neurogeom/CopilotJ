@@ -1,50 +1,50 @@
 # BiaPy version: 3.6.7
 
 SYSTEM:
-    NUM_CPUS: -1
+  NUM_CPUS: -1
 
 PROBLEM:
-    TYPE: SEMANTIC_SEG
-    NDIM: 3D
-  
-DATA: 
-    PATCH_SIZE: (80, 80, 80, 1)
-    TRAIN:                                                                                                              
-        PATH: /path/to/data
-        GT_PATH: /path/to/data
-        IN_MEMORY: True
-    VAL:
-        SPLIT_TRAIN: 0.1
-    TEST:                                                                                                               
-        PATH: /path/to/data
-        GT_PATH: /path/to/data
-        IN_MEMORY: True
-        LOAD_GT: True
-        PADDING: (10,10,10)
+  TYPE: SEMANTIC_SEG
+  NDIM: 3D
+
+DATA:
+  PATCH_SIZE: (80, 80, 80, 1)
+  TRAIN:
+    PATH: /path/to/data
+    GT_PATH: /path/to/data
+    IN_MEMORY: True
+  VAL:
+    SPLIT_TRAIN: 0.1
+  TEST:
+    PATH: /path/to/data
+    GT_PATH: /path/to/data
+    IN_MEMORY: True
+    LOAD_GT: True
+    PADDING: (10,10,10)
 
 AUGMENTOR:
-    ENABLE: True
-    RANDOM_ROT: True
-    VFLIP: True
-    HFLIP: True
-    ZFLIP: True
+  ENABLE: True
+  RANDOM_ROT: True
+  VFLIP: True
+  HFLIP: True
+  ZFLIP: True
 
 MODEL:
-    ARCHITECTURE: resunet
-    FEATURE_MAPS: [16, 32, 64, 128, 256]
-    LOAD_CHECKPOINT: False
+  ARCHITECTURE: resunet
+  FEATURE_MAPS: [16, 32, 64, 128, 256]
+  LOAD_CHECKPOINT: False
 
 TRAIN:
-    ENABLE: True
-    OPTIMIZER: ADAMW
-    LR: 1.E-3
-    BATCH_SIZE: 4
-    EPOCHS: 30
-    PATIENCE: 30
-    LR_SCHEDULER:
-        NAME: 'onecycle'    # use one-cycle learning rate scheduler
-  
+  ENABLE: True
+  OPTIMIZER: ADAMW
+  LR: 1.E-3
+  BATCH_SIZE: 4
+  EPOCHS: 30
+  PATIENCE: 30
+  LR_SCHEDULER:
+    NAME: "onecycle" # use one-cycle learning rate scheduler
+
 TEST:
-    ENABLE: True
-    AUGMENTATION: False
-    FULL_IMG: False
+  ENABLE: True
+  AUGMENTATION: False
+  FULL_IMG: False

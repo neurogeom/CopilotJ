@@ -1,52 +1,52 @@
 # BiaPy version: 3.6.7
 
 SYSTEM:
-    NUM_CPUS: -1
-    
+  NUM_CPUS: -1
+
 PROBLEM:
-    TYPE: SUPER_RESOLUTION
-    NDIM: 3D
-    SUPER_RESOLUTION:
-        UPSCALING: (1,1,1)
-  
-DATA: 
-    PATCH_SIZE: (6, 128, 128, 1)
-    NORMALIZATION:
-        TYPE: "div"
-    TRAIN:                                                                                                              
-        PATH: /path/to/data
-        GT_PATH: /path/to/data
-        IN_MEMORY: True
-    VAL:
-        SPLIT_TRAIN: 0.2
-    TEST:                                                                                                               
-        IN_MEMORY: True
-        LOAD_GT: True
-        PATH: /path/to/data
-        GT_PATH: /path/to/data
-        PADDING: (2,16,16)
+  TYPE: SUPER_RESOLUTION
+  NDIM: 3D
+  SUPER_RESOLUTION:
+    UPSCALING: (1,1,1)
+
+DATA:
+  PATCH_SIZE: (6, 128, 128, 1)
+  NORMALIZATION:
+    TYPE: "div"
+  TRAIN:
+    PATH: /path/to/data
+    GT_PATH: /path/to/data
+    IN_MEMORY: True
+  VAL:
+    SPLIT_TRAIN: 0.2
+  TEST:
+    IN_MEMORY: True
+    LOAD_GT: True
+    PATH: /path/to/data
+    GT_PATH: /path/to/data
+    PADDING: (2,16,16)
 
 AUGMENTOR:
-    ENABLE: True
-    DA_PROB: 0.5
-    VFLIP: True
-    HFLIP: True
-    ZFLIP: True
+  ENABLE: True
+  DA_PROB: 0.5
+  VFLIP: True
+  HFLIP: True
+  ZFLIP: True
 
 MODEL:
-    ARCHITECTURE: resunet
-    LOAD_CHECKPOINT: False
+  ARCHITECTURE: resunet
+  LOAD_CHECKPOINT: False
 
 TRAIN:
-    ENABLE: True
-    OPTIMIZER: ADAMW
-    LR: 1.E-3
-    BATCH_SIZE: 6
-    EPOCHS: 15
-    PATIENCE: 15
-    LR_SCHEDULER:
-        NAME: 'onecycle'    # use one-cycle learning rate scheduler
-  
+  ENABLE: True
+  OPTIMIZER: ADAMW
+  LR: 1.E-3
+  BATCH_SIZE: 6
+  EPOCHS: 15
+  PATIENCE: 15
+  LR_SCHEDULER:
+    NAME: "onecycle" # use one-cycle learning rate scheduler
+
 TEST:
-    ENABLE: True
-    AUGMENTATION: False
+  ENABLE: True
+  AUGMENTATION: False
