@@ -184,6 +184,7 @@ class _Thread(UI):
             with self._trace_ctx.start_as_current_observation(
                 as_type="span", name="thread", metadata={"thread_id": self.thread_id}, input=prompt
             ):
+                self._trace_ctx.update_current_trace(session_id=self.thread_id)
                 await self._agent.run(prompt, trace_ctx=self._trace_ctx)
 
         finally:
