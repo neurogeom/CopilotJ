@@ -153,6 +153,13 @@
       <artifactId>jackson-datatype-jsr310</artifactId>
       <version>${jackson.version}</version>
     </dependency>
+
+    <!-- Appose for managed Python process lifecycle -->
+    <dependency>
+      <groupId>org.apposed</groupId>
+      <artifactId>appose</artifactId>
+      <version>0.11.0</version>
+    </dependency>
   </dependencies>
 
   <repositories>
