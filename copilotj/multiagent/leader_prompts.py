@@ -53,6 +53,16 @@ This Thought/Action/Observation can repeat N times, you should take several step
 If the task is already complete, skip the Action and output:
 Final Answer: [your answer or summary of the process]
 
+# Saved Workflow Execution Shortcut
+When the user asks to run, execute, apply, rerun, or use an existing saved workflow by ID or clear workflow name, do not enter the Standard Image Analysis Workflow.
+- Prefer calling `execute_workflow` directly.
+- Do not call `get_workflow` just to inspect steps, and do not re-plan the workflow before execution.
+- Do not call `kb_retrieve`, `imagej_perception`, or `user_manipulate` before `execute_workflow` unless the user explicitly asks to modify the workflow or choose a new method.
+- Pass any user-provided runtime values as `inputs` exactly as provided, especially image/file paths, output_dir, thresholds, channels, and model choices.
+- A workflow input declared as type `file` may receive either one file path or a folder path. If a folder is provided, `execute_workflow` will batch over matching files automatically.
+- If required inputs are missing, ask only for the missing inputs; after the user provides them, call `execute_workflow`.
+- If `execute_workflow` returns a missing-input or missing-output error, expose that error clearly and ask for the concrete missing value only when needed.
+
 # Standard Image Analysis Workflow
 1. **Image Acquisition**: Load raw images (e.g., TIFF, ND2, CZI).
 2. **Perception & Knowledge Retrieval**
@@ -425,6 +435,16 @@ PROMPT_TOOL_SAVE_WORKFLOW = """\
 Save a successful dialog as a reusable workflow. This tool converts the summarized steps and dialog context into a standardized workflow format that can be executed later.
 You can call this tool like this: Action: {"name": "save_workflow", "args": {"workflow_name": "My-Workflow", "tags": "cell-analysis, image-processing, segmentation", "dialog_id": 2}}
 The tool will save the specific dialog with id (default will be last one) as a reusable workflow, and return the save status, you must summarize it.
+
+The saved workflow JSON must be reusable, not a replay of one user's exact files:
+- Save as `schema_version: "2.0"` with an `interface` object.
+- `interface.inputs` must include all run-specific values: source file paths, output_dir, thresholds, radii, channel indices, timepoints, and model choices.
+- Use one `type: "file"` input for single-image workflows. Use separate named file inputs for role-specific multi-image workflows, such as `t0_image` and `t24_image`.
+- `interface.outputs` must include every produced artifact: masks, CSV tables, plots, reports, logs, and summary files.
+- Step arguments must not contain hardcoded absolute paths from the completed run. Replace input paths, output paths, and reusable parameters with template variables.
+- Allowed template variables are only `{{inputs.<name>}}`, `{{outputs.<name>.path}}`, and `{{run_dir}}`.
+- If the candidate workflow still contains absolute paths in step args, it is not reusable yet; regenerate the workflow definition before saving.
+- Do not invent fallback behavior, mock outputs, compatibility branches, or silent error handling.
 """
 
 PROMPT_TOOL_LIST_WORKFLOWS = """\
@@ -435,8 +455,9 @@ Returns metadata about each workflow including name and Task Overview. You must 
 PROMPT_TOOL_GET_WORKFLOW = """\
 Get detailed information about a specific workflow by its ID.
 You can call this tool like this: Action: {"name": "get_workflow", "args": {"workflow_id": "test-advanced-workflow"}}
-Returns the complete workflow definition including all steps and metadata.
+Returns the complete workflow definition including metadata, interface, and steps.
 After you call this tool, you must add this workflow information when showing the final result or user manipulation.
+Use this tool for inspection, debugging, editing, exporting decisions, or when the user asks what a workflow contains. Do not call it as a required pre-step before execute_workflow.
 """
 
 PROMPT_TOOL_DELETE_WORKFLOW = """\
@@ -452,8 +473,8 @@ You can call this tool like this: Action: {"name": "export_workflow", "args": {"
 
 PROMPT_TOOL_EXECUTE_WORKFLOW = """\
 Execute a saved workflow by its ID, This will take some time depending on the workflow complexity.
-You can call this tool like this: Action: {"name": "execute_workflow", "args": {"workflow_id": "myworkflow", "stop_on_error": true}}
-The workflow will run all its steps in sequence, calling the appropriate tools and agents, finally return a execution result, you need to summarize it.
+You can call this tool like this: Action: {"name": "execute_workflow", "args": {"workflow_id": "myworkflow", "inputs": {"image": "/absolute/input.tif", "output_dir": "/absolute/output"}, "stop_on_error": true}}
+When the user asks to run an existing workflow, call this tool directly with any available inputs. Do not call get_workflow first and do not re-plan the workflow. A type `file` input may be a single file or a folder; folder inputs are executed as a batch over matching files. If the workflow requires inputs that the user has not provided, ask only for those missing values. The workflow will bind inputs, render template variables, run all steps in sequence, verify declared outputs, and return execution results for summarization.
 """
 # </Workflow Management Prompts>
 
@@ -465,6 +486,7 @@ User ask: {task}
 Execution Steps to Summarize:
 {steps_text}
 Please provide a detailed summary of the following ImageJ task execution steps.
+When the summary may be saved as a reusable workflow, identify runtime inputs, output artifacts, and parameters that should become interface inputs/outputs instead of hardcoded paths.
 
 ## Required Summary Format
 The summary must be comprehensive like:
@@ -516,23 +538,41 @@ def build_tool_prompt(tools: list[Tool]) -> str:
 
 
 STEPS_PROMPT = """
-You are an expert summarizer. Your job is to extract a minimal, correct, and reproducible sequence of Actions from an execution trace.  
-Now the task is finished, according to the Original Task and Execution History, you need to extract the correct sequence of Actions.
+You are an expert workflow author. Your job is to convert an execution trace into a reusable Workflow JSON definition.
+Now the task is finished. According to the Original Task and Execution History, create a minimal, correct, reproducible workflow.
 
 #Original Task: {{TASK}}
 
 #Execution History:
 {{SETPS}}
 
-Return a JSON array ONLY:
+Return a JSON object ONLY, not markdown:
 <Example>
-[
-{"name":"run_imagej_macro","args": {"script": "run("8-bit");"}},
-{"name":"run_imagej_macro","args": {"script": "run("Auto Threshold", "method=Otsu");"}},
-{"name": "delegate", "args": {"agent": "Tool Agent", "task": "Create a plot from the CSV file at temp/results.csv showing measurement data over time"}},
-]
+{
+  "schema_version": "2.0",
+  "interface": {
+    "inputs": {
+      "image": {"type": "file", "required": true, "description": "Input image"},
+      "output_dir": {"type": "directory", "required": false, "default": "{{run_dir}}"}
+    },
+    "outputs": {
+      "measurements": {"type": "table", "path": "{{inputs.output_dir}}/measurements.csv"}
+    }
+  },
+  "steps": [
+    {"name": "run_macro", "args": {"script": "open(\"{{inputs.image}}\");\nrun(\"8-bit\");\nsaveAs(\"Results\", \"{{outputs.measurements.path}}\");"}}
+  ]
+}
 </Example>
 
+Rules:
+1. Put values that change between runs in `interface.inputs`: image paths, folders, output_dir, thresholds, radii, channel indices, timepoints, and model choices.
+2. Put every file artifact promised by the workflow in `interface.outputs`.
+3. Replace hardcoded input paths, output paths, and reusable parameters inside step args with template variables. Step args must not retain absolute paths from the original run.
+4. Use `{{inputs.<name>}}`, `{{outputs.<name>.path}}`, and `{{run_dir}}` only.
+5. For multi-image workflows, use separate named file inputs such as `t0_image` and `t24_image`; do not depend on file ordering.
+6. Preserve the original tool names and the minimal step order required for execution.
+7. Do not add mock outputs, fallback branches, or silent error handling.
 **Error Handling**: Be careful of the `'gbk' codec can't encode character '\u2080'` error
 """
 
