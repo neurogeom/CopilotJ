@@ -13,6 +13,7 @@ from typing import AsyncGenerator, Literal, override
 import aiohttp.web as web
 import langfuse
 import pydantic
+from langfuse import propagate_attributes
 
 from copilotj.core import UI, UIEvent, UIEventPost, UIEventState
 from copilotj.core.config import get_llm_and_key
@@ -181,11 +182,11 @@ class _Thread(UI):
     async def _run_agent(self, prompt: str, done_event: asyncio.Event) -> None:
         """Run the chat with the agent."""
         try:
-            with self._trace_ctx.start_as_current_observation(
-                as_type="span", name="thread", metadata={"thread_id": self.thread_id}, input=prompt
-            ):
-                self._trace_ctx.update_current_trace(session_id=self.thread_id)
-                await self._agent.run(prompt, trace_ctx=self._trace_ctx)
+            with propagate_attributes(session_id=self.thread_id):
+                with self._trace_ctx.start_as_current_observation(
+                    as_type="span", name="thread", metadata={"thread_id": self.thread_id}, input=prompt
+                ):
+                    await self._agent.run(prompt, trace_ctx=self._trace_ctx)
 
         finally:
             done_event.set()  # Signal that the chat is done

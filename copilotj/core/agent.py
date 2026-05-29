@@ -6,6 +6,7 @@ import abc
 import asyncio
 import functools
 import inspect
+import json
 from collections.abc import Awaitable, Callable
 from typing import Any, override
 
@@ -120,7 +121,7 @@ class ChatAgent(Agent):
             metadata={
                 "agent": self.name,
                 "agent_description": self.description,
-                "agent_tools": {t.name: t.description for t in tools} if tools else None,
+                "agent_tools": json.dumps({t.name: t.description for t in tools}) if tools else "",
             },
         ):
             # Reset abort event before starting new stream
