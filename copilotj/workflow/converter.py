@@ -13,6 +13,9 @@ from copilotj.workflow.manager import Workflow, WorkflowMeta, WorkflowStep, slug
 class DialogToWorkflowConverter:
     @staticmethod
     def extract_definition(steps_text: str) -> dict[str, Any] | list[dict[str, Any]]:
+        if not isinstance(steps_text, str) or not steps_text.strip():
+            raise ValueError("workflow steps must be a non-empty JSON string")
+
         json_pattern = r"```(?:json)?\s*\n(.*?)\n```"
         match = re.search(json_pattern, steps_text, re.DOTALL)
         json_content = match.group(1).strip() if match else steps_text.strip()

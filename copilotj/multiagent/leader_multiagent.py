@@ -510,30 +510,8 @@ User prompt to optimize:
             return user_prompt
 
     async def summarize_dialog_context(self, dialog_context: dict, dialog_id: int | None = None):
-        steps = dialog_context["steps"]
-        if len(steps) <= self.max_steps_before_summary:
-            return dialog_context, None
-
-        self.log_info(f"[SUMMARY] Summarizing {len(steps)} steps into a detailed summary...")
-
-        steps_text = json.dumps(steps, indent=2, ensure_ascii=False)
-
-        summary_prompt = make_summary_prompt(dialog_context["task"], steps_text)
-        steps_prompt = make_steps_prompt(dialog_context["task"], steps_text)
-
-        try:
-            response = await self.model_client.create([TextMessage(role="user", text=summary_prompt)])
-            steps_response = await self.model_client.create([TextMessage(role="user", text=steps_prompt)])
-            if response.content is None or steps_response.content is None:
-                self.log_error("[ERROR] Failed to generate summary - empty response")
-                return dialog_context, None
-
-            summary = response.content.strip()
-            steps = steps_response.content.strip()
-            self.log_info("[SUCCESS] Successfully generated dialog context summary")
-
-        except Exception as e:
-            self.log_error(f"[ERROR] Error generating dialog context summary: {e}")
+        summary, steps = await self._generate_dialog_summary_and_steps(dialog_context)
+        if steps is None:
             return dialog_context, None
 
         if str(os.getenv("COPILOTJ_KB_AUTOSAVE")) != "1":
@@ -584,6 +562,28 @@ User prompt to optimize:
 
         finally:
             return summary, steps
+
+    async def _generate_dialog_summary_and_steps(self, dialog_context: dict) -> tuple[object, str | None]:
+        steps = dialog_context["steps"]
+        self.log_info(f"[SUMMARY] Generating reusable workflow steps from {len(steps)} dialog steps...")
+
+        steps_text = json.dumps(steps, indent=2, ensure_ascii=False)
+        summary_prompt = make_summary_prompt(dialog_context["task"], steps_text)
+        steps_prompt = make_steps_prompt(dialog_context["task"], steps_text)
+
+        try:
+            response = await self.model_client.create([TextMessage(role="user", text=summary_prompt)])
+            steps_response = await self.model_client.create([TextMessage(role="user", text=steps_prompt)])
+        except Exception as e:
+            self.log_error(f"[ERROR] Error generating dialog context summary: {e}")
+            return dialog_context, None
+
+        if response.content is None or steps_response.content is None:
+            self.log_error("[ERROR] Failed to generate summary - empty response")
+            return dialog_context, None
+
+        self.log_info("[SUCCESS] Successfully generated dialog context summary")
+        return response.content.strip(), steps_response.content.strip()
 
     async def _background_summarize_and_store(self, dialog_id: int, task: str, dialog_context: dict) -> None:
         try:

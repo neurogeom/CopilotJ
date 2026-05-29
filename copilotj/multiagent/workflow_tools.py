@@ -18,6 +18,9 @@ async def save_workflow_from_steps(
     summary: Annotated[str, "The summary of the workflow"],
     tags: Annotated[Optional[str], "Optional string of tags for categorization"] = None,
 ) -> str:
+    if not isinstance(steps, str) or not steps.strip():
+        return "Failed to auto-save workflow: dialog has no generated reusable workflow steps"
+
     try:
         workflow = DialogToWorkflowConverter.create_workflow(
             steps_text=steps,
@@ -27,11 +30,12 @@ async def save_workflow_from_steps(
         )
 
         workflow_id = WorkflowManager.save_workflow(workflow)
+        workflow_about = workflow.meta.about or ""
         return f"""
 ✅ Workflow saved successfully:
 workflow_id: {workflow_id}
 workflow_name: {workflow_name}
-workflow_about: {summary[:100]}...
+workflow_about: {workflow_about[:100]}...
 tags: {tags}
 """
     except Exception as e:
