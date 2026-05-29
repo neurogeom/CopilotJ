@@ -998,7 +998,7 @@ requires-dist = [
     { name = "langchain-core", specifier = ">=0.3.35" },
     { name = "langchain-google-genai", specifier = ">=2.1.5" },
     { name = "langchain-openai", specifier = ">=0.2.14" },
-    { name = "langfuse", specifier = ">=3.3.2" },
+    { name = "langfuse", specifier = ">=4.0.0" },
     { name = "matplotlib", specifier = ">=3.10.3" },
     { name = "napari-process-points-and-surfaces", specifier = ">=0.5.0" },
     { name = "openai", specifier = ">=1.63.2" },
@@ -2824,7 +2824,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/0e/72/a3add0e4eec4eb9e2
 
 [[package]]
 name = "langfuse"
-version = "3.3.2"
+version = "4.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "backoff" },
@@ -2834,12 +2834,11 @@ dependencies = [
     { name = "opentelemetry-sdk" },
     { name = "packaging" },
     { name = "pydantic" },
-    { name = "requests" },
     { name = "wrapt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6d/91/b92566f4fd73b607136bcd3ed011af98a571dc4c0f60b95fffb768d3cb5c/langfuse-3.3.2.tar.gz", hash = "sha256:4b029fed675b2b631b96da157459c285930420139667f25a6ee71ed3b3c5a71c", size = 164001, upload-time = "2025-08-27T15:55:11.716Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ab/80/0bd2ed8f781905d8e4c8f69e72fd06d914c907f31a3074449d20f8964c78/langfuse-4.7.0.tar.gz", hash = "sha256:7b592a251777dae44f76db7971871ff16c4c200d490cb5cd4e2f3822a1d593ec", size = 282543, upload-time = "2026-05-27T18:51:01.521Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9b/ed/c4e914c5362740a40b12eaa8f90205cc05af81bacf983f3e89bf26b1c3cf/langfuse-3.3.2-py3-none-any.whl", hash = "sha256:0a5871501720c362183fbf2970c895fb0d46f4ed121a5f95a1874f9af081cfdd", size = 317629, upload-time = "2025-08-27T15:55:09.435Z" },
+    { url = "https://files.pythonhosted.org/packages/cf/13/9a2304f546c74bc2bfc4765adb1e6f6a0984ead671fa65c3edcf9d473b58/langfuse-4.7.0-py3-none-any.whl", hash = "sha256:72ca668ce0999d05c787ccbfa313b679b99b3492e268d351549488822dd40c34", size = 482420, upload-time = "2026-05-27T18:50:59.773Z" },
 ]
 
 [[package]]
