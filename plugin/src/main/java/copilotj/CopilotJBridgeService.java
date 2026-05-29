@@ -19,4 +19,16 @@ public interface CopilotJBridgeService extends SciJavaService {
   public void start(final String serverURL);
 
   public void stop();
+
+  public void ensureEnvironment() throws java.io.IOException;
+
+  public boolean isEnvironmentReady();
+
+  public boolean isEnvironmentOnDisk();
+
+  public void startManagedServer() throws java.io.IOException, InterruptedException;
+
+  public boolean isManaged();
+
+  public boolean isServerRunning();
 }
