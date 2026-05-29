@@ -73,6 +73,7 @@ class Connection {
   }
 
   public void close() {
+    closed = true;
     // Set state to DISCONNECTED before closing so that the async onClose callback
     // sees currentState == DISCONNECTED and skips handleReconnect().
     Connection.notifyStateChange(this, State.DISCONNECTED, "Disconnected by user.");
@@ -102,6 +103,11 @@ class Connection {
       return new WebSocketClient(uri) {
         @Override
         public void onOpen(final ServerHandshake handshakedata) {
+          if (closed) {
+            log.debug("onOpen after close, closing immediately");
+            this.close();
+            return;
+          }
           log.info("Connected to WebSocket server: " + uri);
           retryCount = 0;
           Connection.notifyStateChange(Connection.this, State.CONNECTED, "Connection established to " + uri);
@@ -131,27 +137,30 @@ class Connection {
 
         @Override
         public void onClose(final int code, final String reason, final boolean remote) {
-          final String closeReason = reason.isEmpty() ? "No reason provided (code: " + code + ")" : reason;
-          if (currentState != State.DISCONNECTED) { // Avoid redundant logs/notifications if close() was called
-            if (retryCount == 0) {
-              log.info("WebSocket connection closed: " + closeReason);
-            }
-            Connection.notifyStateChange(Connection.this, State.DISCONNECTED, "Connection closed: " + closeReason);
-            handleReconnect();
-          } else {
+          if (closed || currentState == State.DISCONNECTED) {
             log.debug("WebSocket closed explicitly or already disconnected.");
+            return;
           }
+          final String closeReason = reason.isEmpty() ? "No reason provided (code: " + code + ")" : reason;
+          if (retryCount == 0) {
+            log.info("WebSocket connection closed: " + closeReason);
+          }
+          Connection.notifyStateChange(Connection.this, State.DISCONNECTED, "Connection closed: " + closeReason);
+          handleReconnect();
         }
 
         @Override
         public void onError(final Exception e) {
+          if (closed) {
+            return;
+          }
           String errorMsg;
           if (e.getMessage() != null && e.getMessage().contains("Connection refused")) {
             errorMsg = "Connection refused by server " + uri;
             if (retryCount == 0) {
-              log.warn(errorMsg);
+              log.info(errorMsg);
             } else {
-              log.info(errorMsg + " (retry #" + retryCount + ")");
+              log.debug(errorMsg + " (retry #" + retryCount + ")");
             }
           } else {
             errorMsg = "WebSocket error: " + e.getMessage();
@@ -170,20 +179,18 @@ class Connection {
   }
 
   private void handleReconnect() {
-    if (timer != null) {
+    if (closed) {
       return;
     }
 
-    // Only attempt reconnect if not explicitly closed
-    if (currentState == State.DISCONNECTED && retryCount > 0 && webSocketClient == null) {
-      log.debug("Reconnect cancelled as connection was explicitly closed.");
+    if (timer != null) {
       return;
     }
 
     final int k = this.retryWaitSecondIncreasedAfter;
     final int wait = Math.min((int) Math.pow(2, Math.max(retryCount - k + 1, 0)), maxRetryWaitSecond);
     final String reconnectMsg = "Will attempt to reconnect #" + (retryCount + 1) + " after " + wait + " second...";
-    log.info(reconnectMsg);
+    log.debug(reconnectMsg);
     Connection.notifyStateChange(this, State.RECONNECTING, reconnectMsg);
 
     timer = new Timer("WebSocketReconnectTimer"); // Give the timer thread a name
@@ -205,6 +212,8 @@ class Connection {
   }
 
   // --- State Management ---
+
+  private volatile boolean closed;
 
   private final List<ConnectionStateListener> stateListeners = new CopyOnWriteArrayList<>(); // Thread-safe for
                                                                                              // listeners

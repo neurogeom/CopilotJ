@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 import org.apposed.appose.Appose;
 import org.apposed.appose.BuildException;
 import org.apposed.appose.Environment;
+import org.apposed.appose.builder.Builders;
 import org.scijava.Context;
 import org.scijava.Priority;
 import org.scijava.event.EventService;
@@ -79,10 +80,10 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
 
   // -- Appose-managed server state --
 
-  private Environment apposeEnv;
+  private volatile Environment apposeEnv;
   private org.apposed.appose.Service pythonService;
-  private String managedServerUrl;
-  private boolean managed = false;
+  private volatile String managedServerUrl;
+  private volatile boolean managed = false;
 
   public DefaultCopilotJBridgeService() {
   }
@@ -110,17 +111,11 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
     this.eventHandler = new EventHandler(context, log, debug);
 
     if (debug) {
-      // Debug mode: connect to manually started server at hardcoded URL.
+      // Debug mode: auto-connect to manually started server.
       log.info("Debug mode: connecting to " + debugServerUrl);
       this.start(debugServerUrl);
-    } else {
-      // Production mode: manage environment + process via Appose.
-      try {
-        startManagedServer();
-      } catch (final Exception e) {
-        log.error("copilotj: Failed to start managed server", e);
-      }
     }
+    // Production mode: user starts managed server via dialog buttons.
 
     if (ui.isVisible()) {
       installActionTool();
@@ -173,11 +168,36 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
 
   // -- Appose lifecycle --
 
-  private void startManagedServer() throws IOException, InterruptedException {
+  @Override
+  public boolean isEnvironmentReady() {
+    return apposeEnv != null;
+  }
+
+  @Override
+  public boolean isEnvironmentOnDisk() {
+    if (apposeEnv != null)
+      return true;
+    final File envRoot = resolveEnvRoot();
+    return Builders.canWrap(new File(envRoot, ".venv"));
+  }
+
+  @Override
+  public boolean isManaged() {
+    return managed;
+  }
+
+  @Override
+  public boolean isServerRunning() {
+    return connection != null && connection.getState() != Connection.State.DISCONNECTED;
+  }
+
+  @Override
+  public void startManagedServer() throws IOException, InterruptedException {
     // 1. Ensure environment is ready (also sets PYTHONPATH + .env on builder).
-    final Environment env = ensureEnvironment();
+    ensureEnvironment();
 
     // 2. Create Appose Service.
+    final Environment env = apposeEnv;
     pythonService = env.python();
 
     // 3. Send init task: Python starts server on port 0, returns port.
@@ -206,8 +226,10 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
     this.start(managedServerUrl);
   }
 
-  private Environment ensureEnvironment() throws IOException {
-    if (apposeEnv != null) return apposeEnv;
+  @Override
+  public void ensureEnvironment() throws IOException {
+    if (apposeEnv != null)
+      return;
 
     final File envRoot = resolveEnvRoot();
 
@@ -250,7 +272,7 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
           .build();
 
       apposeEnv = env;
-      return env;
+      return;
     } catch (final BuildException e) {
       throw new IOException("Failed to build CopilotJ Python environment", e);
     }
@@ -290,11 +312,13 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
 
   private static Map<String, String> readDotEnv(final File dotEnvFile) throws IOException {
     final Map<String, String> envVars = new HashMap<>();
-    if (!dotEnvFile.exists()) return envVars;
+    if (!dotEnvFile.exists())
+      return envVars;
 
     for (final String line : Files.readAllLines(dotEnvFile.toPath(), StandardCharsets.UTF_8)) {
       final String trimmed = line.trim();
-      if (trimmed.isEmpty() || trimmed.startsWith("#")) continue;
+      if (trimmed.isEmpty() || trimmed.startsWith("#"))
+        continue;
       final int eq = trimmed.indexOf('=');
       if (eq > 0) {
         final String key = trimmed.substring(0, eq).trim();
@@ -313,7 +337,8 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
 
   private static String readResource(final String path) throws IOException {
     final InputStream is = DefaultCopilotJBridgeService.class.getResourceAsStream(path);
-    if (is == null) return null;
+    if (is == null)
+      return null;
     try (final BufferedReader reader = new BufferedReader(
         new InputStreamReader(is, StandardCharsets.UTF_8))) {
       return reader.lines().collect(Collectors.joining("\n"));

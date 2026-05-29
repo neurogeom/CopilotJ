@@ -8,15 +8,23 @@ package copilotj;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.FlowLayout;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.util.List;
 
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JTabbedPane;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 
 import org.scijava.command.Command;
 import org.scijava.log.LogService;
@@ -25,7 +33,8 @@ import org.scijava.plugin.Plugin;
 import org.scijava.ui.UIService;
 
 @Plugin(type = Command.class, menuPath = "Plugins>CopilotJ")
-public class CopilotJBridgeDialog implements Command, Connection.ConnectionStateListener, EventHandler.IdListener {
+public class CopilotJBridgeDialog
+    implements Command, Connection.ConnectionStateListener, EventHandler.IdListener {
   private static JFrame opened = null;
 
   @Parameter
@@ -40,9 +49,30 @@ public class CopilotJBridgeDialog implements Command, Connection.ConnectionState
   @Parameter
   private LogService logService;
 
+  // -- Shared components --
+  private JLabel statusLabel;
+  private JLabel idLabel;
+  private JTabbedPane tabbedPane;
+
+  // -- External server tab components --
+  private JTextField urlField;
   private JButton connectButton;
-  private JLabel statusLabel; // Make statusLabel accessible in the class
-  private JLabel idLabel; // Label to display the connection ID
+
+  // -- Managed server tab components --
+  private JButton installButton;
+  private JButton serverToggleButton;
+  private JLabel envStatusLabel;
+  private JLabel managedStatusLabel;
+  private JTextArea progressArea;
+
+  /**
+   * True while the managed server is being started — keeps buttons disabled
+   * against async syncUIState overwrites.
+   */
+  private boolean serverStarting;
+
+  /** The connection this dialog is currently listening to. */
+  private Connection listenedConnection;
 
   @Override
   public void run() {
@@ -54,145 +84,371 @@ public class CopilotJBridgeDialog implements Command, Connection.ConnectionState
 
     final JFrame frame = new JFrame("CopilotJ Bridge Config");
     opened = frame;
+    frame.setMinimumSize(new java.awt.Dimension(520, 320));
+    frame.setLayout(new BorderLayout(10, 10));
 
-    frame.setSize(400, 200);
-    frame.setLayout(new BorderLayout());
+    // -- Tabbed pane --
+    tabbedPane = new JTabbedPane();
+    tabbedPane.addTab("Managed Server", buildManagedTab());
+    tabbedPane.addTab("External Server", buildExternalTab());
 
-    final JTextField urlField = new JTextField(service.getServerUrl());
-    final Connection existingConn = service.getConnection();
-    final boolean isActive = existingConn != null &&
-        existingConn.getState() != Connection.State.DISCONNECTED;
-    connectButton = new JButton(isActive ? "Disconnect" : "(Re)Connect");
-    statusLabel = new JLabel("Initializing..."); // Initial status
-    idLabel = new JLabel("ID: N/A"); // Initial ID status
-
-    connectButton.addActionListener(e -> {
-      if ("Disconnect".equals(connectButton.getText())) {
-        final Connection conn = service.getConnection();
-        if (conn != null) conn.close();
-        connectButton.setText("(Re)Connect");
-        return;
-      }
-
-      final String newUrl = urlField.getText();
-      logService.info("Attempting to connect to: " + newUrl);
-      service.start(newUrl); // This will create a new connection or restart the existing one
-      connectButton.setText("Disconnect");
-
-      // Register listeners when new connection is created
-      final Connection connection = service.getConnection();
-      if (connection != null) {
-        connection.registerStateListener(this);
-      } else {
-        onStateChange(Connection.State.DISCONNECTED, "Currently disconnected.");
-      }
-    });
-
-    // Register listeners when dialog opens
-    final Connection connection = service.getConnection();
-    if (connection != null) {
-      connection.registerStateListener(this);
-    } else {
-      onStateChange(Connection.State.DISCONNECTED, "Currently disconnected.");
+    // Select External tab if currently connected externally.
+    if (!service.isManaged()) {
+      tabbedPane.setSelectedIndex(1);
     }
 
-    final JPanel inputPanel = new JPanel(new BorderLayout(5, 5)); // Panel for URL and button
-    inputPanel.add(new JLabel("Server URL:"), BorderLayout.WEST);
-    inputPanel.add(urlField, BorderLayout.CENTER);
-    inputPanel.add(connectButton, BorderLayout.EAST);
-
-    final JPanel statusPanel = new JPanel(new BorderLayout(5, 5)); // Panel for status and ID
+    // -- Shared status panel (below tabs) --
+    statusLabel = new JLabel("Status: disconnected");
+    idLabel = new JLabel("ID: N/A");
+    final JPanel statusPanel = new JPanel(new BorderLayout(5, 5));
     statusPanel.add(statusLabel, BorderLayout.NORTH);
     statusPanel.add(idLabel, BorderLayout.SOUTH);
 
-    final JPanel mainPanel = new JPanel(new BorderLayout(10, 10)); // Main content panel
-    mainPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10)); // Add padding
-    mainPanel.add(inputPanel, BorderLayout.NORTH);
-    mainPanel.add(statusPanel, BorderLayout.CENTER);
+    final JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+    mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+    mainPanel.add(tabbedPane, BorderLayout.CENTER);
+    mainPanel.add(statusPanel, BorderLayout.SOUTH);
 
-    // Register ID listener
+    // -- Register listeners --
+    final Connection connection = service.getConnection();
+    if (connection != null) {
+      switchConnectionListener(connection);
+      syncUIState();
+    }
+
     final EventHandler handler = service.getEventHandler();
     if (handler != null) {
       handler.addListener(this);
-    } else {
-      logService.warn("EventHandler is null, cannot register IdListener.");
     }
 
-    // Unregister listener when dialog closes
+    // -- Window cleanup --
     frame.addWindowListener(new WindowAdapter() {
       @Override
       public void windowClosing(final WindowEvent e) {
+        if (listenedConnection != null) {
+          listenedConnection.removeStateListener(CopilotJBridgeDialog.this);
+        }
         final Connection conn = service.getConnection();
-        if (conn != null) {
-          conn.removeStateListener(CopilotJBridgeDialog.this);
-          logService.debug("Removed connection state listener from dialog.");
-          if ("Disconnect".equals(connectButton.getText())) {
-            conn.close();
-          }
+        if (conn != null && !service.isManaged()) {
+          conn.close();
         }
-
-        final EventHandler handler = service.getEventHandler();
-        if (handler != null) {
-          handler.removeListener(CopilotJBridgeDialog.this);
-          logService.debug("Removed ID listener from dialog.");
+        final EventHandler h = service.getEventHandler();
+        if (h != null) {
+          h.removeListener(CopilotJBridgeDialog.this);
         }
-
         frame.dispose();
-
         opened = null;
       }
     });
 
     frame.add(mainPanel, BorderLayout.CENTER);
-    frame.pack(); // Adjust size to fit components
-    frame.setLocationRelativeTo(null); // Center on screen
+    frame.pack();
+    frame.setLocationRelativeTo(null);
     frame.setVisible(true);
   }
 
+  // -- Tab builders --
+
+  private JPanel buildExternalTab() {
+    final JPanel panel = new JPanel(new BorderLayout(10, 10));
+    panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+    urlField = new JTextField(service.getServerUrl(), 25);
+    connectButton = new JButton("(Re)Connect");
+
+    // Sync button state with current connection.
+    final Connection conn = service.getConnection();
+    final boolean isActive = conn != null &&
+        conn.getState() != Connection.State.DISCONNECTED && !service.isManaged();
+    connectButton.setText(isActive ? "Disconnect" : "(Re)Connect");
+
+    connectButton.addActionListener(e -> {
+      if ("Disconnect".equals(connectButton.getText())) {
+        final Connection c = service.getConnection();
+        if (c != null)
+          c.close();
+        connectButton.setText("(Re)Connect");
+        return;
+      }
+
+      // Warn if managed server is running — connecting externally will stop it.
+      if (service.isServerRunning() && service.isManaged()) {
+        final int choice = javax.swing.JOptionPane.showConfirmDialog(
+            opened,
+            "A managed server is currently running.\n"
+                + "Connecting to an external server will stop it.\n"
+                + "Continue?",
+            "Managed Server Running",
+            javax.swing.JOptionPane.YES_NO_OPTION,
+            javax.swing.JOptionPane.WARNING_MESSAGE);
+        if (choice != javax.swing.JOptionPane.YES_OPTION)
+          return;
+        service.stop();
+      }
+
+      final String url = urlField.getText().trim();
+      if (url.isEmpty())
+        return;
+      logService.info("Connecting to: " + url);
+      service.start(url);
+      connectButton.setText("Disconnect");
+
+      final Connection c = service.getConnection();
+      if (c != null) {
+        switchConnectionListener(c);
+      }
+    });
+
+    final JPanel inputRow = new JPanel(new BorderLayout(5, 0));
+    inputRow.add(new JLabel("Server URL:"), BorderLayout.WEST);
+    inputRow.add(urlField, BorderLayout.CENTER);
+    inputRow.add(connectButton, BorderLayout.EAST);
+
+    final JLabel hint = new JLabel("Connect to an externally running CopilotJ server.");
+    hint.setForeground(Color.GRAY);
+
+    panel.add(inputRow, BorderLayout.NORTH);
+    panel.add(hint, BorderLayout.CENTER);
+    return panel;
+  }
+
+  private JPanel buildManagedTab() {
+    final JPanel panel = new JPanel(new BorderLayout(10, 10));
+    panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+    // -- Environment row --
+    envStatusLabel = new JLabel("Not installed");
+    installButton = new JButton("Install");
+    installButton.addActionListener(e -> runInstallWorker());
+
+    final JPanel envRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+    envRow.add(new JLabel("Environment:"));
+    envRow.add(envStatusLabel);
+    envRow.add(Box.createHorizontalStrut(10));
+    envRow.add(installButton);
+
+    // -- Server row --
+    managedStatusLabel = new JLabel("Stopped");
+    serverToggleButton = new JButton("Start Server");
+
+    serverToggleButton.addActionListener(e -> {
+      if (serverRunning()) {
+        service.stop();
+        progressArea.append("Server stopped.\n");
+        syncUIState();
+      } else {
+        // Warn if external connection exists — starting managed will replace it.
+        final Connection extConn = service.getConnection();
+        if (extConn != null && !service.isManaged()) {
+          final int choice = javax.swing.JOptionPane.showConfirmDialog(
+              opened,
+              "An external server connection exists.\n"
+                  + "Starting the managed server will disconnect it.\n"
+                  + "Continue?",
+              "External Connection Active",
+              javax.swing.JOptionPane.YES_NO_OPTION,
+              javax.swing.JOptionPane.WARNING_MESSAGE);
+          if (choice != javax.swing.JOptionPane.YES_OPTION)
+            return;
+          // Stop the external connection immediately so it stops reconnecting.
+          extConn.close();
+        }
+        runStartWorker();
+      }
+    });
+
+    final JPanel serverRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+    serverRow.add(new JLabel("Server:"));
+    serverRow.add(managedStatusLabel);
+    serverRow.add(Box.createHorizontalStrut(10));
+    serverRow.add(serverToggleButton);
+
+    // -- Progress area --
+    progressArea = new JTextArea(6, 40);
+    progressArea.setEditable(false);
+    progressArea.setFont(new java.awt.Font("Monospaced", java.awt.Font.PLAIN, 11));
+    final javax.swing.JScrollPane progressScroll = new javax.swing.JScrollPane(progressArea);
+    progressScroll.setBorder(BorderFactory.createTitledBorder("Progress Log"));
+
+    // -- Layout --
+    final JPanel topRows = new JPanel();
+    topRows.setLayout(new BoxLayout(topRows, BoxLayout.Y_AXIS));
+    topRows.add(envRow);
+    topRows.add(Box.createVerticalStrut(5));
+    topRows.add(serverRow);
+
+    panel.add(topRows, BorderLayout.NORTH);
+    panel.add(progressScroll, BorderLayout.CENTER);
+
+    // Initial state sync.
+    syncUIState();
+    return panel;
+  }
+
+  // -- SwingWorkers for blocking operations --
+
+  private void runInstallWorker() {
+    installButton.setEnabled(false);
+    envStatusLabel.setText("Installing...");
+    progressArea.setText("");
+
+    new SwingWorker<Void, String>() {
+      @Override
+      protected Void doInBackground() throws Exception {
+        publish("Installing Python environment...\n");
+        service.ensureEnvironment();
+        return null;
+      }
+
+      @Override
+      protected void process(final List<String> chunks) {
+        for (final String msg : chunks) {
+          progressArea.append(msg);
+        }
+      }
+
+      @Override
+      protected void done() {
+        try {
+          get();
+          envStatusLabel.setText("Ready");
+          progressArea.append("Environment installed successfully.\n");
+        } catch (final Exception e) {
+          envStatusLabel.setText("Failed");
+          progressArea.append("Installation failed: " + e.getMessage() + "\n");
+          installButton.setEnabled(true);
+        }
+        syncUIState();
+      }
+    }.execute();
+  }
+
+  private void runStartWorker() {
+    serverStarting = true;
+    serverToggleButton.setEnabled(false);
+    managedStatusLabel.setText("Starting...");
+
+    new SwingWorker<String, String>() {
+      @Override
+      protected String doInBackground() throws Exception {
+        service.startManagedServer();
+        return service.getServerUrl();
+      }
+
+      @Override
+      protected void process(final List<String> chunks) {
+        for (final String msg : chunks) {
+          progressArea.append(msg);
+        }
+      }
+
+      @Override
+      protected void done() {
+        serverStarting = false;
+        try {
+          final String url = get();
+          managedStatusLabel.setText("Running at " + url);
+          progressArea.append("Server started at " + url + "\n");
+
+          // Switch listener from old (closed) connection to the new managed connection.
+          switchConnectionListener(service.getConnection());
+        } catch (final Exception e) {
+          managedStatusLabel.setText("Failed");
+          progressArea.append("Start failed: " + e.getMessage() + "\n");
+        }
+        syncUIState();
+      }
+    }.execute();
+  }
+
+  // -- State synchronization --
+
+  private boolean serverRunning() {
+    return service.isServerRunning() && service.isManaged();
+  }
+
+  private void syncUIState() {
+    SwingUtilities.invokeLater(() -> {
+      // Managed tab button states.
+      final boolean envReady = service.isEnvironmentReady() || service.isEnvironmentOnDisk();
+      final boolean running = serverRunning();
+
+      installButton.setEnabled(!serverStarting && !envReady);
+      serverToggleButton.setEnabled(!serverStarting && envReady);
+      serverToggleButton.setText(running ? "Stop Server" : "Start Server");
+
+      if (envReady && !"Ready".equals(envStatusLabel.getText()) &&
+          !"Installing...".equals(envStatusLabel.getText())) {
+        envStatusLabel.setText("Ready");
+      }
+      if (!running && !serverStarting && !"Stopped".equals(managedStatusLabel.getText()) &&
+          !"Failed".equals(managedStatusLabel.getText())) {
+        managedStatusLabel.setText("Stopped");
+      }
+
+      // External tab button state.
+      if (connectButton != null) {
+        if (serverStarting) {
+          connectButton.setEnabled(false);
+        } else {
+          connectButton.setEnabled(true);
+          final Connection conn = service.getConnection();
+          final boolean isActive = conn != null &&
+              conn.getState() != Connection.State.DISCONNECTED && !service.isManaged();
+          connectButton.setText(isActive ? "Disconnect" : "(Re)Connect");
+        }
+      }
+    });
+  }
+
+  // -- Listener management --
+
+  private void switchConnectionListener(final Connection conn) {
+    if (listenedConnection != null && listenedConnection != conn) {
+      listenedConnection.removeStateListener(this);
+    }
+    listenedConnection = conn;
+    if (conn != null) {
+      conn.registerStateListener(this);
+    }
+  }
+
+  // -- Connection.ConnectionStateListener --
+
   @Override
   public void onStateChange(final Connection.State state, final String message) {
-    // Ensure UI updates are done on the Event Dispatch Thread
     SwingUtilities.invokeLater(() -> {
       if (statusLabel != null) {
         statusLabel.setText("Status: " + state + " - " + message);
-      }
-
-      // Optionally change color based on state
-      if (statusLabel != null) {
         switch (state) {
           case CONNECTED:
-            statusLabel.setForeground(new Color(0, 128, 0)); // Green
+            statusLabel.setForeground(new Color(0, 128, 0));
             break;
           case CONNECTING:
           case RECONNECTING:
             statusLabel.setForeground(Color.ORANGE);
             break;
-
           case DISCONNECTED:
           case ERROR:
             statusLabel.setForeground(Color.RED);
             break;
-
           default:
             statusLabel.setForeground(Color.BLACK);
             break;
         }
-      } else {
-        logService.warn("statusLabel is null during state change: " + state);
       }
+      syncUIState();
     });
   }
 
+  // -- EventHandler.IdListener --
+
   @Override
   public void onIdChanged(final String newId) {
-    // Ensure UI updates are done on the Event Dispatch Thread
     SwingUtilities.invokeLater(() -> {
-      if (idLabel == null) {
-        logService.warn("idLabel is null during ID change: " + newId);
-        return;
+      if (idLabel != null) {
+        idLabel.setText("ID: " + newId);
       }
-
-      idLabel.setText("ID: " + newId);
     });
   }
 }
