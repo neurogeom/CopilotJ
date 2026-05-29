@@ -19,6 +19,12 @@ worktree="$root/.worktrees/$path"
 mkdir -p "$(dirname "$worktree")"
 git worktree add -b "$name" "$worktree"
 
+# Copy gitignored .env files from the original worktree
+for f in $(git ls-files --others --ignored --exclude-standard -- "$root/.env*"); do
+  rel="${f#$root/}"
+  cp "$f" "$worktree/$rel"
+done
+
 # Activate direnv for the new worktree if direnv is installed and current directory is allowed
 # `foundRC.allowed`: 0 -> allowed, 2 -> denied
 if command -v direnv >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
