@@ -16,8 +16,43 @@ path="${name//\//__}"
 root="$(cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd)"
 worktree="$root/.worktrees/$path"
 
+# Refresh remote refs (non-fatal, skips if offline)
+git fetch --quiet --all >/dev/null 2>&1 || true
+
 mkdir -p "$(dirname "$worktree")"
-git worktree add -b "$name" "$worktree"
+
+if git show-ref --verify --quiet "refs/heads/$name"; then
+  # Local branch already exists
+  if git worktree list --porcelain | awk '/^branch/{print $2}' | grep -qFx "refs/heads/$name"; then
+    existing=$(git worktree list --porcelain | awk "/^branch refs\\/heads\\/${name}$/{found=1} found&&/^worktree/{print \$2;exit}")
+    echo "error: branch '$name' is already checked out in a worktree ($existing)" >&2
+    exit 1
+  fi
+
+  echo "Branch '$name' already exists but is not checked out in any worktree."
+  read -rp "Check it out in a new worktree? [y/N] " -n 1 -r
+  echo
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    exit 1
+  fi
+
+  git worktree add "$worktree" "$name"
+elif matching_remote="$(git remote | while read -r r; do
+       git show-ref --verify --quiet "refs/remotes/$r/$name" && echo "$r" && break
+     done)" && [ -n "$matching_remote" ]; then
+  # Remote branch exists — checkout from it
+  echo "Branch '$name' exists on remote '$matching_remote'."
+  read -rp "Check it out in a new worktree? [y/N] " -n 1 -r
+  echo
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    exit 1
+  fi
+
+  git worktree add -b "$name" "$worktree" "$matching_remote/$name"
+else
+  # Branch doesn't exist — create it
+  git worktree add -b "$name" "$worktree"
+fi
 
 # Copy gitignored .env files from the original worktree
 for f in $(git ls-files --others --ignored --exclude-standard -- "$root/.env*"); do
