@@ -47,3 +47,7 @@ test-cov:
 # Create a git worktree under .worktrees/<name> with a new branch
 add-worktree name:
   scripts/add-worktree.sh {{name}}
+
+# Interactively remove worktrees whose branches are merged or closed
+cleanup-worktree *args:
+  scripts/cleanup-worktree.sh {{args}}

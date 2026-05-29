@@ -13,7 +13,7 @@ fi
 
 name="$1"
 path="${name//\//__}"
-root="$(dirname "$(git rev-parse --git-common-dir)")"
+root="$(cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd)"
 worktree="$root/.worktrees/$path"
 
 mkdir -p "$(dirname "$worktree")"
