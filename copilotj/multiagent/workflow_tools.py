@@ -3,16 +3,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import json
-from typing import Annotated, Optional
+from typing import Annotated, Any, Optional
 
 import copilotj.multiagent.leader_multiagent as leader_multiagent
 from copilotj.core import load_env
-from copilotj.multiagent.workflow_manager import (
-    DialogToWorkflowConverter,
-    WorkflowExecutor,
-    WorkflowManager,
-)
-from copilotj.plugin.api import ClientPluginAPI
+from copilotj.workflow.converter import DialogToWorkflowConverter
+from copilotj.workflow.executor import WorkflowExecutor
+from copilotj.workflow.manager import WorkflowManager
 
 
 async def save_workflow_from_steps(
@@ -102,6 +99,17 @@ async def get_workflow(workflow_id: Annotated[str, "The ID of the workflow to re
         if workflow.meta.tags:
             result.extend(["**Tags:**", workflow.meta.tags, ""])
 
+        if workflow.interface:
+            result.extend(
+                [
+                    "**Interface:**",
+                    "```json",
+                    json.dumps(workflow.interface.to_dict(), ensure_ascii=False, indent=2),
+                    "```",
+                    "",
+                ]
+            )
+
         result.extend(["**Steps:**", ""])
 
         for step in workflow.steps:
@@ -168,6 +176,7 @@ async def export_workflow(
 async def execute_workflow(
     apis: ClientPluginAPI,
     workflow_id: Annotated[str, "The ID of the workflow to execute"],
+    inputs: Annotated[Optional[dict[str, Any]], "Runtime inputs declared by workflow.interface.inputs"] = None,
     stop_on_error: Annotated[bool, "Whether to stop execution on first error"] = True,
 ) -> str:
     """Execute a workflow with the provided leader agent"""
@@ -175,7 +184,7 @@ async def execute_workflow(
         load_env()  # FIXME: why we need to load env here? should we load it in the main entry point instead?
         leader = leader_multiagent.LeaderDriven(apis=apis)
         executor = WorkflowExecutor(leader.leader_agent)
-        results = await executor.execute_workflow_by_id(workflow_id, stop_on_error)
+        results = await executor.execute_workflow_by_id(workflow_id, stop_on_error, inputs)
 
         # Format results for display
         result_lines = ["📋 **Workflow Execution Results:**"]
@@ -184,6 +193,12 @@ async def execute_workflow(
             step_id = result["step_id"]
             action = result["action"]
             if result["ok"]:
+                if step_id == "batch":
+                    result_lines.append(f"✅ Batch expanded: {result['result']['count']} input files")
+                    continue
+                if str(step_id).endswith("outputs"):
+                    result_lines.append(f"✅ Outputs verified: {json.dumps(result['result'], ensure_ascii=False)}")
+                    continue
                 result_lines.append(
                     f"✅ Step {step_id}:  {action.get('name', 'unknown')} - {action.get('args', 'unknown')} executed successfully."
                 )
