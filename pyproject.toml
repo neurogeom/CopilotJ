@@ -12,7 +12,7 @@ requires-python = ">=3.12"
 dependencies = [
   "aiohttp[speedups]>=3.11.12",
   "aiohttp-cors>=0.8.1",
-  "ujson>=5.10.0",
+  "ujson>=5.12.1",
   "pydantic>=2.10.6",
   "python-dotenv>=1.0.1",
   "openai>=1.63.2",
