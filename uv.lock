@@ -919,7 +919,7 @@ requires-dist = [
     { name = "torchmetrics", specifier = ">=1.7.3" },
     { name = "trackpy", specifier = ">=0.6.4" },
     { name = "ujson", specifier = ">=5.12.1" },
-    { name = "unstructured", specifier = ">=0.17.2" },
+    { name = "unstructured", specifier = ">=0.18.18" },
     { name = "wikipedia", specifier = ">=1.4.0" },
     { name = "xarray", specifier = "==2024.11.0" },
 ]
@@ -6599,7 +6599,7 @@ wheels = [
 
 [[package]]
 name = "unstructured"
-version = "0.18.14"
+version = "0.18.18"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "backoff" },
@@ -6624,9 +6624,9 @@ dependencies = [
     { name = "unstructured-client" },
     { name = "wrapt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/99/7c/39380d2a2fdb53db3581ddd5ef271dab9afa5fe0d31d92837fcb4252fae3/unstructured-0.18.14.tar.gz", hash = "sha256:c23760dd38dd6eca924a2803a005318f4ddc8af6a69388a7ce9d5b7fbc4b51bf", size = 1690988, upload-time = "2025-08-26T13:26:04.437Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/25/46/ed7c358d0a8851ff10e761888baade66a7061e05c40092f8239b98b860c5/unstructured-0.18.18.tar.gz", hash = "sha256:cfe6c84a36d374e5767930e13cfc10622357b3b68a5b7c735fdb1eeca08c6b57", size = 1693431, upload-time = "2025-11-07T01:07:20.186Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cf/36/5c6b09f8d4152445015916d3be672471c1b52a71951f22af85d2cece6ad0/unstructured-0.18.14-py3-none-any.whl", hash = "sha256:cc6fadcf2f84fb6d910dd87bcbd54d8b6e2593ce29b851af167bc786d9263f73", size = 1778832, upload-time = "2025-08-26T13:26:02.58Z" },
+    { url = "https://files.pythonhosted.org/packages/88/32/060aa452bb92384ab6f07eaee736131f894c6023a35d5fc4870621af13c3/unstructured-0.18.18-py3-none-any.whl", hash = "sha256:d5189bdd5e2a1c5ed3cc289cfb4fb483c6f2dd544b42744bdc5b81d3388ea527", size = 1779719, upload-time = "2025-11-07T01:07:18.156Z" },
 ]
 
 [[package]]
