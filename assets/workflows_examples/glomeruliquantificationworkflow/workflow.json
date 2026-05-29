@@ -1,4 +1,5 @@
 {
+  "schema_version": "2.0",
   "meta": {
     "id": "glomeruliquantificationworkflow",
     "name": "glomeruli_quantification_workflow",
@@ -9,13 +10,65 @@
     "created_at": 1757493654.479362,
     "updated_at": 1757493654.479363
   },
+  "interface": {
+    "inputs": {
+      "image": {
+        "type": "file",
+        "required": true,
+        "description": "Microscopy image file or folder of microscopy images to analyze",
+        "formats": [
+          "tif",
+          "tiff",
+          "png"
+        ]
+      },
+      "output_dir": {
+        "type": "directory",
+        "required": false,
+        "default": "{{run_dir}}"
+      },
+      "rolling_radius": {
+        "type": "number",
+        "required": false,
+        "default": 50
+      },
+      "particle_size": {
+        "type": "string",
+        "required": false,
+        "default": "5-500"
+      },
+      "particle_circularity": {
+        "type": "string",
+        "required": false,
+        "default": "0.50-1.00"
+      }
+    },
+    "outputs": {
+      "measurements": {
+        "type": "table",
+        "path": "{{inputs.output_dir}}/glomeruli_measurements.csv"
+      },
+      "mask": {
+        "type": "image",
+        "path": "{{inputs.output_dir}}/glomeruli_outlines.tif"
+      },
+      "statistics": {
+        "type": "table",
+        "path": "{{inputs.output_dir}}/glomeruli_statistics.csv"
+      },
+      "plot": {
+        "type": "image",
+        "path": "{{inputs.output_dir}}/glomeruli_analysis_plots.png"
+      }
+    }
+  },
   "steps": [
     {
       "id": 1,
       "action": {
         "name": "run_macro",
         "args": {
-          "script": "run(\"Duplicate...\", \"title=kidney_Z00_processed\");\nselectWindow(\"kidney_Z00_processed\");\nrun(\"Subtract Background...\", \"rolling=50\");\nsetAutoThreshold(\"Otsu dark\");\nrun(\"Convert to Mask\");\nrun(\"Analyze Particles...\", \"size=5-500 circularity=0.50-1.00 show=Outlines display clear\");"
+          "script": "open(\"{{inputs.image}}\");\nrun(\"Duplicate...\", \"title=workflow_processed\");\nselectWindow(\"workflow_processed\");\nrun(\"Subtract Background...\", \"rolling={{inputs.rolling_radius}}\");\nsetAutoThreshold(\"Otsu dark\");\nrun(\"Convert to Mask\");\nrun(\"Analyze Particles...\", \"size={{inputs.particle_size}} circularity={{inputs.particle_circularity}} show=Outlines display clear\");"
         }
       }
     },
@@ -24,7 +77,7 @@
       "action": {
         "name": "run_macro",
         "args": {
-          "script": "selectWindow(\"Results\");\nsaveAs(\"Results\", \"/Users/jacklu/vscode_project/ChatImageJ/temp/glomeruli_measurements.csv\");\nselectWindow(\"Drawing of kidney_Z00_processed\");\nsaveAs(\"Tiff\", \"/Users/jacklu/vscode_project/ChatImageJ/temp/glomeruli_outlines.tif\");"
+          "script": "selectWindow(\"Results\");\nsaveAs(\"Results\", \"{{outputs.measurements.path}}\");\nselectWindow(\"Drawing of workflow_processed\");\nsaveAs(\"Tiff\", \"{{outputs.mask.path}}\");"
         }
       }
     },
@@ -33,7 +86,7 @@
       "action": {
         "name": "execute_python_script",
         "args": {
-          "script": "import pandas as pd\nimport numpy as np\nimport matplotlib.pyplot as plt\nimport seaborn as sns\nimport os\n\n# Define file paths\ninput_csv = '/Users/jacklu/vscode_project/ChatImageJ/temp/glomeruli_measurements.csv'\noutput_stats_csv = '/Users/jacklu/vscode_project/ChatImageJ/temp/glomeruli_statistics.csv'\noutput_plot_png = '/Users/jacklu/vscode_project/ChatImageJ/temp/glomeruli_analysis_plots.png'\n\n# Load the data\ndata = pd.read_csv(input_csv)\n\n# Perform statistical analysis\nstats_summary = data.describe()\n\n# Save the statistical summary\nstats_summary.to_csv(output_stats_csv)\n\n# Create a comprehensive visualization\nfig, axes = plt.subplots(2, 2, figsize=(14, 12))\nfig.suptitle('Analysis of Glomerular Morphology', fontsize=16)\n\n# Distribution of Area\nsns.histplot(data['Area'], kde=True, ax=axes[0, 0], bins=30)\naxes[0, 0].set_title('Distribution of Glomeruli Area')\naxes[0, 0].set_xlabel('Area (pixels)')\naxes[0, 0].set_ylabel('Frequency')\n\n# Distribution of Circularity\nsns.histplot(data['Circ.'], kde=True, ax=axes[0, 1], bins=30)\naxes[0, 1].set_title('Distribution of Glomeruli Circularity')\naxes[0, 1].set_xlabel('Circularity')\naxes[0, 1].set_ylabel('Frequency')\n\n# Scatter plot of Area vs. Circularity\nsns.scatterplot(data=data, x='Area', y='Circ.', ax=axes[1, 0], alpha=0.6)\naxes[1, 0].set_title('Area vs. Circularity')\naxes[1, 0].set_xlabel('Area (pixels)')\naxes[1, 0].set_ylabel('Circularity')\n\n# Correlation heatmap\nnumeric_cols = data.select_dtypes(include=np.number).columns\ncorr = data[numeric_cols].corr()\nsns.heatmap(corr, annot=True, cmap='coolwarm', ax=axes[1, 1], fmt='.2f')\naxes[1, 1].set_title('Correlation Matrix of Morphological Features')\n\nplt.tight_layout(rect=[0, 0.03, 1, 0.95])\nplt.savefig(output_plot_png, dpi=300)\n\nprint(f\"Analysis complete. Statistics saved to {output_stats_csv} and plot saved to {output_plot_png}\")"
+          "script": "import pandas as pd\nimport numpy as np\nimport matplotlib.pyplot as plt\nimport seaborn as sns\n\ninput_csv = '{{outputs.measurements.path}}'\noutput_stats_csv = '{{outputs.statistics.path}}'\noutput_plot_png = '{{outputs.plot.path}}'\n\ndata = pd.read_csv(input_csv)\nstats_summary = data.describe()\nstats_summary.to_csv(output_stats_csv)\n\nfig, axes = plt.subplots(2, 2, figsize=(14, 12))\nfig.suptitle('Analysis of Glomerular Morphology', fontsize=16)\n\nsns.histplot(data['Area'], kde=True, ax=axes[0, 0], bins=30)\naxes[0, 0].set_title('Distribution of Glomeruli Area')\naxes[0, 0].set_xlabel('Area (pixels)')\naxes[0, 0].set_ylabel('Frequency')\n\nsns.histplot(data['Circ.'], kde=True, ax=axes[0, 1], bins=30)\naxes[0, 1].set_title('Distribution of Glomeruli Circularity')\naxes[0, 1].set_xlabel('Circularity')\naxes[0, 1].set_ylabel('Frequency')\n\nsns.scatterplot(data=data, x='Area', y='Circ.', ax=axes[1, 0], alpha=0.6)\naxes[1, 0].set_title('Area vs. Circularity')\naxes[1, 0].set_xlabel('Area (pixels)')\naxes[1, 0].set_ylabel('Circularity')\n\nnumeric_cols = data.select_dtypes(include=np.number).columns\ncorr = data[numeric_cols].corr()\nsns.heatmap(corr, annot=True, cmap='coolwarm', ax=axes[1, 1], fmt='.2f')\naxes[1, 1].set_title('Correlation Matrix of Morphological Features')\n\nplt.tight_layout(rect=[0, 0.03, 1, 0.95])\nplt.savefig(output_plot_png, dpi=300)\n\nprint(f\"Analysis complete. Statistics saved to {output_stats_csv} and plot saved to {output_plot_png}\")"
         }
       }
     },
@@ -42,11 +95,10 @@
       "action": {
         "name": "run_macro",
         "args": {
-          "script": "open(\"/Users/jacklu/vscode_project/ChatImageJ/temp/glomeruli_analysis_plots.png\");"
+          "script": "open(\"{{outputs.plot.path}}\");"
         }
       }
     }
   ],
-  "dataset_pattern": null,
-  "outputs": null
+  "dataset_pattern": null
 }
