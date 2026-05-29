@@ -248,9 +248,9 @@ Overrides the API endpoint for the VLM only. Some LLMs, especially local or smal
 
 Routes all outbound model API requests through an HTTP/HTTPS [proxy server](https://en.wikipedia.org/wiki/Proxy_server) — an intermediary between your machine and the internet. Commonly required in institutional or corporate networks where all traffic must pass through a central gateway. If you are connecting directly to the internet, you do not need this. Example value: `http://proxy.example.com:8080`.
 
-**`COPILOTJ_RAG_API_KEY`**
+**`COPILOTJ_EMBEDDING_MODEL` / `COPILOTJ_EMBEDDING_DEVICE`**
 
-Enables [retrieval-augmented generation (RAG)](https://en.wikipedia.org/wiki/Retrieval-augmented_generation), a technique that allows the model to search a document collection before generating a response, rather than relying solely on what it learned during training. This can ground CopilotJ's answers in specific literature, protocols, or your own notes. RAG requires a separate **embedding model** to convert text into numerical vectors for similarity search; `COPILOTJ_RAG_API_KEY` is the credential for that embedding service. If you are already using OpenAI for `COPILOTJ_MODEL`, the same key often works here. For most users getting started, RAG is not required.
+Controls the local embedding model used by ImageJ RAG. By default, CopilotJ uses `sentence-transformers/all-MiniLM-L6-v2` and auto-detects the best available device. Set `COPILOTJ_EMBEDDING_DEVICE` to `cpu`, `cuda`, or `mps` only when you need to force a specific runtime.
 
 **`COPILOTJ_TAVILY_API_KEY`**
 
@@ -281,7 +281,8 @@ COPILOTJ_API_KEY=sk-xxxxxxxx
 #COPILOTJ_VLM_API_KEY=AI-xxxxxxxx
 
 # Retrieval-augmented generation (RAG)
-#COPILOTJ_RAG_API_KEY=sk-xxxxxxxx
+#COPILOTJ_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+#COPILOTJ_EMBEDDING_DEVICE=mps
 
 # External search tool (web search)
 #COPILOTJ_TAVILY_API_KEY=tvly-xxxxxxxxx

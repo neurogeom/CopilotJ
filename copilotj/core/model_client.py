@@ -11,7 +11,7 @@ import langfuse.openai
 import openai.types.chat
 import openai.types.responses
 import pydantic
-from langchain_openai import OpenAIEmbeddings
+from langchain_core.embeddings import Embeddings
 
 from copilotj.core.config import get_llm_and_key, get_llm_base_url, get_proxy, get_vlm_and_key, get_vlm_base_url
 from copilotj.core.message import ImageMessage, TextMessage
@@ -32,7 +32,8 @@ __all__ = [
     "OllamaChatCompletionClient",
     "new_model_client",
     "new_vlm_model_client",
-    "new_langchain_openai_embeddings",
+    "new_local_embeddings",
+    "get_embeddings",
 ]
 
 
@@ -175,16 +176,39 @@ def _new_model_client(model: str, api_key: str, *, proxy: str | None, base_url: 
     return OpenAIChatCompletionClient(model, api_key, base_url=base_url, proxy=proxy)
 
 
-# TODO: this is tricky
-def new_langchain_openai_embeddings(
-    *, api_key: str | None = None, proxy: str | None = None, **kwargs
-) -> OpenAIEmbeddings:
-    api_key = api_key or os.getenv("COPILOTJ_API_KEY", None)
-    assert api_key is not None, "API key is required"
-    kwargs.update(api_key=api_key)
+def new_local_embeddings(*, model_name: str | None = None, device: str | None = None) -> Embeddings:
+    """Create the local embedding model used by the bundled FAISS index."""
+    from langchain_community.embeddings import HuggingFaceEmbeddings
 
-    proxy = get_proxy(proxy)
-    return OpenAIEmbeddings(api_key=api_key, openai_proxy=proxy)  # type: ignore
+    model_name = model_name or os.getenv("COPILOTJ_EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+    device = device or os.getenv("COPILOTJ_EMBEDDING_DEVICE", None)
+    model_kwargs = {"device": device or _detect_embedding_device()}
+
+    logger.info("Loading local embedding model: %s on device: %s", model_name, model_kwargs["device"])
+
+    return HuggingFaceEmbeddings(
+        model_name=model_name,
+        model_kwargs=model_kwargs,
+        encode_kwargs={"normalize_embeddings": True},
+    )
+
+
+def get_embeddings() -> Embeddings:
+    """Get the local embeddings used for ImageJ RAG."""
+    return new_local_embeddings()
+
+
+def _detect_embedding_device() -> str:
+    try:
+        import torch
+    except ImportError:
+        return "cpu"
+
+    if torch.cuda.is_available():
+        return "cuda"
+    if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        return "mps"
+    return "cpu"
 
 
 #############################
