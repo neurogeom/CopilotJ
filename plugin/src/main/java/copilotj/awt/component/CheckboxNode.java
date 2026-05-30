@@ -45,6 +45,7 @@ public class CheckboxNode extends AbstractComponentNode<Checkbox> {
     return "Checkbox: label=" + label + ", state=" + state;
   }
 
+  @Override
   public List<Action> getActions() {
     final Action setStateAction = Action
         .builder(TYPE + ".setState", "Set State", "Sets the checkbox to a specific state.")

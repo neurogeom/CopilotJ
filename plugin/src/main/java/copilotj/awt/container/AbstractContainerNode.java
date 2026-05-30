@@ -55,6 +55,7 @@ public class AbstractContainerNode<T extends Container> extends AbstractComponen
     }
   }
 
+  @Override
   public List<Action> getActions() {
     if (children == null || children.size() == 0) {
       return null;

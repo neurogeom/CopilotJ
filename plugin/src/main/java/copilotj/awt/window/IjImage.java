@@ -408,6 +408,7 @@ public class IjImage extends AbstractAwtWindow<ImageWindow> {
     return new Difference((IjImage) from, this, imageUpdated);
   }
 
+  @Override
   public List<Action> getActions() {
     final Action captureImage = Action
         .builder(TYPE + ".capture", "Capture", "Capture image in current window")
@@ -415,6 +416,7 @@ public class IjImage extends AbstractAwtWindow<ImageWindow> {
     return Collections.singletonList(captureImage);
   }
 
+  @Override
   public Object runAction(final List<String> path, final String type, final List<Object> parameters) {
     if (!this.isActivate()) {
       throw new IllegalStateException("Window is not active");

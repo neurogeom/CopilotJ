@@ -175,6 +175,7 @@ public class IjTextWindow extends AbstractAwtWindow<TextWindow> {
     return new Difference(fromTextWindow, this);
   }
 
+  @Override
   public List<Action> getActions() {
     final Action getResultsTable = Action
         .builder(TYPE + ".getResultsTable", "Get Results Table", "Get detail rows of the results table")
@@ -184,6 +185,7 @@ public class IjTextWindow extends AbstractAwtWindow<TextWindow> {
     return Collections.singletonList(getResultsTable);
   }
 
+  @Override
   public Object runAction(final List<String> path, final String type, final List<Object> parameters) {
     if (!this.isActivate()) {
       throw new IllegalStateException("Window is not active");
