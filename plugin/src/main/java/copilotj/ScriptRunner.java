@@ -129,7 +129,7 @@ class ScriptRunner {
     final Thread scriptThread = new Thread(() -> {
       try {
         // TODO: check if scripting header not exists
-        final Boolean isIj1Macro = "ijm".equals(extension);
+        final boolean isIj1Macro = "ijm".equals(extension);
 
         final Result result = isIj1Macro
             ? runIJ1Macro(request.script)
