@@ -40,7 +40,7 @@ public class Ij2ConsoleWindow extends AbstractAwtWindow<JFrame> {
 
         Container node = ((JFrame) window).getRootPane();
         for (int i = 0; i < path.length; i++) {
-          if (path[i] >= node.getComponentCount()) {
+          if (node == null || path[i] >= node.getComponentCount()) {
             return null; // out of bounds
           }
 
