@@ -651,6 +651,7 @@ def _parse_steps(steps: Any) -> list[dict[str, Any]]:
                 if isinstance(data, list):
                     return data
         except Exception:
+            # Intentionally ignore extraction/parsing errors here and fall back to []
             pass
 
     # Last fallback: treat as empty if we can't parse properly
