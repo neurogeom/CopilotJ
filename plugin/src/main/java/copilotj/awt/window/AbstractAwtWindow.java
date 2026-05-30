@@ -22,10 +22,12 @@ public abstract class AbstractAwtWindow<T extends Window> extends AbstractContai
   protected final int id;
   protected final WindowIdentifier identifier;
 
+  @Override
   public int getId() {
     return id;
   }
 
+  @Override
   public String getType() {
     return type;
   };
@@ -46,6 +48,7 @@ public abstract class AbstractAwtWindow<T extends Window> extends AbstractContai
     return Objects.equals(this.id, other.getId()) && Objects.equals(this.type, other.getType());
   }
 
+  @Override
   public AwtWindow.Difference compare(final AwtWindow from, final ImagejListener.HistoryResponse history) {
     if (this.equals(from)) {
       return null;

@@ -266,6 +266,7 @@ public class ImagejListener implements PlugIn, IJEventListener, ImageListener, R
 
   // --- Listener: IJEventListener ---
 
+  @Override
   public void run(final String _args) {
     IJ.addEventListener(this);
     Executer.addCommandListener(this);
@@ -319,6 +320,7 @@ public class ImagejListener implements PlugIn, IJEventListener, ImageListener, R
 
   // --- Listener: ImageListener ---
 
+  @Override
   public void eventOccurred(final int eventID) {
     switch (eventID) {
       case IJEventListener.FOREGROUND_COLOR_CHANGED:
@@ -344,14 +346,17 @@ public class ImagejListener implements PlugIn, IJEventListener, ImageListener, R
   }
 
   // called when an image is opened
+  @Override
   public void imageOpened(final ImagePlus imp) {
     push(new ImageMessage(ImageMessage.Type.OPENED, imp.getTitle(), EventQueue.isDispatchThread()));
   }
 
+  @Override
   public void imageClosed(final ImagePlus imp) {
     push(new ImageMessage(ImageMessage.Type.CLOSED, imp.getTitle(), EventQueue.isDispatchThread()));
   }
 
+  @Override
   public void imageUpdated(final ImagePlus imp) {
     push(new ImageMessage(ImageMessage.Type.UPDATED, imp.getTitle(), EventQueue.isDispatchThread()));
   }
@@ -362,6 +367,7 @@ public class ImagejListener implements PlugIn, IJEventListener, ImageListener, R
 
   // --- Listener: RoiListener ---
 
+  @Override
   public void roiModified(final ImagePlus img, final int id) {
     RoiMessage.Type type;
     switch (id) {
@@ -391,6 +397,7 @@ public class ImagejListener implements PlugIn, IJEventListener, ImageListener, R
 
   // --- Listener: CommandListener ---
 
+  @Override
   public String commandExecuting(final String command) {
     push(new CommandExecutedMessage(command));
     return command;
