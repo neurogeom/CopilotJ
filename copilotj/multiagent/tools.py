@@ -4,7 +4,6 @@
 
 import asyncio
 import atexit
-import json
 import platform
 import signal
 import sys
