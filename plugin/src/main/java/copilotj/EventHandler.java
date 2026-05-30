@@ -109,8 +109,12 @@ public class EventHandler {
   }
 
   public void addListener(final IdListener listener) {
+    if (listener == null) {
+      System.out.println("new listener: null");
+      return;
+    }
     System.out.println("new listener: " + listener.getClass().getName());
-    if (listener != null && !idListeners.contains(listener)) {
+    if (!idListeners.contains(listener)) {
       idListeners.add(listener);
       listener.onIdChanged(this.id); // Immediately notify the new listener
     }
