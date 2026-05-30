@@ -53,7 +53,7 @@ class CopilotJBridgeActionToolInstaller {
     int x = 0;
     int y = 0;
 
-    char empty = new String(" ").charAt(0);
+    char empty = ' ';
     // DebugHelper.print(new Object(), "len: " + icon.length());
     for (int i = 0; i < icon.length(); i++) {
       // DebugHelper.print(new Object(), "|" + icon.charAt(i) + " == " + empty + "|");
