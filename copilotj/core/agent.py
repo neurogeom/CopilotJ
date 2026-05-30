@@ -151,8 +151,9 @@ class ChatAgent(Agent):
                         if hasattr(stream, "aclose"):
                             try:
                                 await asyncio.shield(stream.aclose())
-                            except Exception:
-                                pass
+                            except Exception as e:
+                                # Best-effort cleanup during cancellation: log and continue abort flow.
+                                self.log_error(f"Failed to close stream during abort: {type(e).__name__}: {e}")
                         raise asyncio.CancelledError("Stream was aborted by user request")
 
                     # Process the next chunk
