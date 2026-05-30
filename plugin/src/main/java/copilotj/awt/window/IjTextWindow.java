@@ -56,6 +56,13 @@ public class IjTextWindow extends AbstractAwtWindow<TextWindow> {
       return size == that.size && Objects.equals(title, that.title) && Arrays.equals(headings, that.headings);
     }
 
+    @Override
+    public int hashCode() {
+      int result = Objects.hash(title, size);
+      result = 31 * result + Arrays.hashCode(headings);
+      return result;
+    }
+
     public static class Difference {
       public final FromTo<String> title;
       public final FromTo<String[]> headings;
