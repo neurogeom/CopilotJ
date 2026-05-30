@@ -183,7 +183,7 @@ public class Snapshot {
     Collections.reverse(path);
 
     final String windowIdStr = path.remove(path.size() - 1); // remove window id from path
-    final Integer targetWindowId = Integer.parseInt(windowIdStr);
+    final int targetWindowId = Integer.parseInt(windowIdStr);
     AwtWindow window = null;
     for (final AwtWindow w : this.windows) {
       if (w.getId() == targetWindowId) {
