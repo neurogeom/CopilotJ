@@ -107,6 +107,7 @@
         packages = with pkgs; [
           # python
           uv
+          ruff
 
           # imagej
           jdk8
@@ -115,9 +116,12 @@
           # web
           nodejs
           pnpm
+          prettier
 
           # misc
           jq
+          nixfmt
+          taplo
         ];
       in
       {
