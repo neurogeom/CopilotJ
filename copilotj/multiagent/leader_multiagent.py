@@ -5,7 +5,8 @@
 import asyncio
 import json
 import os
-from typing import Annotated
+from collections.abc import Awaitable, Callable
+from typing import Annotated, Any
 
 import pydantic
 from langfuse import Langfuse
@@ -92,7 +93,9 @@ class LeaderAgent(ChatAgent):
     ):
         super().__init__(name, description, model_client=model_client)
 
-        self.chat_history: list[dict[str, str | int]] = []
+        self.chat_history: list[dict[str, Any]] = []
+        self.workflow_contexts: dict[int, dict[str, Any]] = {}
+        self._workflow_summary_generator: Callable[[dict], Awaitable[tuple[object, str | None]]] | None = None
 
         # Per-dialog conversation state. Populated by begin_dialog() and
         # extended by continue_dialog(). Reset at the start of each dialog.
@@ -123,6 +126,12 @@ class LeaderAgent(ChatAgent):
             FunctionTool(self.execute_workflow, PROMPT_TOOL_EXECUTE_WORKFLOW),
         ]
         self.agents = agents if agents else {}
+
+    def set_workflow_summary_generator(
+        self,
+        generator: Callable[[dict], Awaitable[tuple[object, str | None]]],
+    ) -> None:
+        self._workflow_summary_generator = generator
 
     async def _build_system_prompt(self) -> str:
         """Build the static system prompt for the current session."""
@@ -248,10 +257,26 @@ class LeaderAgent(ChatAgent):
             ids = ", ".join(str(x.get("dialog")) for x in self.chat_history if x.get("dialog") is not None)
             return f"Dialog {dialog_id} not found. Available dialogs: {ids}"
 
+        await self._generate_missing_workflow_steps(target)
         save_status = await workflow_tools.save_workflow_from_steps(
             workflow_name, target.get("steps"), target.get("assistant"), tags
         )
         return f"Workflow saved for dialog {target.get('dialog')}: {save_status}"
+
+    async def _generate_missing_workflow_steps(self, target: dict[str, Any]) -> None:
+        if isinstance(target.get("steps"), str) and target["steps"].strip():
+            return
+        dialog_id = target.get("dialog")
+        if not isinstance(dialog_id, int):
+            return
+        dialog_context = self.workflow_contexts.get(dialog_id)
+        if dialog_context is None or self._workflow_summary_generator is None:
+            return
+        summary, steps = await self._workflow_summary_generator(dialog_context.copy())
+        if steps is None:
+            return
+        target["assistant"] = str(summary)
+        target["steps"] = steps
 
     async def delegate_task(self, agent: str, task: str) -> str:
         if agent not in self.agents:
@@ -416,6 +441,7 @@ class LeaderDriven(Pattern):
             agents=self.specialized_agents,
             apis=apis,
         )
+        self.leader_agent.set_workflow_summary_generator(self._generate_dialog_summary_and_steps)
         self.log_info("Leader Agent initialized.")
 
     def update_config(
@@ -510,6 +536,10 @@ User prompt to optimize:
             return user_prompt
 
     async def summarize_dialog_context(self, dialog_context: dict, dialog_id: int | None = None):
+        steps = dialog_context["steps"]
+        if len(steps) <= self.max_steps_before_summary:
+            return dialog_context, None
+
         summary, steps = await self._generate_dialog_summary_and_steps(dialog_context)
         if steps is None:
             return dialog_context, None
@@ -587,6 +617,7 @@ User prompt to optimize:
 
     async def _background_summarize_and_store(self, dialog_id: int, task: str, dialog_context: dict) -> None:
         try:
+            self.leader_agent.workflow_contexts[dialog_id] = dialog_context.copy()
             summary, steps = await self.summarize_dialog_context(dialog_context.copy(), dialog_id)
             self.leader_agent.chat_history.append(
                 {"dialog": dialog_id, "user": task, "assistant": str(summary), "steps": steps}
