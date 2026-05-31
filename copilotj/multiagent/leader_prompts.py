@@ -434,7 +434,11 @@ question parameter must same as user main question
 PROMPT_TOOL_SAVE_WORKFLOW = """\
 Save a successful dialog as a reusable workflow. This tool converts the summarized steps and dialog context into a standardized workflow format that can be executed later.
 You can call this tool like this: Action: {"name": "save_workflow", "args": {"workflow_name": "My-Workflow", "tags": "cell-analysis, image-processing, segmentation", "dialog_id": 2}}
-The tool will save the specific dialog with id (default will be last one) as a reusable workflow, and return the save status, you must summarize it.
+For workflows that span multiple successful dialogs or where later dialogs fix/refine earlier steps, call it with dialog_ids:
+Action: {"name": "save_workflow", "args": {"workflow_name": "My-Workflow", "tags": "cell-analysis, image-processing, segmentation", "dialog_ids": [2, 3, 4]}}
+Use `dialog_id` for one dialog, `dialog_ids` for several dialogs, or omit both to save the latest dialog. Do not pass both `dialog_id` and `dialog_ids`.
+When the user asks to save a workflow and the successful process was distributed across multiple dialogs, choose the relevant dialog ids yourself from chat history instead of saving only the latest dialog.
+The tool will save the selected dialog context as a reusable workflow, and return the save status, you must summarize it.
 
 The saved workflow JSON must be reusable, not a replay of one user's exact files:
 - Save as `schema_version: "2.0"` with an `interface` object.

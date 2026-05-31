@@ -240,28 +240,87 @@ class LeaderAgent(ChatAgent):
 
         return HandoffFunctionTool(self.user_manipulate, PROMPT_TOOL_USER_MANIPULATION, get_handoff=get_handoff)
 
-    async def save_workflow(self, workflow_name: str, tags: str | None = None, dialog_id: int | None = None) -> str:
+    async def save_workflow(
+        self,
+        workflow_name: str,
+        tags: str | None = None,
+        dialog_id: int | None = None,
+        dialog_ids: list[int] | None = None,
+    ) -> str:
         if not self.chat_history:
             return "No workflow in chat history to save."
 
-        target = None
-        if dialog_id is None:
-            target = self.chat_history[-1]
+        selected_ids = self._select_workflow_dialog_ids(dialog_id, dialog_ids)
+        if isinstance(selected_ids, str):
+            return selected_ids
+
+        if len(selected_ids) == 1:
+            target = self._find_chat_history_dialog(selected_ids[0])
+            if target is None:
+                return self._dialog_not_found_message(selected_ids)
+            await self._generate_missing_workflow_steps(target)
         else:
-            for item in reversed(self.chat_history):
-                if item.get("dialog") == dialog_id:
-                    target = item
-                    break
+            missing = [selected_id for selected_id in selected_ids if selected_id not in self.workflow_contexts]
+            if missing:
+                missing_text = ", ".join(str(selected_id) for selected_id in missing)
+                return f"Raw workflow context is unavailable for dialog(s) {missing_text}."
+            if self._workflow_summary_generator is None:
+                return "Workflow summary generator is not configured."
+            summary, steps = await self._workflow_summary_generator(self._combined_dialog_context(selected_ids))
+            if steps is None:
+                return "Failed to generate reusable workflow steps from the selected dialogs."
+            target = {"dialog": selected_ids, "assistant": str(summary), "steps": steps}
 
-        if target is None:
-            ids = ", ".join(str(x.get("dialog")) for x in self.chat_history if x.get("dialog") is not None)
-            return f"Dialog {dialog_id} not found. Available dialogs: {ids}"
-
-        await self._generate_missing_workflow_steps(target)
         save_status = await workflow_tools.save_workflow_from_steps(
             workflow_name, target.get("steps"), target.get("assistant"), tags
         )
-        return f"Workflow saved for dialog {target.get('dialog')}: {save_status}"
+        return f"Workflow saved for dialog(s) {target.get('dialog')}: {save_status}"
+
+    def _select_workflow_dialog_ids(
+        self,
+        dialog_id: int | None,
+        dialog_ids: list[int] | None,
+    ) -> list[int] | str:
+        if dialog_id is not None and dialog_ids is not None:
+            return "Use either dialog_id or dialog_ids, not both."
+        if dialog_ids is not None:
+            if not dialog_ids:
+                return "dialog_ids must not be empty."
+            if len(set(dialog_ids)) != len(dialog_ids):
+                return "dialog_ids must not contain duplicates."
+            return dialog_ids
+        if dialog_id is not None:
+            return [dialog_id]
+        latest_dialog = self.chat_history[-1].get("dialog")
+        if not isinstance(latest_dialog, int):
+            return "Latest dialog does not have a dialog id."
+        return [latest_dialog]
+
+    def _find_chat_history_dialog(self, dialog_id: int) -> dict[str, Any] | None:
+        for item in reversed(self.chat_history):
+            if item.get("dialog") == dialog_id:
+                return item
+        return None
+
+    def _dialog_not_found_message(self, missing_ids: list[int]) -> str:
+        available = ", ".join(str(x.get("dialog")) for x in self.chat_history if x.get("dialog") is not None)
+        missing = ", ".join(str(dialog_id) for dialog_id in missing_ids)
+        return f"Dialog(s) {missing} not found. Available dialogs: {available}"
+
+    def _combined_dialog_context(self, dialog_ids: list[int]) -> dict[str, Any]:
+        contexts = [self.workflow_contexts[dialog_id] for dialog_id in dialog_ids]
+        tasks = [str(context.get("task", "")) for context in contexts]
+        return {
+            "task": "\n".join(f"Dialog {dialog_id}: {task}" for dialog_id, task in zip(dialog_ids, tasks)),
+            "steps": [
+                {
+                    "dialog": dialog_id,
+                    "task": task,
+                    "steps": self.workflow_contexts[dialog_id].get("steps", []),
+                }
+                for dialog_id, task in zip(dialog_ids, tasks)
+            ],
+        }
 
     async def _generate_missing_workflow_steps(self, target: dict[str, Any]) -> None:
         if isinstance(target.get("steps"), str) and target["steps"].strip():
