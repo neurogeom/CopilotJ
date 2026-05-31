@@ -28,12 +28,15 @@ class JupyterNotebook:
                 outputs_only_str.append(error_msg)
 
         result = "\n".join(outputs_only_str).strip()
-        
+
         # Limit output length to prevent token explosion
         if len(result) > max_length:
             truncated_length = max_length - 200  # Reserve space for truncation notice
-            result = result[:truncated_length] + f"\n\n... [Output truncated, original length: {len(result)} characters, showing first {truncated_length} characters] ..."
-        
+            result = (
+                result[:truncated_length]
+                + f"\n\n... [Output truncated, original length: {len(result)} characters, showing first {truncated_length} characters] ..."
+            )
+
         return result
 
     def add_and_run(self, code_string: str) -> tuple[str, bool]:

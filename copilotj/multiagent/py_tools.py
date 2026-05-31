@@ -69,7 +69,7 @@ async def cellpose_segmentation(
     norm_range_high: Annotated[float, "Upper percentile for normalization"] = 99.8,
     save_path: Annotated[
         str | None,
-        "Path to save segmentation results (if None, uses original image directory with _cellpose_segmented suffix). Path end must with \"/\"",
+        'Path to save segmentation results (if None, uses original image directory with _cellpose_segmented suffix). Path end must with "/"',
     ] = None,
 ) -> dict[str, str]:
     try:
@@ -129,15 +129,11 @@ async def cellpose_segmentation(
         )
 
         save_path_obj = Path(save_path)
-        
+
         # Determine if save_path is a directory or file path
         # Consider it a directory if: ends with /, has no suffix, or is an existing directory
-        is_directory = (
-            str(save_path).endswith(("/", "\\")) or 
-            not save_path_obj.suffix or 
-            save_path_obj.is_dir()
-        )
-        
+        is_directory = str(save_path).endswith(("/", "\\")) or not save_path_obj.suffix or save_path_obj.is_dir()
+
         if is_directory:
             # save_path is a directory
             save_dir = save_path_obj
@@ -151,7 +147,7 @@ async def cellpose_segmentation(
             save_dir.mkdir(parents=True, exist_ok=True)
             base_name = save_path_obj.stem
             final_save_path = save_path_obj
-        
+
         logger.info(f"Save directory: {save_dir}")
 
         try:
@@ -164,7 +160,7 @@ async def cellpose_segmentation(
             colored_masks = await asyncio.to_thread(create_colored_masks, masks)
             await asyncio.to_thread(io.imsave, str(final_save_path), colored_masks)
             logger.info(f"Saved colored segmentation to {final_save_path}")
-            
+
             # Save ROIs
             rois_save_path = save_dir / f"{base_name}_rois.zip"
             await asyncio.to_thread(cellpose_io.save_rois, masks, str(rois_save_path))
@@ -282,6 +278,7 @@ def _deep_merge(dst: dict, src: dict):
         else:
             dst[k] = v
 
+
 # -----------------------------
 # Task registry
 # Based on: "Select workflow" documentation and workflow pages in BiaPy docs.
@@ -379,26 +376,35 @@ TASKS: Dict[str, Dict[str, Any]] = {
 }
 
 
-def _set_paths(cfg: dict, train_raw_path: str, train_gt_path: str, test_raw_path: str, test_gt_path: str, 
-               val_from_train: bool, split_ratio: float, val_raw_path: str = None, val_gt_path: str = None):
+def _set_paths(
+    cfg: dict,
+    train_raw_path: str,
+    train_gt_path: str,
+    test_raw_path: str,
+    test_gt_path: str,
+    val_from_train: bool,
+    split_ratio: float,
+    val_raw_path: str = None,
+    val_gt_path: str = None,
+):
     d = cfg.setdefault("DATA", {})
-    
+
     # For prediction mode, BiaPy requires non-empty paths to avoid string index errors
     # Use test_raw_path as fallback for empty paths
     safe_train_raw = train_raw_path if train_raw_path else test_raw_path
     safe_train_gt = train_gt_path if train_gt_path else test_raw_path  # Use raw path as fallback
-    safe_test_gt = test_gt_path if test_gt_path else test_raw_path      # Use raw path as fallback
-    
+    safe_test_gt = test_gt_path if test_gt_path else test_raw_path  # Use raw path as fallback
+
     # Set training paths
     d.setdefault("TRAIN", {})["PATH"] = safe_train_raw
     d.setdefault("TRAIN", {})["GT_PATH"] = safe_train_gt
-    
+
     # Set test paths
     d.setdefault("TEST", {})["PATH"] = test_raw_path
     d.setdefault("TEST", {})["GT_PATH"] = safe_test_gt
     # For evaluation, many workflows expect ground-truth to exist
     d.setdefault("TEST", {})["LOAD_GT"] = True
-    
+
     # Configure validation data
     if val_raw_path and val_gt_path and not val_from_train:
         # Use separate validation dataset
@@ -409,7 +415,7 @@ def _set_paths(cfg: dict, train_raw_path: str, train_gt_path: str, test_raw_path
         # Use validation split from training data
         d.setdefault("VAL", {})["FROM_TRAIN"] = bool(val_from_train)
         d.setdefault("VAL", {})["SPLIT_TRAIN"] = float(split_ratio)
-    
+
     # Replace any remaining "/path/to/data" placeholders in the entire config
     base_path = train_raw_path or test_raw_path
     if base_path:
@@ -467,7 +473,7 @@ def _set_task_specific_metrics(cfg: dict, task_key: str):
     """Set task-specific metrics based on BiaPy workflow requirements."""
     train_cfg = cfg.setdefault("TRAIN", {})
     test_cfg = cfg.setdefault("TEST", {})
-    
+
     if task_key.startswith("inst"):
         # Instance segmentation requires 'iou' metric
         train_cfg["METRICS"] = ["iou"]
@@ -504,19 +510,19 @@ def _fix_predict_mode_config(cfg: dict, task_key: str, num_classes: int):
     """Fix configuration issues for prediction mode."""
     # For prediction mode, disable training
     cfg.setdefault("TRAIN", {})["ENABLE"] = False
-    
+
     # For prediction mode, disable ground truth loading and metric calculation
     cfg.setdefault("DATA", {}).setdefault("TEST", {})["LOAD_GT"] = False
-    
+
     # Don't calculate metrics in predict mode
     cfg.setdefault("TEST", {})["METRICS"] = []
     cfg.setdefault("TRAIN", {})["METRICS"] = []
-    
+
     # For instance segmentation in predict mode, disable matching stats
     if task_key.startswith("inst"):
         cfg.setdefault("TEST", {})["MATCHING_STATS"] = False
         return
-    
+
     # Fix metrics that require >= 5 classes (only for classification tasks)
     if task_key.startswith("cls") and num_classes < 5:
         # Fix train metrics
@@ -524,13 +530,13 @@ def _fix_predict_mode_config(cfg: dict, task_key: str, num_classes: int):
         if isinstance(train_metrics, list) and "top-5-accuracy" in train_metrics:
             train_metrics.remove("top-5-accuracy")
             cfg.setdefault("TRAIN", {})["METRICS"] = train_metrics
-        
-        # Fix test metrics  
+
+        # Fix test metrics
         test_metrics = cfg.get("TEST", {}).get("METRICS", [])
         if isinstance(test_metrics, list) and "top-5-accuracy" in test_metrics:
             test_metrics.remove("top-5-accuracy")
             cfg.setdefault("TEST", {})["METRICS"] = test_metrics
-        
+
         # Set safe default metrics for classification with < 5 classes
         cfg.setdefault("TRAIN", {})["METRICS"] = ["accuracy"]
         cfg.setdefault("TEST", {})["METRICS"] = ["accuracy"]
@@ -544,7 +550,10 @@ def _maybe_enable_basic_augs(cfg: dict):
 
 
 async def biapy_tool(
-    task: Annotated[str, "One of: cls2d, cls3d, seg2d, seg3d, inst2d, inst3d, det2d, det3d, denoise2d, denoise3d, sr2d, sr3d, ssl2d, ssl3d, i2i2d, i2i3d"],
+    task: Annotated[
+        str,
+        "One of: cls2d, cls3d, seg2d, seg3d, inst2d, inst3d, det2d, det3d, denoise2d, denoise3d, sr2d, sr3d, ssl2d, ssl3d, i2i2d, i2i3d",
+    ],
     mode: Annotated[str, "Execution mode: train | predict | eval"],
     train_raw_path: Annotated[str, "Path to training raw images directory"],
     train_gt_path: Annotated[str, "Path to training ground truth/labels directory"],
@@ -563,10 +572,18 @@ async def biapy_tool(
     pretrained_ckpt: Annotated[Optional[str], "Path to pretrained checkpoint for fine-tuning or prediction"] = None,
     val_from_train: Annotated[bool, "Whether to derive validation from training data"] = True,
     val_split_ratio: Annotated[float, "Fraction of training used as validation"] = 0.1,
-    val_raw_path: Annotated[Optional[str], "Path to separate validation raw images directory (if not using val_from_train)"] = None,
-    val_gt_path: Annotated[Optional[str], "Path to separate validation ground truth directory (if not using val_from_train)"] = None,
-    local_template_dir: Annotated[Optional[str], "If provided, prefer local templates by task key (e.g., seg2d.yaml)"] = None,
-    extra_overrides: Annotated[Optional[Dict[str, Any]], "Additional YAML overrides to merge, e.g., for custom metrics or system settings"] = None,
+    val_raw_path: Annotated[
+        Optional[str], "Path to separate validation raw images directory (if not using val_from_train)"
+    ] = None,
+    val_gt_path: Annotated[
+        Optional[str], "Path to separate validation ground truth directory (if not using val_from_train)"
+    ] = None,
+    local_template_dir: Annotated[
+        Optional[str], "If provided, prefer local templates by task key (e.g., seg2d.yaml)"
+    ] = None,
+    extra_overrides: Annotated[
+        Optional[Dict[str, Any]], "Additional YAML overrides to merge, e.g., for custom metrics or system settings"
+    ] = None,
     dry_run: Annotated[bool, "If True, only generate YAML without execution"] = False,
 ) -> Dict[str, Any]:
     """Run BiaPy across multiple workflows with a single, consistent entry point.
@@ -606,18 +623,27 @@ async def biapy_tool(
         # Use built-in templates
         templates_dir = get_project_templates_dir()
         template_path = templates_dir / task_info["template"]
-    
+
     if not template_path.exists():
         raise FileNotFoundError(f"Template file not found: {template_path}")
-    
+
     logger.info(f"Using template: {template_path}")
 
     with open(template_path, "r", encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
 
     # Common configuration according to workflow docs
-    _set_paths(cfg, train_raw_path, train_gt_path, test_raw_path, test_gt_path, 
-               val_from_train, val_split_ratio, val_raw_path, val_gt_path)
+    _set_paths(
+        cfg,
+        train_raw_path,
+        train_gt_path,
+        test_raw_path,
+        test_gt_path,
+        val_from_train,
+        val_split_ratio,
+        val_raw_path,
+        val_gt_path,
+    )
 
     ps_shape = task_info["patch_size_shape"](patch_size)
     _set_patch_size(cfg, ps_shape)
@@ -627,7 +653,7 @@ async def biapy_tool(
     _set_model_head(cfg, task_key, num_classes, architecture)
     _set_task_specific_metrics(cfg, task_key)
     _attach_pretrained(cfg, pretrained_ckpt)
-    
+
     # Fix metrics for prediction mode
     if mode == "predict":
         _fix_predict_mode_config(cfg, task_key, num_classes)
@@ -653,7 +679,7 @@ async def biapy_tool(
             "output_dir": str(run_dir),
             "config_file": str(cfg_path),
             "model_name": model_name,
-            "message": "Configuration YAML generated successfully (dry run mode)"
+            "message": "Configuration YAML generated successfully (dry run mode)",
         }
 
     bia = BiaPy(
@@ -665,11 +691,11 @@ async def biapy_tool(
     )
 
     logger.info(f"[BiaPy] Start: task={task_key}, mode={mode}, cfg={cfg_path}")
-    
+
     try:
         await asyncio.to_thread(bia.run_job)
         logger.info("[BiaPy] Job completed successfully.")
-        
+
         # Build comprehensive return information
         result = {
             "success": True,
@@ -685,35 +711,32 @@ async def biapy_tool(
                 "patch_size": patch_size,
                 "architecture": architecture,
                 "gpu": gpu,
-            }
+            },
         }
-        
+
         # Add mode-specific information
         if mode == "predict":
             result["prediction_info"] = {
                 "input_path": test_raw_path,
                 "checkpoint": pretrained_ckpt if pretrained_ckpt else "default",
-                "message": "Prediction completed successfully"
+                "message": "Prediction completed successfully",
             }
         elif mode == "train":
             result["training_info"] = {
                 "train_path": train_raw_path,
                 "epochs": num_epochs,
-                "message": "Training completed successfully"
+                "message": "Training completed successfully",
             }
         elif mode == "eval":
-            result["evaluation_info"] = {
-                "test_path": test_raw_path,
-                "message": "Evaluation completed successfully"
-            }
-        
+            result["evaluation_info"] = {"test_path": test_raw_path, "message": "Evaluation completed successfully"}
+
         # Check if output files exist to verify success
         output_files = list(run_dir.glob("*"))
         result["output_files"] = [str(f) for f in output_files]
         result["num_output_files"] = len(output_files)
-        
+
         return result
-        
+
     except Exception as e:
         logger.error(f"[BiaPy] Job failed with error: {e}")
         return {
@@ -725,8 +748,10 @@ async def biapy_tool(
             "config_file": str(cfg_path),
             "model_name": model_name,
             "error": str(e),
-            "message": f"BiaPy {mode} job failed: {e}"
+            "message": f"BiaPy {mode} job failed: {e}",
         }
+
+
 # </BiaPy>
 
 
@@ -1397,6 +1422,7 @@ def load_image(
         if p.suffix.lower() in (".tif", ".tiff", ".ome.tif", ".ome.tiff"):
             try:
                 import tifffile
+
                 img = tifffile.imread(str(p))
                 logger.info(f"Successfully loaded TIFF using tifffile: {p}")
             except ImportError:

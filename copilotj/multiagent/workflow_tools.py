@@ -55,26 +55,27 @@ async def list_workflows(dummy: Annotated[Optional[str], "dummy"] = None) -> str
                 result.append(f"   Description: {wf['about']}")  # TODO: be concise
             if wf.get("tags"):
                 result.append(f"   Tags: {wf['tags']}")
-            
+
             # Format timestamps for better readability
             import time
-            created_at = wf.get('created_at')
-            updated_at = wf.get('updated_at')
-            
+
+            created_at = wf.get("created_at")
+            updated_at = wf.get("updated_at")
+
             if created_at and isinstance(created_at, (int, float)):
-                created_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(created_at))
+                created_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(created_at))
                 result.append(f"   Created: {created_str}")
             else:
                 result.append(f"   Created: {created_at or 'Unknown'}")
-                
+
             if updated_at and isinstance(updated_at, (int, float)):
-                updated_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(updated_at))
+                updated_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(updated_at))
                 result.append(f"   Updated: {updated_str}")
             else:
                 result.append(f"   Updated: {updated_at or 'Unknown'}")
 
         return "\n".join(result)
-    
+
     except json.JSONDecodeError as e:
         return f"❌ Error parsing workflow data: {str(e)}. The workflow storage may be corrupted or empty."
     except Exception as e:

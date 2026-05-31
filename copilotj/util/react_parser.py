@@ -112,7 +112,11 @@ class ReActChatCompletionClient(ModelClient):
             )
 
         try:
-            tool_call = self._parse_action_content(action_match.group(1).strip(), tools=tools or []) if action_match is not None else None
+            tool_call = (
+                self._parse_action_content(action_match.group(1).strip(), tools=tools or [])
+                if action_match is not None
+                else None
+            )
         except ModelSyntaxError as e:
             e.chat_completion = ModelResponse(
                 content=text,

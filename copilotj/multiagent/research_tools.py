@@ -47,7 +47,9 @@ FALLBACK_COLLECTION_URLS = [
     "https://raw.githubusercontent.com/bioimage-io/collection-bioimage-io/main/collection.json",
     "https://bioimage.io/collection.json",
 ]
-DEFAULT_CACHE_DIR = Path(os.getenv("BIOIMAGE_MODEL_ZOO_CACHE", Path(__file__).resolve().parent.parent.parent / "temp" / "bioimage_model_zoo")).resolve()
+DEFAULT_CACHE_DIR = Path(
+    os.getenv("BIOIMAGE_MODEL_ZOO_CACHE", Path(__file__).resolve().parent.parent.parent / "temp" / "bioimage_model_zoo")
+).resolve()
 DEFAULT_CACHE_TTL = int(os.getenv("BIOIMAGE_MODEL_ZOO_CACHE_TTL", "86400"))
 
 
@@ -678,7 +680,7 @@ def bioimage_search_models(
     limit: Annotated[int, "Maximum number of results to return"] = 10,
 ) -> str:
     """Search BioImage Model Zoo for pre-trained models.
-    
+
     Returns formatted list of models with name, ID, version, description, tags, and authors.
     Use this to find models for specific tasks like denoising, segmentation, detection, etc.
     """
@@ -731,10 +733,10 @@ def bioimage_search_models(
                 "authors": entry.get("authors") or entry.get("maintainers"),
             }
             results.append(summary)
-        
+
         if not results:
             return "No models found matching the search criteria."
-        
+
         output = []
         for idx, model in enumerate(results, 1):
             output.append(
@@ -744,7 +746,7 @@ def bioimage_search_models(
                 f"    Description: {model.get('description', 'No description')}\n"
                 f"    Tags: {', '.join(str(t) for t in model.get('tags', []))}\n"
             )
-        
+
         return "\n".join(output)
     except Exception as e:
         return f"Error searching BioImage Model Zoo: {str(e)}"
@@ -754,7 +756,7 @@ def bioimage_get_model_info(
     model_id: Annotated[str, "Model ID or name to get detailed information for"],
 ) -> str:
     """Get detailed metadata for a specific BioImage Model Zoo model.
-    
+
     Returns comprehensive information including description, authors, tags, download URLs, etc.
     """
     try:
@@ -762,7 +764,7 @@ def bioimage_get_model_info(
         entry = _get_model(models, model_id)
         if not entry:
             return f"Model '{model_id}' not found in BioImage Model Zoo."
-        
+
         # Format the detailed model information
         info = []
         info.append(f"Name: {entry.get('name', 'Unknown')}")
@@ -770,23 +772,23 @@ def bioimage_get_model_info(
         info.append(f"Version: {entry.get('version') or entry.get('latest_version') or 'N/A'}")
         info.append(f"Description: {entry.get('description', 'No description')}")
         info.append(f"Tags: {', '.join(str(t) for t in entry.get('tags', []))}")
-        
+
         # Authors
-        authors = entry.get('authors') or entry.get('maintainers')
+        authors = entry.get("authors") or entry.get("maintainers")
         if authors:
             author_names = []
             for author in authors:
-                if isinstance(author, dict) and 'name' in author:
-                    author_names.append(author['name'])
+                if isinstance(author, dict) and "name" in author:
+                    author_names.append(author["name"])
                 else:
                     author_names.append(str(author))
             info.append(f"Authors: {', '.join(author_names)}")
-        
+
         # Download URLs
         urls = _extract_download_urls(entry)
         if urls:
             info.append(f"Download URL: {urls[0]}")
-        
+
         return "\n".join(info)
     except Exception as e:
         return f"Error getting model info: {str(e)}"
@@ -794,10 +796,12 @@ def bioimage_get_model_info(
 
 def bioimage_download_model(
     model_id: Annotated[str, "Model ID or name to download"],
-    dest_dir: Annotated[str | None, "Optional destination directory path (defaults to project assets/bioimage_models)"] = None,
+    dest_dir: Annotated[
+        str | None, "Optional destination directory path (defaults to project assets/bioimage_models)"
+    ] = None,
 ) -> str:
     """Download a BioImage Model Zoo model archive.
-    
+
     Returns the local file path where the model was downloaded.
     """
     try:
@@ -805,7 +809,7 @@ def bioimage_download_model(
             dest_path = Path(dest_dir)
         else:
             dest_path = Path(__file__).resolve().parent.parent.parent / "assets" / "bioimage_models"
-        
+
         dest_path.mkdir(parents=True, exist_ok=True)
 
         models = _fetch_collection(
@@ -835,7 +839,7 @@ def bioimage_download_model(
                     if not chunk:
                         continue
                     handle.write(chunk)
-        
+
         return f"✅ Model downloaded successfully to: {result_path}"
     except Exception as e:
         return f"❌ Error downloading model: {str(e)}"
