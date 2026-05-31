@@ -29,6 +29,9 @@ dev-web:
 build-web:
   cd web && pnpm run build
 
+run-workflow:
+  scripts/run-workflow.sh
+
 test:
   uv run --with pytest \
     pytest \
