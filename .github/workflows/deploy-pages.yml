@@ -40,7 +40,7 @@ jobs:
 
       - name: Build with Vite
         env:
-          VITE_DISABLE_CHAT: true
+          VITE_CONFIGURABLE_API_BASE: true
         run: |
           cd web
           pnpm run build
