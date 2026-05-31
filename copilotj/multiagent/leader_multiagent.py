@@ -125,11 +125,7 @@ class LeaderAgent(ChatAgent):
 
     async def _build_system_prompt(self) -> str:
         """Build the static system prompt for the current session."""
-        tool_list = (
-            build_tool_prompt(self.tools)
-            + "\n"
-            + build_available_specialized_agents_prompt(self.agents)
-        )
+        tool_list = build_tool_prompt(self.tools) + "\n" + build_available_specialized_agents_prompt(self.agents)
         macro_plugins = _load_macro_plugin_names() or ["StarDist", "TrackMate", "CLIJ2"]
         plugins_text = ", ".join(macro_plugins)
         system_info_text = await system_info()
@@ -141,9 +137,7 @@ class LeaderAgent(ChatAgent):
             default_image_path=str(py_tools.get_project_temp_dir()),
         )
 
-    async def begin_dialog(
-        self, main_task: str, *, trace_ctx: Langfuse | None = None
-    ) -> ModelResponse:
+    async def begin_dialog(self, main_task: str, *, trace_ctx: Langfuse | None = None) -> ModelResponse:
         """Start a new dialog, seeding the conversation with system + initial user turn.
 
         Resets per-dialog state. The system prompt (static) and the first user
@@ -211,9 +205,7 @@ class LeaderAgent(ChatAgent):
 
     def _log_prompt_size(self, label: str) -> None:
         total_chars = sum(len(m.text) for m in self._dialog_messages)
-        self.log_info(
-            f"[PROMPT] {label}: {len(self._dialog_messages)} messages, ~{total_chars} chars"
-        )
+        self.log_info(f"[PROMPT] {label}: {len(self._dialog_messages)} messages, ~{total_chars} chars")
 
     async def user_manipulate(
         self, instructions: Annotated[str, "Clear, step-by-step instructions for the user."]
@@ -267,8 +259,10 @@ class LeaderAgent(ChatAgent):
         agent_instance = self.agents[agent]
         self.log_info(f"[CALL] Calling Agent: {agent} | Params/Task: {task}")
         self.imagej_windowInfo_text = await self.plugin_tools.imagej_windowInfo()
-        
-        return await agent_instance.run(task + self.imagej_windowInfo_text + "Previous Chat History: \n" + json.dumps(self.chat_history))
+
+        return await agent_instance.run(
+            task + self.imagej_windowInfo_text + "Previous Chat History: \n" + json.dumps(self.chat_history)
+        )
 
     def _mk_tool_delegate(self) -> Tool:
         def get_handoff(id: str, args: pydantic.BaseModel) -> Handoff:
@@ -309,10 +303,9 @@ class LeaderAgent(ChatAgent):
             ]
 
             if filtered_history:
-                history_text = "\n".join([
-                    f"User: {h.get('user', '')}\nAssistant: {h['assistant'][:100]}..."
-                    for h in filtered_history
-                ])
+                history_text = "\n".join(
+                    [f"User: {h.get('user', '')}\nAssistant: {h['assistant'][:100]}..." for h in filtered_history]
+                )
                 history_context = f"\n## Recent Conversation\n{history_text}"
             else:
                 history_context = ""
@@ -419,7 +412,9 @@ class LeaderDriven(Pattern):
         )
         self.log_info("Leader Agent initialized.")
 
-    def update_config(self, *, model: str | None = None, api_key: str | None = None, base_url: str | None = None) -> None:
+    def update_config(
+        self, *, model: str | None = None, api_key: str | None = None, base_url: str | None = None
+    ) -> None:
         if model is not None or api_key is not None or base_url is not None:
             model = model or self.model_client.get_model()
             api_key = api_key or self.model_client.get_api_key()
@@ -464,10 +459,9 @@ class LeaderDriven(Pattern):
                 if "assistant" in item and item["assistant"]
             ]
             if filtered_history:
-                history_text = "\n".join([
-                    f"User: {h.get('user', '')}\nAssistant: {h['assistant'][:100]}..."
-                    for h in filtered_history
-                ])
+                history_text = "\n".join(
+                    [f"User: {h.get('user', '')}\nAssistant: {h['assistant'][:100]}..." for h in filtered_history]
+                )
                 history_context = f"\n## Recent Conversation\n{history_text}"
 
         # Build context section

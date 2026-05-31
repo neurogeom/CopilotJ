@@ -6,7 +6,15 @@ import os
 
 import dotenv
 
-__all__ = ["load_env", "is_dev", "get_llm_and_key", "get_llm_base_url", "get_vlm_and_key", "get_vlm_base_url", "get_proxy"]
+__all__ = [
+    "load_env",
+    "is_dev",
+    "get_llm_and_key",
+    "get_llm_base_url",
+    "get_vlm_and_key",
+    "get_vlm_base_url",
+    "get_proxy",
+]
 
 
 def load_env() -> None:

@@ -129,12 +129,16 @@ class ModelClient(abc.ABC):
     ) -> AsyncGenerator[ModelResponseChunk | ToolCall, None]: ...
 
 
-def new_model_client(model: str | None = None, api_key: str | None = None, *, proxy: str | None = None, base_url: str | None = None) -> ModelClient:
+def new_model_client(
+    model: str | None = None, api_key: str | None = None, *, proxy: str | None = None, base_url: str | None = None
+) -> ModelClient:
     model, api_key = get_llm_and_key(model, api_key)
     return _new_model_client(model, api_key, proxy=proxy, base_url=base_url or get_llm_base_url())
 
 
-def new_vlm_model_client(model: str | None = None, api_key: str | None = None, *, proxy: str | None = None) -> ModelClient:
+def new_vlm_model_client(
+    model: str | None = None, api_key: str | None = None, *, proxy: str | None = None
+) -> ModelClient:
     model, api_key = get_vlm_and_key(model, api_key)
     return _new_model_client(model, api_key, proxy=proxy, base_url=get_vlm_base_url())
 
@@ -164,10 +168,7 @@ def _new_model_client(model: str, api_key: str, *, proxy: str | None, base_url: 
         else:
             return OpenAIResponseClient(model, api_key, proxy=proxy)
 
-    elif (
-        model.startswith("zai-org/")
-        or model.startswith("Pro/")
-    ):
+    elif model.startswith("zai-org/") or model.startswith("Pro/"):
         url = base_url or "https://api.siliconflow.cn/v1"
         return OpenAIChatCompletionClient(model, api_key, base_url=url, proxy=proxy)
 
@@ -513,9 +514,7 @@ class OpenAIResponseClient(ModelClient):
 
                     case "response.reasoning_summary_text.delta" | "response.reasoning_text.delta":
                         # Surface reasoning trace as reasoning_content so the UI can show it.
-                        last_chunk = ModelResponseChunk(
-                            content=None, reasoning_content=chunk.delta, finish_reason=None
-                        )
+                        last_chunk = ModelResponseChunk(content=None, reasoning_content=chunk.delta, finish_reason=None)
                         yield last_chunk
 
                     case "response.output_item.added":

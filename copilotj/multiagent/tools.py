@@ -30,7 +30,7 @@ class PluginTools:
 
     def _detect_timeout_from_script(self, script: str) -> float:
         script_lower = script.lower()
-        if any(keyword in script_lower for keyword in ['batch', 'for(', 'for (', 'getfilelist', 'while']):
+        if any(keyword in script_lower for keyword in ["batch", "for(", "for (", "getfilelist", "while"]):
             return 180.0
         return 15.0
 
@@ -39,12 +39,14 @@ class PluginTools:
         script: Annotated[str, "Valid ImageJ macro script to execute"],
         timeout: Annotated[float | None, "Timeout in seconds (auto-detected: 15s normal, 180s for batch)"] = None,
         verify_result: Annotated[bool, "Enable visual verification of operation results (costs extra time)"] = False,
-        operation_intent: Annotated[str | None, "Required if verify_result=True: describe what the operation should achieve"] = None,
+        operation_intent: Annotated[
+            str | None, "Required if verify_result=True: describe what the operation should achieve"
+        ] = None,
     ) -> str:
         if timeout is None:
             timeout = self._detect_timeout_from_script(script)
         try:
-            script = script+"\n"+'print("Macro executed.");'
+            script = script + "\n" + 'print("Macro executed.");'
             response = await self.apis.run_script("macro", script, timeout=timeout)
         except asyncio.TimeoutError:
             raise RuntimeError(
@@ -60,12 +62,12 @@ class PluginTools:
 
         # Perform state check if needed
         result = f"{script} has executed successfully.\n"
-        
+
         # Perform result verification if requested
         if verify_result and operation_intent:
             verification = await self.simple_result_verification(operation_intent)
             result += f"\nOperation verification: {verification}"
-        
+
         return result
 
     async def capture_image(self, title: str | None = None) -> str:
@@ -167,9 +169,7 @@ imagejOperation is the monitor event history of ImageJ.
 
 {{PERCEPTION}}
 """
-        prompt = PROMPT_TEMPLATE.replace("{{QUERY}}", str(query)).replace(
-            "{{PERCEPTION}}", perception
-        )
+        prompt = PROMPT_TEMPLATE.replace("{{QUERY}}", str(query)).replace("{{PERCEPTION}}", perception)
         perception_str = await self.capture_screen(prompt)
         return perception_str
 
@@ -177,7 +177,7 @@ imagejOperation is the monitor event history of ImageJ.
         """ImageJ Window Information Tool."""
         imagejStatus = await self.apis.take_snapshot()
         imagejOperation = await self.apis.get_operation_history()
-        
+
         # Format as readable text instead of JSON to avoid string replacement issues
         result = f"""ImageJ Window Information:
 
@@ -189,12 +189,11 @@ imagejOperation is the monitor event history of ImageJ.
 """
         return result
 
-
     async def simple_result_verification(self, operation_intent: str, expected_outcome: str = None) -> str:
         """Simple perception-based result verification."""
         vlm = new_vlm_model_client()
         imagejCapture_resp = await self.apis.capture_screen()
-        
+
         verification_prompt = f"""
 You are an ImageJ Result Verification assistant. 
 
@@ -210,7 +209,7 @@ Please analyze the current ImageJ screen and provide a BRIEF assessment:
 
 Keep your response concise and focused on actionable feedback.
 """
-        
+
         imagej_verification = await vlm.create(
             [ImageMessage(role="user", image=i.image) for i in imagejCapture_resp.screenshots]
             + [TextMessage(role="user", text=verification_prompt)]
@@ -228,7 +227,7 @@ async def folder_summary(folder_path: str):
 
     summary = []
     MAX_FILES = 300
-    
+
     for path in folder.rglob("*"):
         if len(summary) >= MAX_FILES:
             break
@@ -243,7 +242,7 @@ async def folder_summary(folder_path: str):
         folder_summary.append(f"File {index}: {item}")
 
     files_summary = ",".join(folder_summary)
-    
+
     total_files_msg = ""
     if len(summary) >= MAX_FILES:
         total_files_msg = f" (Showing first {MAX_FILES} items, more files may exist, need to ask user to check the folder directly if necessary)"
@@ -257,7 +256,7 @@ The provided folder and uploaded files contain the following items{total_files_m
     return prompt
 
 
-async def system_info(add_python_info: bool = False): 
+async def system_info(add_python_info: bool = False):
     """
     Returns a string with information about the system: machine, operating system (all details), version of Python, etc.
     """
@@ -484,7 +483,10 @@ async def execute_python_script(script: Annotated[str, "Python script to execute
             max_output_length = 8000
             if len(result) > max_output_length:
                 truncated_length = max_output_length - 200
-                result = result[:truncated_length] + f"\n\n... [Output truncated, original length: {len(result)} characters] ..."
+                result = (
+                    result[:truncated_length]
+                    + f"\n\n... [Output truncated, original length: {len(result)} characters] ..."
+                )
 
             # Return successful result
             return (
@@ -507,6 +509,7 @@ async def execute_python_script(script: Annotated[str, "Python script to execute
 
     except Exception as e:
         return f"❌ Failed to get Jupyter client: {str(e)}"
+
 
 def label_macro():
     """Returns the macro script for human-in-the-loop mask export for current image set."""
@@ -665,6 +668,7 @@ function enforce_binary_and_fill_windowID(winID) {
 
 """)
     return macro_script
+
 
 if __name__ == "__main__":
     from copilotj.core import load_env
