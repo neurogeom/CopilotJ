@@ -13,7 +13,6 @@ manifest in lockstep.
 import argparse
 import hashlib
 import json
-import os
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -229,8 +228,6 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--status", action="store_true", help="Show index and data directory status")
     parser.add_argument("--data-dir", type=Path, default=DEFAULT_DATA_DIR)
     parser.add_argument("--index-dir", type=Path, default=DEFAULT_INDEX_DIR)
-    parser.add_argument("--embedding-model", type=str, default=None)
-    parser.add_argument("--device", type=str, choices=["cpu", "cuda", "mps"], default=None)
     args = parser.parse_args(argv)
 
     if not args.build and not args.status:
@@ -241,7 +238,6 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     load_env()
-    apply_embedding_overrides(args.embedding_model, args.device)
 
     if args.build:
         build_rag(data_dir=args.data_dir, index_dir=args.index_dir)
@@ -249,13 +245,6 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     show_status(data_dir=args.data_dir, index_dir=args.index_dir)
     return 0
-
-
-def apply_embedding_overrides(model: str | None, device: str | None) -> None:
-    if model:
-        os.environ["COPILOTJ_EMBEDDING_MODEL"] = model
-    if device:
-        os.environ["COPILOTJ_EMBEDDING_DEVICE"] = device
 
 
 if __name__ == "__main__":

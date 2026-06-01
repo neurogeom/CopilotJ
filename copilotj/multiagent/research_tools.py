@@ -21,7 +21,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from tavily import TavilyClient
 
 from copilotj.core import load_env
-from copilotj.core.model_client import get_embeddings
+from copilotj.core.embedding import get_embeddings
 from copilotj.multiagent.py_tools import get_project_temp_dir
 from copilotj.multiagent.tools import execute_python_script
 
@@ -551,7 +551,6 @@ def _load_docs_store(db_path: str, collection_name: str) -> FAISS:
         if not os.path.exists(f"{store_path}.faiss") or not os.path.exists(f"{store_path}.pkl"):
             raise FileNotFoundError(f"Docs store {collection_name} not found. Run `python scripts/rag_builder.py --build` first.")
 
-        # Use get_embeddings which supports both local and OpenAI embeddings
         embeddings = get_embeddings()
 
         try:
