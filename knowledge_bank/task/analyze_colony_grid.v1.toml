@@ -51,7 +51,7 @@ The requested task is **fully complete**. All steps, from image cropping to fina
 [[steps]]
 id = 1
   [steps.action]
-  name = "run_imagej_macro"
+  name = "run_macro"
   script = """run("Split Channels");
 
 selectWindow("1832-48hours-gal-1.JPG (red)");
@@ -66,7 +66,7 @@ close();
 [[steps]]
 id = 2
   [steps.action]
-  name = "run_imagej_macro"
+  name = "run_macro"
   script = """selectWindow("1832-48hours-gal-1.JPG (green)");
 
 run("Duplicate...", "title=background");
@@ -89,7 +89,7 @@ close();
 [[steps]]
 id = 3
   [steps.action]
-  name = "run_imagej_macro"
+  name = "run_macro"
   script = """selectWindow("corrected_image");
 
 getDimensions(width, height, channels, slices, frames);
@@ -160,7 +160,7 @@ else:
 [[steps]]
 id = 5
   [steps.action]
-  name = "run_imagej_macro"
+  name = "run_macro"
   script = """open("D:/vscode_project/ChatImageJ/temp/colony_heatmap.png");
 """
 

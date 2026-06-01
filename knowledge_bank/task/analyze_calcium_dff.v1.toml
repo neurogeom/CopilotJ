@@ -109,7 +109,7 @@ The process efficiently quantified and summarized calcium activity dynamics from
 [[steps]]
 id = 1
   [steps.action]
-  name = "run_imagej_macro"
+  name = "run_macro"
   script = """selectWindow("30hz-ave6-fr600isfobegin-1500sifoend_00001_copy_motion_corrected.tif");
 run("Duplicate...", "title=CalciumStackCopy duplicate");
 selectWindow("CalciumStackCopy");

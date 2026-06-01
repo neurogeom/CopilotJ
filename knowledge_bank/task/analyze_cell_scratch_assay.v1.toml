@@ -52,7 +52,7 @@ The task is fully **complete**. Both images have been analyzed, the wound areas 
 [[steps]]
 id = 1
   [steps.action]
-  name = "run_imagej_macro"
+  name = "run_macro"
   script = """selectWindow("DMSO_B5_t0.JPG");
 
 run("Duplicate...", "title=t0_analysis");
@@ -122,7 +122,7 @@ close();
 [[steps]]
 id = 2
   [steps.action]
-  name = "run_imagej_macro"
+  name = "run_macro"
   script = """roiManager("reset");
 run("Clear Results");
 

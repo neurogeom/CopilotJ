@@ -42,7 +42,7 @@ summary = """Summary of ImageJ Task
 [[steps]]
 id = 1
   [steps.action]
-  name = "run_imagej_macro"
+  name = "run_macro"
   script = """run("DeconvolutionLab2 Run", "-image file C:\\Users\\10331\\OneDrive\\chatImageJ\\claim_1\\1_4_Deconvolution_Super_Resolution\\Drosophila\\Drosophila.tif -psf file C:\\Users\\10331\\OneDrive\\chatImageJ\\claim_1\\1_4_Deconvolution_Super_Resolution\\Drosophila\\PSF BWz=100nm.tif -algorithm RL 20 -out file C:\\Users\\10331\\OneDrive\\chatImageJ\\claim_1\\1_4_Deconvolution_Super_Resolution\\Drosophila\\RL60.tif");
 """
 

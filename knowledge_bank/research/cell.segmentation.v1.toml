@@ -22,11 +22,11 @@ The main objective was to perform cell segmentation on a given image using three
 The task was executed through a structured, multi-step workflow involving initial analysis, user-approved planning, and a combination of native ImageJ macros and delegated Python tasks.
 *   **Image Analysis (`imagej_perception`)**: The process began by analyzing the input image (`original_image.tif`) to identify its properties. It was determined to be an 8-bit grayscale image containing bright, distinct nuclei against a dark background, which is ideal for segmentation.
 *   **Planning & User Approval (`user_manipulation`)**: A comprehensive four-step plan was formulated and presented to the user. This plan outlined the classic segmentation in ImageJ, delegation of StarDist and Cellpose to a Python Agent, and the final creation of a comparison figure. The user approved this plan before execution.
-*   **Classic Segmentation (`run_imagej_macro`)**: An ImageJ macro was executed to perform threshold-based segmentation. This involved duplicating the image, applying an automatic Otsu threshold, using the Watershed algorithm to separate touching nuclei, and running "Analyze Particles" to generate a labeled image and a results table.
+*   **Classic Segmentation (`run_macro`)**: An ImageJ macro was executed to perform threshold-based segmentation. This involved duplicating the image, applying an automatic Otsu threshold, using the Watershed algorithm to separate touching nuclei, and running "Analyze Particles" to generate a labeled image and a results table.
 *   **Delegation to Python Agent (`delegate_task`)**: For the deep learning-based methods, the task was delegated to the `Python Agent`, which has specialized tools for StarDist and Cellpose.
     *   **StarDist Segmentation**: The image path and description were sent to the agent, which performed the segmentation and returned the labeled image and CSV results.
     *   **Cellpose Segmentation**: The process was repeated for Cellpose, with the agent executing the model and saving the required output files.
-*   **Montage Creation (`run_imagej_macro`)**: A final ImageJ macro was run to open the original image and the three generated labeled images. These were combined into a 2x2 montage with clear labels and saved as a single figure.
+*   **Montage Creation (`run_macro`)**: A final ImageJ macro was run to open the original image and the three generated labeled images. These were combined into a 2x2 montage with clear labels and saved as a single figure.
 
 **3. Critical Results**
 The task successfully generated all requested outputs, providing a comprehensive comparison of the segmentation methods.

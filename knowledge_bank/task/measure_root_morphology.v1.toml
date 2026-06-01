@@ -46,7 +46,7 @@ The task is **incomplete**. While the image processing and the core quantitative
 [[steps]]
 id = 1
   [steps.action]
-  name = "run_imagej_macro"
+  name = "run_macro"
   script = """run("Duplicate...", "title=quer1_copy.bmp");
 
 run("8-bit");
@@ -55,7 +55,7 @@ run("8-bit");
 [[steps]]
 id = 2
   [steps.action]
-  name = "run_imagej_macro"
+  name = "run_macro"
   script = """setAutoThreshold("Otsu dark");
 
 run("Convert to Mask");
@@ -64,7 +64,7 @@ run("Convert to Mask");
 [[steps]]
 id = 3
   [steps.action]
-  name = "run_imagej_macro"
+  name = "run_macro"
   script = """run("Skeletonize");
 
 run("Analyze Skeleton (2D/3D)");
