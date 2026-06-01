@@ -12,9 +12,9 @@ The primary objective was to perform automated cell segmentation on the image `h
 **2. Key Actions Taken**
 *   **Image Analysis (`imagej_perception`)**: The process began by analyzing the image to understand its characteristics. This step confirmed that the high-contrast image of bright, circular cells on a dark background was an ideal candidate for Cellpose.
 *   **Task Delegation (`delegate_task`)**: The segmentation was delegated to the `Python Agent`, which has access to the Cellpose library.
-*   **Path Resolution (`run_imagej_macro`, `imagej_perception`)**: After an initial failure, an ImageJ macro was run to retrieve the full, absolute path of the image file, which was then read and confirmed using `imagej_perception`.
+*   **Path Resolution (`run_macro`, `imagej_perception`)**: After an initial failure, an ImageJ macro was run to retrieve the full, absolute path of the image file, which was then read and confirmed using `imagej_perception`.
 *   **Re-delegation (`delegate_task`)**: The segmentation task was successfully re-issued to the `Python Agent` using the correct absolute file path.
-*   **Result Visualization (`run_imagej_macro`)**: Upon completion, a macro was executed to open the newly created segmented image in the ImageJ GUI for visual inspection.
+*   **Result Visualization (`run_macro`)**: Upon completion, a macro was executed to open the newly created segmented image in the ImageJ GUI for visual inspection.
 
 **3. Critical Results**
 *   The Cellpose algorithm successfully identified and segmented **307 cells** in the image.

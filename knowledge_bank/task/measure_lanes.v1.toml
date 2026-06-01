@@ -63,7 +63,7 @@ The task is complete. The 6 lanes within the selected rectangle have been measur
 id = 1
 
 [steps.action]
-name = "run_imagej_macro"
+name = "run_macro"
 script = """
   // Select the image window
 selectWindow("Western_blot.jpeg");

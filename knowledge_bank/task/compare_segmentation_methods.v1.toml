@@ -23,12 +23,12 @@ The main objective was to perform cell segmentation on a microscopic image of hu
 **2. Key Actions Taken**
 *   **Initial Analysis**: The process began with `imagej_perception` to analyze the input image, identifying it as an 8-bit grayscale image with bright, round cell nuclei on a dark background, making it suitable for segmentation.
 *   **Planning and Approval**: A detailed, step-by-step plan was formulated and presented to the user for approval via `user_manipulation`, ensuring clarity and alignment before execution.
-*   **Image Preparation**: The original image was duplicated three times using `run_imagej_macro` to create separate, dedicated images for each segmentation method (`classic_seg`, `stardist_seg`, `cellpose_seg`).
-*   **Classic Segmentation**: An ImageJ macro (`run_imagej_macro`) was executed to apply an automatic threshold, convert the image to a binary mask, run "Analyze Particles" to generate measurements, and save both the mask and the results.
+*   **Image Preparation**: The original image was duplicated three times using `run_macro` to create separate, dedicated images for each segmentation method (`classic_seg`, `stardist_seg`, `cellpose_seg`).
+*   **Classic Segmentation**: An ImageJ macro (`run_macro`) was executed to apply an automatic threshold, convert the image to a binary mask, run "Analyze Particles" to generate measurements, and save both the mask and the results.
 *   **Deep Learning Segmentation**: For StarDist and Cellpose, the `delegate_task` tool was used to hand off the segmentation to the `Python Agent`. This involved:
-    1.  Saving the corresponding duplicate image to a temporary file using `run_imagej_macro`.
+    1.  Saving the corresponding duplicate image to a temporary file using `run_macro`.
     2.  Instructing the `Python Agent` to load the image, perform the segmentation, and save the resulting mask and CSV file.
-*   **Montage Creation**: After all segmentations were complete, `run_imagej_macro` was used to open the original image and the three masks, combine them into a 2x2 montage, add red labels ("human_motis.png", "classic_seg_mask.tif", etc.), and save the final figure.
+*   **Montage Creation**: After all segmentations were complete, `run_macro` was used to open the original image and the three masks, combine them into a 2x2 montage, add red labels ("human_motis.png", "classic_seg_mask.tif", etc.), and save the final figure.
 
 **3. Critical Results**
 *   **Segmentation Masks**: Three mask images were successfully generated and saved:
@@ -58,7 +58,7 @@ The task is **fully complete**. All requested segmentations have been performed,
 [[steps]]
 id = 1
   [steps.action]
-  name = "run_imagej_macro"
+  name = "run_macro"
   script = """selectWindow(\"human_motis.png\");
 run(\"Duplicate...\", \"title=classic_seg\");
 selectWindow(\"human_motis.png\");
@@ -69,7 +69,7 @@ run(\"Duplicate...\", \"title=cellpose_seg\");"""
 [[steps]]
 id = 2
   [steps.action]
-  name = "run_imagej_macro"
+  name = "run_macro"
   script = """selectWindow(\"classic_seg\");
 run(\"8-bit\");
 // --- Segmentation ---
@@ -87,7 +87,7 @@ saveAs(\"Tiff\", \"D:/vscode_project/ChatImageJ/temp/classic_seg_mask.tif\");
 [[steps]]
 id = 3
   [steps.action]
-  name = "run_imagej_macro"
+  name = "run_macro"
   script = """selectWindow(\"stardist_seg\");
 saveAs(\"PNG\", \"D:/vscode_project/ChatImageJ/temp/stardist_seg.png\");"""
 
@@ -101,7 +101,7 @@ id = 4
 [[steps]]
 id = 5
   [steps.action]
-  name = "run_imagej_macro"
+  name = "run_macro"
   script = """selectWindow(\"cellpose_seg\");
 saveAs(\"PNG\", \"D:/vscode_project/ChatImageJ/temp/cellpose_seg.png\");"""
 
@@ -115,7 +115,7 @@ id = 6
 [[steps]]
 id = 7
   [steps.action]
-  name = "run_imagej_macro"
+  name = "run_macro"
   script = """open(\"C:/Users/10331/OneDrive/chatImageJ/pics/human_motis.png\");
 selectWindow(\"human_motis.png\"); run(\"8-bit\"); rename(\"Original\");
 open(\"D:/vscode_project/ChatImageJ/temp/classic_seg_mask.tif\");
@@ -128,7 +128,7 @@ selectWindow(\"cellpose_seg_mask.tif\"); rename(\"Cellpose\");"""
 [[steps]]
 id = 8
   [steps.action]
-  name = "run_imagej_macro"
+  name = "run_macro"
   script = """run(\"Images to Stack\", \"name=Stack title=[] use\");
 run(\"Make Montage...\", \"columns=2 rows=2 scale=1.0 font=48 color=White label border=2\");
 saveAs(\"PNG\", \"D:/vscode_project/ChatImageJ/temp/comparison_montage.png\");

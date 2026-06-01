@@ -58,7 +58,7 @@ summary = """Summary of ImageJ Task
 [[steps]]
 id = 1
   [steps.action]
-  name = "run_imagej_macro"
+  name = "run_macro"
   script = """run("Split Channels");
 """
   timeout = "None"
@@ -66,7 +66,7 @@ id = 1
 [[steps]]
 id = 2
   [steps.action]
-  name = "run_imagej_macro"
+  name = "run_macro"
   script = """selectWindow("cnnm_Merged.tif (red)");
 
 saveAs("Tiff", "D:/vscode_project/ChatImageJ/temp/red_channel.tif");
@@ -94,7 +94,7 @@ id = 4
 [[steps]]
 id = 5
   [steps.action]
-  name = "run_imagej_macro"
+  name = "run_macro"
   script = """close("*");
 """
   timeout = 60.0
@@ -102,7 +102,7 @@ id = 5
 [[steps]]
 id = 6
   [steps.action]
-  name = "run_imagej_macro"
+  name = "run_macro"
   script = """open("D:/vscode_project/ChatImageJ/temp/red_channel.tif");
 
 open("D:/vscode_project/ChatImageJ/temp/green_channel.tif");
@@ -114,7 +114,7 @@ open("D:/vscode_project/ChatImageJ/temp/green_channel_masks.tif");
 [[steps]]
 id = 7
   [steps.action]
-  name = "run_imagej_macro"
+  name = "run_macro"
   script = """baseImageTitle = "green_channel_masks.tif";
 
 selectWindow(baseImageTitle);
@@ -154,7 +154,7 @@ for (r = 0;
 [[steps]]
 id = 8
   [steps.action]
-  name = "run_imagej_macro"
+  name = "run_macro"
   script = """selectWindow("green_channel_masks.tif");
 
 getDimensions(width, height, channels, slices, frames);
@@ -191,7 +191,7 @@ for (g = 0;
 [[steps]]
 id = 9
   [steps.action]
-  name = "run_imagej_macro"
+  name = "run_macro"
   script = """imageCalculator("AND create", "redMask", "greenMask");
 
 selectWindow("Result of redMask");
@@ -215,7 +215,7 @@ roiManager("Save", "D:/vscode_project/ChatImageJ/temp/colocmask_rois.zip");
 [[steps]]
 id = 10
   [steps.action]
-  name = "run_imagej_macro"
+  name = "run_macro"
   script = """nColoc = roiManager("Count");
   
 
@@ -260,7 +260,7 @@ else
 [[steps]]
 id = 11
   [steps.action]
-  name = "run_imagej_macro"
+  name = "run_macro"
   script = """open("C:/Users/10331/OneDrive/copilotj/6_Colocalization/cnnm_Merged.tif");
 
 selectWindow("cnnm_Merged.tif");
