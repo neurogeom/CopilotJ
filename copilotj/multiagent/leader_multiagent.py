@@ -96,6 +96,7 @@ class LeaderAgent(ChatAgent):
         self.chat_history: list[dict[str, Any]] = []
         self.workflow_contexts: dict[int, dict[str, Any]] = {}
         self._workflow_summary_generator: Callable[[dict], Awaitable[tuple[object, str | None]]] | None = None
+        self._workflow_steps_generator: Callable[[dict, object | None], Awaitable[str | None]] | None = None
 
         # Per-dialog conversation state. Populated by begin_dialog() and
         # extended by continue_dialog(). Reset at the start of each dialog.
@@ -132,6 +133,12 @@ class LeaderAgent(ChatAgent):
         generator: Callable[[dict], Awaitable[tuple[object, str | None]]],
     ) -> None:
         self._workflow_summary_generator = generator
+
+    def set_workflow_steps_generator(
+        self,
+        generator: Callable[[dict, object | None], Awaitable[str | None]],
+    ) -> None:
+        self._workflow_steps_generator = generator
 
     async def _build_system_prompt(self) -> str:
         """Build the static system prompt for the current session."""
@@ -264,9 +271,10 @@ class LeaderAgent(ChatAgent):
             if missing:
                 missing_text = ", ".join(str(selected_id) for selected_id in missing)
                 return f"Raw workflow context is unavailable for dialog(s) {missing_text}."
-            if self._workflow_summary_generator is None:
-                return "Workflow summary generator is not configured."
-            summary, steps = await self._workflow_summary_generator(self._combined_dialog_context(selected_ids))
+            if self._workflow_steps_generator is None:
+                return "Workflow steps generator is not configured."
+            summary = self._combined_dialog_summary(selected_ids)
+            steps = await self._workflow_steps_generator(self._combined_dialog_context(selected_ids), summary)
             if steps is None:
                 return "Failed to generate reusable workflow steps from the selected dialogs."
             target = {"dialog": selected_ids, "assistant": str(summary), "steps": steps}
@@ -322,6 +330,11 @@ class LeaderAgent(ChatAgent):
             ],
         }
 
+    def _combined_dialog_summary(self, dialog_ids: list[int]) -> str:
+        items = [self._find_chat_history_dialog(dialog_id) for dialog_id in dialog_ids]
+        summaries = [str(item.get("assistant", "")) for item in items if item is not None]
+        return "\n\n".join(summaries)
+
     async def _generate_missing_workflow_steps(self, target: dict[str, Any]) -> None:
         if isinstance(target.get("steps"), str) and target["steps"].strip():
             return
@@ -329,12 +342,11 @@ class LeaderAgent(ChatAgent):
         if not isinstance(dialog_id, int):
             return
         dialog_context = self.workflow_contexts.get(dialog_id)
-        if dialog_context is None or self._workflow_summary_generator is None:
+        if dialog_context is None or self._workflow_steps_generator is None:
             return
-        summary, steps = await self._workflow_summary_generator(dialog_context.copy())
+        steps = await self._workflow_steps_generator(dialog_context.copy(), target.get("assistant"))
         if steps is None:
             return
-        target["assistant"] = str(summary)
         target["steps"] = steps
 
     async def delegate_task(self, agent: str, task: str) -> str:
@@ -501,6 +513,7 @@ class LeaderDriven(Pattern):
             apis=apis,
         )
         self.leader_agent.set_workflow_summary_generator(self._generate_dialog_summary_and_steps)
+        self.leader_agent.set_workflow_steps_generator(self._generate_workflow_steps)
         self.log_info("Leader Agent initialized.")
 
     def update_config(
@@ -654,25 +667,45 @@ User prompt to optimize:
 
     async def _generate_dialog_summary_and_steps(self, dialog_context: dict) -> tuple[object, str | None]:
         steps = dialog_context["steps"]
-        self.log_info(f"[SUMMARY] Generating reusable workflow steps from {len(steps)} dialog steps...")
+        self.log_info(f"[SUMMARY] Generating dialog summary from {len(steps)} dialog steps...")
 
         steps_text = json.dumps(steps, indent=2, ensure_ascii=False)
         summary_prompt = make_summary_prompt(dialog_context["task"], steps_text)
-        steps_prompt = make_steps_prompt(dialog_context["task"], steps_text)
 
         try:
             response = await self.model_client.create([TextMessage(role="user", text=summary_prompt)])
-            steps_response = await self.model_client.create([TextMessage(role="user", text=steps_prompt)])
         except Exception as e:
             self.log_error(f"[ERROR] Error generating dialog context summary: {e}")
             return dialog_context, None
 
-        if response.content is None or steps_response.content is None:
+        if response.content is None:
             self.log_error("[ERROR] Failed to generate summary - empty response")
             return dialog_context, None
 
+        summary = response.content.strip()
+        steps_response = await self._generate_workflow_steps(dialog_context, summary)
+        if steps_response is None:
+            return dialog_context, None
+
         self.log_info("[SUCCESS] Successfully generated dialog context summary")
-        return response.content.strip(), steps_response.content.strip()
+        return summary, steps_response
+
+    async def _generate_workflow_steps(self, dialog_context: dict, summary: object | None = None) -> str | None:
+        steps = dialog_context["steps"]
+        self.log_info(f"[SUMMARY] Generating reusable workflow steps from {len(steps)} dialog steps...")
+        steps_text = json.dumps(steps, indent=2, ensure_ascii=False)
+        steps_prompt = make_steps_prompt(dialog_context["task"], steps_text, summary)
+
+        try:
+            response = await self.model_client.create([TextMessage(role="user", text=steps_prompt)])
+        except Exception as e:
+            self.log_error(f"[ERROR] Error generating reusable workflow steps: {e}")
+            return None
+
+        if response.content is None:
+            self.log_error("[ERROR] Failed to generate reusable workflow steps - empty response")
+            return None
+        return response.content.strip()
 
     async def _background_summarize_and_store(self, dialog_id: int, task: str, dialog_context: dict) -> None:
         try:
