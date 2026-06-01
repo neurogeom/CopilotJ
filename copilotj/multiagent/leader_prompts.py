@@ -433,6 +433,7 @@ question parameter must same as user main question
 # <Workflow Management Prompts>
 PROMPT_TOOL_SAVE_WORKFLOW = """\
 Save a successful dialog as a reusable workflow. This tool converts the summarized steps and dialog context into a standardized workflow format that can be executed later.
+Only call this tool when the user explicitly asks to save, export, or store a reusable workflow. Never call it automatically just because an analysis finished successfully. If the user did not ask to save a workflow, return a Final Answer instead.
 You can call this tool like this: Action: {"name": "save_workflow", "args": {"workflow_name": "My-Workflow", "tags": "cell-analysis, image-processing, segmentation", "dialog_id": 2}}
 For workflows that span multiple successful dialogs or where later dialogs fix/refine earlier steps, call it with dialog_ids:
 Action: {"name": "save_workflow", "args": {"workflow_name": "My-Workflow", "tags": "cell-analysis, image-processing, segmentation", "dialog_ids": [2, 3, 4]}}
@@ -550,6 +551,9 @@ Now the task is finished. According to the Original Task and Execution History, 
 #Execution History:
 {{SETPS}}
 
+#Existing Summary:
+{{SUMMARY}}
+
 Return a JSON object ONLY, not markdown:
 <Example>
 {
@@ -581,8 +585,12 @@ Rules:
 """
 
 
-def make_steps_prompt(task: str, steps_text: str) -> str:
-    return STEPS_PROMPT.replace("{{TASK}}", task).replace("{{SETPS}}", steps_text)
+def make_steps_prompt(task: str, steps_text: str, summary: object | None = None) -> str:
+    return (
+        STEPS_PROMPT.replace("{{TASK}}", task)
+        .replace("{{SETPS}}", steps_text)
+        .replace("{{SUMMARY}}", "" if summary is None else str(summary))
+    )
 
 
 def build_available_specialized_agents_prompt(agents: dict) -> str:
