@@ -248,9 +248,6 @@ Overrides the API endpoint for the VLM only. Some LLMs, especially local or smal
 
 Routes all outbound model API requests through an HTTP/HTTPS [proxy server](https://en.wikipedia.org/wiki/Proxy_server) — an intermediary between your machine and the internet. Commonly required in institutional or corporate networks where all traffic must pass through a central gateway. If you are connecting directly to the internet, you do not need this. Example value: `http://proxy.example.com:8080`.
 
-**`COPILOTJ_EMBEDDING_MODEL` / `COPILOTJ_EMBEDDING_DEVICE`**
-
-Controls the local embedding model used by ImageJ RAG. By default, CopilotJ uses `sentence-transformers/all-MiniLM-L6-v2` and auto-detects the best available device. Set `COPILOTJ_EMBEDDING_DEVICE` to `cpu`, `cuda`, or `mps` only when you need to force a specific runtime.
 
 **`COPILOTJ_TAVILY_API_KEY`**
 
@@ -279,10 +276,6 @@ COPILOTJ_API_KEY=sk-xxxxxxxx
 # Vision-language model (image understanding) — optional, choose one provider
 #COPILOTJ_VLM_MODEL=gemini-2.5-flash
 #COPILOTJ_VLM_API_KEY=AI-xxxxxxxx
-
-# Retrieval-augmented generation (RAG)
-#COPILOTJ_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
-#COPILOTJ_EMBEDDING_DEVICE=mps
 
 # External search tool (web search)
 #COPILOTJ_TAVILY_API_KEY=tvly-xxxxxxxxx
