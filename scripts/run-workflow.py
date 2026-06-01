@@ -108,9 +108,7 @@ def meta_from_raw(raw: dict[str, Any]) -> WorkflowMeta:
 def prompt_inputs(workflow: Workflow) -> dict[str, Any]:
     inputs = {}
     specs = workflow.interface.inputs if workflow.interface else {}
-    file_input = choose_file_input(specs)
-    if file_input:
-        inputs[file_input] = prompt_text(f"Input file/folder for '{file_input}'")
+    inputs.update(prompt_file_inputs(specs))
     if "output_dir" in specs:
         default_output = str(BASE_DIR / "runs" / workflow.meta.id)
         inputs["output_dir"] = prompt_text("Output directory", default_output)
@@ -121,14 +119,9 @@ def prompt_inputs(workflow: Workflow) -> dict[str, Any]:
     return inputs
 
 
-def choose_file_input(specs: dict[str, Any]) -> str | None:
+def prompt_file_inputs(specs: dict[str, Any]) -> dict[str, str]:
     names = [name for name, spec in specs.items() if isinstance(spec, dict) and spec.get("type") == "file"]
-    if not names:
-        return None
-    if len(names) == 1:
-        return names[0]
-    print(f"File inputs: {', '.join(names)}")
-    return prompt_text("Which file input")
+    return {name: prompt_text(f"Input file/folder for '{name}'") for name in names}
 
 
 def parse_override(override: str) -> tuple[str, str]:
