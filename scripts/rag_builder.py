@@ -27,11 +27,13 @@ PROJECT_ROOT = Path(__file__).parent.parent.resolve()
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from copilotj.core import load_env  # noqa: E402
+from copilotj.core.config import get_home  # noqa: E402
 from copilotj.core.embedding import get_embeddings  # noqa: E402
 from copilotj.core.kb import _file_hash, ensure_faiss_index, export_jsonl, save_rebuild_hash  # noqa: E402
 
-DEFAULT_DATA_DIR = PROJECT_ROOT / "data"
-DEFAULT_INDEX_DIR = PROJECT_ROOT / "assets" / "knowledge_base"
+HOME = get_home()
+DEFAULT_DATA_DIR = HOME / "data"
+DEFAULT_INDEX_DIR = HOME / "assets" / "knowledge_base"
 DEFAULT_MANIFEST_DIR = DEFAULT_INDEX_DIR
 INDEX_NAME = "knowledge_base"
 MANIFEST_FILE = "rag_manifest.json"
@@ -51,7 +53,7 @@ def get_file_hash(filepath: Path) -> str:
 
 def to_relative_path(filepath: Path) -> str:
     try:
-        return str(filepath.resolve().relative_to(PROJECT_ROOT))
+        return str(filepath.resolve().relative_to(HOME))
     except ValueError:
         return str(filepath.resolve())
 

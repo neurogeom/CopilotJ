@@ -12,10 +12,12 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-from copilotj.core.config import load_env
+from copilotj.core.config import get_home, load_env
 from copilotj.core.model_client import new_model_client
 
-KB_ROOT = Path("knowledge_bank")
+_SOURCE_ROOT = Path(__file__).resolve().parent.parent.parent
+_HOME = get_home()
+KB_ROOT = _HOME / "knowledge_bank"
 KB_TASK = KB_ROOT / "task"
 KB_MACRO = KB_ROOT / "macro"
 KB_RESEARCH = KB_ROOT / "research"
@@ -44,11 +46,22 @@ def _load_macro_plugin_names() -> list[str]:
 
 def _ensure_dirs() -> None:
     """Ensure knowledge bank directory structure exists."""
+    _bootstrap_kb()
     KB_ROOT.mkdir(parents=True, exist_ok=True)
     KB_TASK.mkdir(parents=True, exist_ok=True)
     KB_MACRO.mkdir(parents=True, exist_ok=True)
     KB_RESEARCH.mkdir(parents=True, exist_ok=True)
     KB_INDEX.mkdir(parents=True, exist_ok=True)
+
+
+def _bootstrap_kb() -> None:
+    """Copy knowledge_bank from project source to COPILOTJ_HOME if missing."""
+    if KB_ROOT.exists() and any(KB_ROOT.iterdir()):
+        return
+    source = _SOURCE_ROOT / "knowledge_bank"
+    if source.exists():
+        import shutil
+        shutil.copytree(source, KB_ROOT, dirs_exist_ok=True)
 
 
 def _read_toml(path: Path) -> dict[str, Any]:

@@ -9,11 +9,13 @@ from pathlib import Path
 from typing import Annotated, Any, Dict, Optional
 
 import numpy as np
+import yaml
 from csbdeep.utils import normalize
 from skimage import io
 from skimage.util import img_as_float32, img_as_ubyte
 from stardist.models import StarDist2D
-import yaml
+
+from copilotj.core.config import get_home
 
 __all__ = [
     "cellpose_segmentation",
@@ -34,9 +36,7 @@ logger = logging.getLogger("stable_templates")
 
 
 def get_project_temp_dir(subdir: str | None = None) -> Path:
-    project_root = Path(__file__).parent.parent.parent
-    temp_dir = project_root / "temp"
-
+    temp_dir = get_home() / "temp"
     if subdir:
         temp_dir = temp_dir / subdir
 
@@ -47,12 +47,11 @@ def get_project_temp_dir(subdir: str | None = None) -> Path:
 
 def get_project_templates_dir() -> Path:
     """Get the local templates directory."""
-    project_root = Path(__file__).parent.parent.parent
-    templates_dir = project_root / "templates"
+    templates_dir = get_home() / "templates"
     return templates_dir
 
 
-MODEL_ROOT = Path(__file__).resolve().parent.parent.parent / "assets" / "models"
+MODEL_ROOT = get_home() / "assets" / "models"
 
 
 async def cellpose_segmentation(
