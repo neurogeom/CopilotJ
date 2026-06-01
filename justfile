@@ -8,7 +8,7 @@ dev-server:
 
 dev-plugin:
   cd plugin && \
-    mvn exec:java -D"exec.mainClass=copilotj.DefaultCopilotJBridgeService" \
+    mvn compile exec:java -D"exec.mainClass=copilotj.DefaultCopilotJBridgeService" \
       -D"ij.debug=true" -D"scijava.log.level=debug" -D"copilotj.maxRetryWaitSecond=1"
 
 dev-plugin-full: clean-plugin dev-plugin
@@ -18,9 +18,6 @@ build-plugin: clean-plugin
 
 clean-plugin:
   cd plugin && mvn clean
-
-compile-plugin:
-  cd plugin && mvn compile
 
 copy-plugin-deps:
   cd plugin && mvn dependency:copy-dependencies -DoutputDirectory=target/deps
