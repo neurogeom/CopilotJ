@@ -554,8 +554,9 @@ Now the task is finished. According to the Original Task and Execution History, 
 #Existing Summary:
 {{SUMMARY}}
 
-Return a JSON object ONLY, not markdown:
-<Example>
+Return a JSON object ONLY, not markdown. Follow the exact workflow step shape shown in the examples.
+
+<Example: single-image workflow>
 {
   "schema_version": "2.0",
   "interface": {
@@ -568,7 +569,63 @@ Return a JSON object ONLY, not markdown:
     }
   },
   "steps": [
-    {"name": "run_macro", "args": {"script": "open(\"{{inputs.image}}\");\nrun(\"8-bit\");\nsaveAs(\"Results\", \"{{outputs.measurements.path}}\");"}}
+    {
+      "id": 1,
+      "action": {
+        "name": "run_macro",
+        "args": {
+          "script": "open(\"{{inputs.image}}\");\nrun(\"8-bit\");\nsaveAs(\"Results\", \"{{outputs.measurements.path}}\");"
+        }
+      }
+    }
+  ]
+}
+</Example>
+
+<Example: two-image workflow>
+{
+  "schema_version": "2.0",
+  "interface": {
+    "inputs": {
+      "t0_image": {"type": "file", "required": true, "description": "Initial timepoint image"},
+      "t24_image": {"type": "file", "required": true, "description": "Later timepoint image"},
+      "output_dir": {"type": "directory", "required": false, "default": "{{run_dir}}"},
+      "threshold": {"type": "number", "required": false, "default": 100}
+    },
+    "outputs": {
+      "t0_mask": {"type": "file", "path": "{{inputs.output_dir}}/t0_mask.tif"},
+      "t24_mask": {"type": "file", "path": "{{inputs.output_dir}}/t24_mask.tif"},
+      "measurements": {"type": "table", "path": "{{inputs.output_dir}}/measurements.csv"}
+    }
+  },
+  "steps": [
+    {
+      "id": 1,
+      "action": {
+        "name": "run_macro",
+        "args": {
+          "script": "open(\"{{inputs.t0_image}}\");\nsetThreshold(0, {{inputs.threshold}});\nrun(\"Convert to Mask\");\nsaveAs(\"Tiff\", \"{{outputs.t0_mask.path}}\");"
+        }
+      }
+    },
+    {
+      "id": 2,
+      "action": {
+        "name": "run_macro",
+        "args": {
+          "script": "open(\"{{inputs.t24_image}}\");\nsetThreshold(0, {{inputs.threshold}});\nrun(\"Convert to Mask\");\nsaveAs(\"Tiff\", \"{{outputs.t24_mask.path}}\");"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "action": {
+        "name": "execute_python_script",
+        "args": {
+          "script": "from pathlib import Path\nPath(\"{{outputs.measurements.path}}\").write_text(\"timepoint,mask\\nt0,{{outputs.t0_mask.path}}\\nt24,{{outputs.t24_mask.path}}\\n\")"
+        }
+      }
+    }
   ]
 }
 </Example>
@@ -579,8 +636,9 @@ Rules:
 3. Replace hardcoded input paths, output paths, and reusable parameters inside step args with template variables. Step args must not retain absolute paths from the original run.
 4. Use `{{inputs.<name>}}`, `{{outputs.<name>.path}}`, and `{{run_dir}}` only.
 5. For multi-image workflows, use separate named file inputs such as `t0_image` and `t24_image`; do not depend on file ordering.
-6. Preserve the original tool names and the minimal step order required for execution.
-7. Do not add mock outputs, fallback branches, or silent error handling.
+6. Each step must be an object with `id` and `action`. `action` must be an object with `name` and `args`.
+7. Preserve the original tool names and the minimal step order required for execution.
+8. Do not add mock outputs, fallback branches, or silent error handling.
 **Error Handling**: Be careful of the `'gbk' codec can't encode character '\u2080'` error
 """
 
