@@ -16,13 +16,13 @@ from typing import Sequence
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
 
+from copilotj.core.config import get_home
 from copilotj.core.embedding import get_embeddings
 
 __all__ = [
     "DEFAULT_DATA_DIR",
     "DEFAULT_INDEX_DIR",
     "INDEX_NAME",
-    "PROJECT_ROOT",
     "ensure_faiss_index",
     "ensure_faiss_index_async",
     "export_jsonl",
@@ -33,9 +33,9 @@ __all__ = [
 
 _log = logging.getLogger(__name__)
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-DEFAULT_INDEX_DIR = PROJECT_ROOT / "assets" / "knowledge_base"
-DEFAULT_DATA_DIR = PROJECT_ROOT / "data"
+
+DEFAULT_INDEX_DIR = get_home() / "assets" / "knowledge_base"
+DEFAULT_DATA_DIR = get_home() / "data"
 INDEX_NAME = "knowledge_base"
 
 _METADATA_SKIP_KEYS = frozenset({"file_path", "trapped", "modDate", "creationDate"})

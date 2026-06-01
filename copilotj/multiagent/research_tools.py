@@ -2,16 +2,16 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import json
 import os
 import time
-import json
-from typing import Annotated, Iterable, Mapping, MutableMapping
 from pathlib import Path
+from typing import Annotated, Iterable, Mapping, MutableMapping
 
 import bs4
-from ddgs import DDGS
 import requests
 import selenium.webdriver as webdriver
+from ddgs import DDGS
 from langchain_community.tools import WikipediaQueryRun
 from langchain_community.utilities import WikipediaAPIWrapper
 from langchain_community.vectorstores import FAISS
@@ -21,6 +21,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from tavily import TavilyClient
 
 from copilotj.core import load_env
+from copilotj.core.config import get_home
 from copilotj.core.embedding import get_embeddings
 from copilotj.multiagent.py_tools import get_project_temp_dir
 from copilotj.multiagent.tools import execute_python_script
@@ -49,9 +50,7 @@ FALLBACK_COLLECTION_URLS = [
     "https://raw.githubusercontent.com/bioimage-io/collection-bioimage-io/main/collection.json",
     "https://bioimage.io/collection.json",
 ]
-DEFAULT_CACHE_DIR = Path(
-    os.getenv("BIOIMAGE_MODEL_ZOO_CACHE", Path(__file__).resolve().parent.parent.parent / "temp" / "bioimage_model_zoo")
-).resolve()
+DEFAULT_CACHE_DIR = Path(os.getenv("BIOIMAGE_MODEL_ZOO_CACHE", get_home() / "temp" / "bioimage_model_zoo")).resolve()
 DEFAULT_CACHE_TTL = int(os.getenv("BIOIMAGE_MODEL_ZOO_CACHE_TTL", "86400"))
 
 
@@ -815,7 +814,7 @@ def bioimage_download_model(
         if dest_dir:
             dest_path = Path(dest_dir)
         else:
-            dest_path = Path(__file__).resolve().parent.parent.parent / "assets" / "bioimage_models"
+            dest_path = get_home() / "assets" / "bioimage_models"
 
         dest_path.mkdir(parents=True, exist_ok=True)
 
@@ -854,7 +853,6 @@ def bioimage_download_model(
 
 # Re-export init_knowledge_base for convenience
 from copilotj.core.kb import init_knowledge_base  # noqa: E402
-
 
 if __name__ == "__main__":
     from copilotj.core import load_env

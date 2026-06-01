@@ -6,16 +6,8 @@
 
 package copilotj;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.apposed.appose.Appose;
 import org.apposed.appose.BuildException;
@@ -193,7 +185,8 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
 
   @Override
   public void startManagedServer() throws IOException, InterruptedException {
-    // 1. Ensure environment is ready (also sets PYTHONPATH + .env on builder).
+    // 1. Ensure environment is ready (also sets PYTHONPATH + COPILOTJ_HOME on
+    // builder).
     ensureEnvironment();
 
     // 2. Create Appose Service.
@@ -233,31 +226,25 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
 
     final File envRoot = resolveEnvRoot();
 
-    // Read pyproject.toml from JAR resources.
-    final String pyprojectContent = readResource("/copilotj-env/pyproject.toml");
-    if (pyprojectContent == null) {
-      throw new IOException("Bundled pyproject.toml not found in JAR resources");
-    }
-
-    // Also write .env template if not present.
-    final File dotEnv = new File(envRoot, ".env");
-    if (!dotEnv.exists()) {
-      final String template = readResource("/copilotj-env/.env.template");
-      if (template != null) {
-        envRoot.mkdirs();
-        Files.write(dotEnv.toPath(), template.getBytes(StandardCharsets.UTF_8));
-        log.info("copilotj: Created default .env at " + dotEnv.getAbsolutePath());
-      }
-    }
-
     // Resolve copilotj source directory so Python can import it.
     final File sourceDir = resolveCopilotJSource();
     if (sourceDir == null || !new File(sourceDir, "copilotj/__init__.py").exists()) {
       throw new IOException("CopilotJ source not found. Set -Dcopilotj.sourcePath=<dir>");
     }
 
-    // Read user .env config.
-    final Map<String, String> dotEnvVars = readDotEnv(dotEnv);
+    // Read pyproject.toml from source directory.
+    final File pyprojectFile = new File(sourceDir, "pyproject.toml");
+    if (!pyprojectFile.isFile()) {
+      throw new IOException("pyproject.toml not found at " + pyprojectFile.getAbsolutePath());
+    }
+    final String pyprojectContent = new String(java.nio.file.Files.readAllBytes(pyprojectFile.toPath()), "UTF-8");
+
+    // In dev mode (copilotj.sourcePath set), point COPILOTJ_HOME to the source
+    // tree so Python skips bootstrapping — resources are already there.
+    // Otherwise (JAR-extracted sources), use envRoot where Java extracted resources.
+    final File homeDir = System.getProperty("copilotj.sourcePath") != null
+        ? sourceDir
+        : envRoot;
 
     try {
       final Environment env = Appose.uv()
@@ -266,7 +253,7 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
           .python("3.12")
           .base(envRoot)
           .env("PYTHONPATH", sourceDir.getAbsolutePath())
-          .env(dotEnvVars)
+          .env("COPILOTJ_HOME", homeDir.getAbsolutePath())
           .subscribeOutput(msg -> log.info("copilotj env: " + msg))
           .subscribeError(msg -> log.warn("copilotj env: " + msg))
           .build();
@@ -303,46 +290,18 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
   }
 
   private File resolveEnvRoot() {
-    // Default to ~/.copilotj/env/
-    final String home = System.getProperty("user.home");
-    return new File(home, ".copilotj" + File.separator + "env");
-  }
-
-  // -- Helpers --
-
-  private static Map<String, String> readDotEnv(final File dotEnvFile) throws IOException {
-    final Map<String, String> envVars = new HashMap<>();
-    if (!dotEnvFile.exists())
-      return envVars;
-
-    for (final String line : Files.readAllLines(dotEnvFile.toPath(), StandardCharsets.UTF_8)) {
-      final String trimmed = line.trim();
-      if (trimmed.isEmpty() || trimmed.startsWith("#"))
-        continue;
-      final int eq = trimmed.indexOf('=');
-      if (eq > 0) {
-        final String key = trimmed.substring(0, eq).trim();
-        String value = trimmed.substring(eq + 1).trim();
-        // Strip surrounding quotes.
-        if (value.length() >= 2
-            && ((value.startsWith("\"") && value.endsWith("\""))
-                || (value.startsWith("'") && value.endsWith("'")))) {
-          value = value.substring(1, value.length() - 1);
-        }
-        envVars.put(key, value);
-      }
+    final String os = System.getProperty("os.name").toLowerCase();
+    if (os.contains("win")) {
+      final String local = System.getenv("LOCALAPPDATA");
+      if (local != null && !local.isEmpty())
+        return new File(local, "copilotj");
+      return new File(System.getProperty("user.home"), "AppData\\Local\\copilotj");
     }
-    return envVars;
-  }
-
-  private static String readResource(final String path) throws IOException {
-    final InputStream is = DefaultCopilotJBridgeService.class.getResourceAsStream(path);
-    if (is == null)
-      return null;
-    try (final BufferedReader reader = new BufferedReader(
-        new InputStreamReader(is, StandardCharsets.UTF_8))) {
-      return reader.lines().collect(Collectors.joining("\n"));
+    String xdg = System.getenv("XDG_STATE_HOME");
+    if (xdg == null || xdg.isEmpty()) {
+      xdg = System.getProperty("user.home") + "/.local/state";
     }
+    return new File(xdg, "copilotj");
   }
 
   // -- SciJava event handlers --

@@ -3,10 +3,12 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
+from pathlib import Path
 
 import dotenv
 
 __all__ = [
+    "get_home",
     "load_env",
     "is_dev",
     "get_llm_and_key",
@@ -16,10 +18,26 @@ __all__ = [
     "get_proxy",
 ]
 
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+
+
+def get_home() -> Path:
+    """Return the CopilotJ home directory.
+
+    Priority:
+    1. COPILOTJ_HOME env var (explicit override or set by Java/Appose)
+    2. Project root derived from this file's location (CLI dev mode)
+    """
+    explicit = os.getenv("COPILOTJ_HOME")
+    if explicit:
+        return Path(explicit)
+    return _PROJECT_ROOT
+
 
 def load_env() -> None:
-    dotenv.load_dotenv(".env")
-    dotenv.load_dotenv(".env.local")
+    home = get_home()
+    dotenv.load_dotenv(home / ".env", override=False)
+    dotenv.load_dotenv(home / ".env.local", override=False)
 
 
 def is_dev() -> bool:

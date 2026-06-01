@@ -188,6 +188,8 @@ class _Thread(UI):
                 ):
                     await self._agent.run(prompt, trace_ctx=self._trace_ctx)
 
+        except Exception:
+            _log.exception("Agent run failed for thread %s", self.thread_id)
         finally:
             done_event.set()  # Signal that the chat is done
 
