@@ -42,7 +42,7 @@ def cli(ctx, server, verbosity):
 def run(get_api: Callable[[ClientPluginAPI], Callable], ctx, *args, **kwargs):
     async def runner():
         apis = HTTPPluginAPI(ctx.obj["server"])
-        client_apis = apis.attach_dev_client()
+        client_apis = apis.attach_single_client()
         api = get_api(client_apis)
         try:
             response = await api(*args, **kwargs)

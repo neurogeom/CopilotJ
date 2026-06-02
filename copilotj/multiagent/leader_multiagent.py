@@ -98,6 +98,7 @@ class LeaderAgent(ChatAgent):
         # extended by continue_dialog(). Reset at the start of each dialog.
         self._dialog_messages: list[TextMessage] = []
 
+        self._apis = apis
         self.plugin_tools = tools.PluginTools(apis)
 
         # Store the combined tools and agents
@@ -119,7 +120,7 @@ class LeaderAgent(ChatAgent):
             FunctionTool(workflow_tools.get_workflow, PROMPT_TOOL_GET_WORKFLOW),
             FunctionTool(workflow_tools.delete_workflow, PROMPT_TOOL_DELETE_WORKFLOW),
             FunctionTool(workflow_tools.export_workflow, PROMPT_TOOL_EXPORT_WORKFLOW),
-            FunctionTool(workflow_tools.execute_workflow, PROMPT_TOOL_EXECUTE_WORKFLOW),
+            FunctionTool(self.execute_workflow, PROMPT_TOOL_EXECUTE_WORKFLOW),
         ]
         self.agents = agents if agents else {}
 
@@ -342,8 +343,6 @@ User prompt to optimize:
 {user_prompt}
 """
 
-        from copilotj.core.message import TextMessage
-
         try:
             response = await self._client.create([TextMessage(role="user", text=system_prompt)])
             optimized = response.content if response.content else user_prompt
@@ -352,6 +351,13 @@ User prompt to optimize:
         except Exception as e:
             self.log_error(f"Failed to optimize prompt: {e}")
             return user_prompt
+
+    async def execute_workflow(
+        self,
+        workflow_id: Annotated[str, "The ID of the workflow to execute"],
+        stop_on_error: Annotated[bool, "Whether to stop execution on first error"] = True,
+    ) -> str:
+        return await workflow_tools.execute_workflow(self._apis, workflow_id, stop_on_error)
 
 
 class LeaderDriven(Pattern):
@@ -441,7 +447,6 @@ class LeaderDriven(Pattern):
         Returns:
             Optimized prompt string, or original if optimization fails
         """
-        from copilotj.core.message import TextMessage
 
         # Get ImageJ window info for context (only if available)
         window_info = ""

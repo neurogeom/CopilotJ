@@ -13,6 +13,7 @@ import pydantic
 import ujson
 from pydantic import TypeAdapter
 
+from copilotj.core.config import SINGLE_CLIENT_ID
 from copilotj.plugin._base import Request, Response
 from copilotj.plugin.awt import SnapshotDifference, SnapshotSummary, TakeSnapshotRequest
 from copilotj.plugin.awt.action import TypedActionResponse
@@ -33,10 +34,6 @@ if TYPE_CHECKING:
 __all__ = ["PluginAPI", "HTTPPluginAPI", "BridgePluginAPI", "ClientPluginAPI"]
 
 ##########################################################
-
-# FIXME: this is a copy from the server since import them causes circular import issues. should be removed
-
-DEV_CLIENT_ID = uuid.UUID("00000000-0000-0000-0000-000000000000")
 
 
 class BridgeRequest(pydantic.BaseModel):
@@ -156,9 +153,9 @@ class PluginAPI(abc.ABC):
         """Creates a client plugin API instance with the given client ID."""
         return ClientPluginAPI(self, client_id)
 
-    def attach_dev_client(self) -> ClientPluginAPI:
+    def attach_single_client(self) -> ClientPluginAPI:
         """Attaches to the first client that connects to the server."""
-        return self.with_client(DEV_CLIENT_ID)
+        return self.with_client(SINGLE_CLIENT_ID)
 
     @abc.abstractmethod
     async def _request[R: Response](
@@ -211,8 +208,10 @@ class BridgePluginAPI(PluginAPI):
         response = await self.handler.send_event(
             BridgeRequest(client_id=client_id, event=data.event, data=data, timeout=timeout)
         )
+        if response.err:
+            raise RuntimeError(f"Plugin request failed: {response.err}")
         adapter = TypeAdapter(data.response_type)
-        return cast(R, adapter.validate_python(response))
+        return cast(R, adapter.validate_python(response.data))
 
     @override
     async def close(self) -> None:

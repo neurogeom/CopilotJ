@@ -3,11 +3,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
+import uuid
 from pathlib import Path
 
 import dotenv
 
 __all__ = [
+    "SINGLE_CLIENT_ID",
     "get_home",
     "load_env",
     "is_dev",
@@ -48,6 +50,9 @@ def is_dev() -> bool:
 
 def is_managed() -> bool:
     return os.getenv("COPILOTJ_MANAGED") is not None
+
+
+SINGLE_CLIENT_ID = uuid.UUID("00000000-0000-0000-0000-000000000000")
 
 
 def is_single_client() -> bool:

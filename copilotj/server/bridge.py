@@ -12,15 +12,14 @@ import aiohttp
 import aiohttp.web as web
 import pydantic
 
-from copilotj.core.config import is_single_client
+from copilotj.core.config import SINGLE_CLIENT_ID, is_single_client
 from copilotj.util import Base64ImageTruncator, IndentedRawJson
 
-__all__ = ["BridgeRequest", "BridgeResponse", "Bridge", "DEV_CLIENT_ID"]
+__all__ = ["BridgeRequest", "BridgeResponse", "Bridge"]
 
 _log = logging.getLogger("copilotj.server.bridge")
 TEXT_MESSAGE_QUEUE_MAX_SIZE = 128
 DEFAULT_TIMEOUT = 4
-DEV_CLIENT_ID = uuid.UUID("00000000-0000-0000-0000-000000000000")
 
 
 class _BridgeEvent(pydantic.BaseModel):
@@ -253,7 +252,7 @@ class Bridge:
 
     async def send_event(self, req: BridgeRequest) -> BridgeResponse:
         client_id = req.client_id
-        if client_id == DEV_CLIENT_ID and len(self._clients) > 0:
+        if client_id == SINGLE_CLIENT_ID and len(self._clients) > 0:
             client_id = next(iter(self._clients.keys()))  # get the first client
 
         client = self._clients.get(client_id)
@@ -276,7 +275,7 @@ class Bridge:
             return None
 
         if (
-            new_id == DEV_CLIENT_ID  # dev client id
+            new_id == SINGLE_CLIENT_ID  # dev client id
             or new_id not in self._used_client_ids  # not used
             or new_id in self._clients  # already used
             or self._clients[client.id] != client  # error from the client

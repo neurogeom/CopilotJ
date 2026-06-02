@@ -12,6 +12,7 @@ from copilotj.multiagent.workflow_manager import (
     WorkflowExecutor,
     WorkflowManager,
 )
+from copilotj.plugin.api import ClientPluginAPI
 
 
 async def save_workflow_from_steps(
@@ -165,17 +166,14 @@ async def export_workflow(
 
 
 async def execute_workflow(
+    apis: ClientPluginAPI,
     workflow_id: Annotated[str, "The ID of the workflow to execute"],
     stop_on_error: Annotated[bool, "Whether to stop execution on first error"] = True,
 ) -> str:
     """Execute a workflow with the provided leader agent"""
     try:
-        from copilotj.plugin.api import HTTPPluginAPI
-
-        load_env()
-        apis = HTTPPluginAPI("http://127.0.0.1:8786")
-        client_apis = apis.attach_dev_client()
-        leader = leader_multiagent.LeaderDriven(apis=client_apis)
+        load_env()  # FIXME: why we need to load env here? should we load it in the main entry point instead?
+        leader = leader_multiagent.LeaderDriven(apis=apis)
         executor = WorkflowExecutor(leader.leader_agent)
         results = await executor.execute_workflow_by_id(workflow_id, stop_on_error)
 
