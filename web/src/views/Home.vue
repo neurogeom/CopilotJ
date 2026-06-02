@@ -6,19 +6,26 @@ SPDX-License-Identifier: Apache-2.0
 
 <script setup lang="ts">
 import { ref } from "vue";
-import { RouterLink } from "vue-router";
+import { useRouter } from "vue-router";
 import {
-  IconArrowRight,
   IconCheck,
   IconExternalLink,
   IconBrandDiscordFilled,
   IconBrandGithubFilled,
+  IconCirclePlus2,
+  IconVideo,
+  IconScript,
 } from "@tabler/icons-vue";
 import Demos from "../components/Demos.vue";
 import Logo from "../components/Logo.vue";
 import { BACKGROUND, CONTRIBUTIONS, DISCORD_LINK, FEATURES, GITHUB_REPO, ORGS, TOOLS, SLOGAN } from "../siteData";
 
+const router = useRouter();
 const demosRef = ref<HTMLElement | null>(null);
+
+function goTo(path: string) {
+  router.push(path);
+}
 
 function scrollToDemos() {
   if (!demosRef.value) return;
@@ -27,7 +34,7 @@ function scrollToDemos() {
 }
 
 function openNewWindow(link: string) {
-  window.open(link, "_blank");
+  window.open(link, "_blank", "noopener,noreferrer");
 }
 </script>
 
@@ -45,26 +52,23 @@ function openNewWindow(link: string) {
 
       <div class="mt-12 flex flex-wrap items-center justify-center gap-3 font-medium">
         <button
-          @click="scrollToDemos"
-          class="inline-flex items-center gap-2 rounded-full bg-primary-500 px-8 py-2.5 text-sm text-white cursor-pointer shadow transition-colors hover:bg-primary-800"
+          v-for="btn in [
+            { label: 'Get Started', icon: IconCirclePlus2, isPrimary: true, click: () => goTo('/chat') },
+            { label: 'Demos', icon: IconVideo, click: scrollToDemos },
+            { label: 'Manual', icon: IconScript, click: () => goTo('/manual') },
+            { label: 'Source Code', icon: IconExternalLink, click: () => openNewWindow(GITHUB_REPO) },
+          ]"
+          :key="`hero-btn-${btn.label}`"
+          class="inline-flex items-center gap-2 rounded-full py-2.5 text-sm cursor-pointer shadow transition-colors"
+          :class="
+            btn.isPrimary
+              ? 'pl-8 pr-6 bg-primary-500 hover:bg-primary-800 text-white'
+              : 'pl-6 pr-4 border border-zinc-300/60 text-zinc-800 hover:bg-zinc-50'
+          "
+          @click="btn.click"
         >
-          Demos
+          {{ btn.label }} <component :is="btn.icon" class="h-5" />
         </button>
-
-        <RouterLink
-          to="/manual"
-          class="inline-flex items-center gap-2 rounded-full border border-zinc-300/60 px-6 py-2.5 transition-colors text-sm text-zinc-800 hover:bg-zinc-50"
-          >Get Started <IconArrowRight class="h-5"
-        /></RouterLink>
-
-        <a
-          :href="GITHUB_REPO"
-          target="_blank"
-          rel="noreferrer"
-          title="View source code on GitHub"
-          class="inline-flex items-center gap-2 rounded-full border border-zinc-300/60 px-6 py-2.5 text-sm text-zinc-800 hover:bg-zinc-50"
-          >Source Code <IconExternalLink class="h-5"
-        /></a>
       </div>
     </section>
 
@@ -282,11 +286,12 @@ function openNewWindow(link: string) {
 
         <h3 class="my-8 text-5xl text-center font-medium leading-18">Meet CopilotJ</h3>
 
-        <RouterLink
-          to="/manual"
-          class="px-6 py-2.5 inline-flex items-center gap-2 rounded-full border border-primary-500 transition-colors text-sm text-white bg-primary-500 hover:bg-primary-600"
-          >Get Started <IconArrowRight class="h-5"
-        /></RouterLink>
+        <button
+          class="pl-8 pr-6 py-2.5 inline-flex items-center gap-2 rounded-full border border-primary-500 transition-colors text-sm text-white bg-primary-500 hover:bg-primary-600 cursor-pointer"
+          @click="goTo('/chat')"
+        >
+          Get Started <IconCirclePlus2 class="h-5" />
+        </button>
       </div>
 
       <div class="max-w-6xl mx-auto px-4 mt-36 flex justify-between items-center">
