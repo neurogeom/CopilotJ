@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import json
 import os
 import uuid
 from pathlib import Path
@@ -15,6 +16,8 @@ __all__ = [
     "is_dev",
     "is_managed",
     "is_single_client",
+    "load_managed_config",
+    "save_managed_config",
     "get_llm_and_key",
     "get_llm_base_url",
     "get_vlm_and_key",
@@ -60,6 +63,21 @@ def is_single_client() -> bool:
     if explicit is not None:
         return explicit.lower() not in ("0", "false", "no")
     return is_dev() or is_managed()
+
+
+def load_managed_config() -> dict:
+    path = get_home() / "config.json"
+    if path.is_file():
+        return json.loads(path.read_text("utf-8"))
+    return {}
+
+
+def save_managed_config(data: dict) -> None:
+    if not is_managed():
+        return
+    path = get_home() / "config.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, indent=2), "utf-8")
 
 
 def get_llm_and_key(model: str | None = None, api_key: str | None = None) -> tuple[str, str]:

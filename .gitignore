@@ -1,5 +1,6 @@
 # application
 uploads/
+config.json
 
 # python
 .venv/
