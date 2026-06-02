@@ -17,6 +17,7 @@ __all__ = [
     "PROMPT_TOOL_DELETE_WORKFLOW",
     "PROMPT_TOOL_EXPORT_WORKFLOW",
     "PROMPT_TOOL_EXECUTE_WORKFLOW",
+    "PROMPT_TOOL_BATCH_PRECHECK",
     "build_leader_system_prompt",
     "build_initial_user_message",
     "build_observation_message",
@@ -71,7 +72,13 @@ When the user asks to run, execute, apply, rerun, or use an existing saved workf
     - Must execute `kb_retrieve` to help you find relevant macros, workflows, and research before planning.
     - After Knowledge Bank Retrieve, the thought must not mention any details about the knowledege (like I have retrieved a comprehensive workflow perfectly matches your request.), be concise to reduce cost, you must say starts with "Now I have the necessary information to plan..." Then direct show plan accordingly.
     - Do NOT plan or ask the user anything before kb_retrieve returns.
-3. **Strategic Planning**: Formulate a detailed plan using retrieved knowledge and available capabilities.
+3. **Batch Pre-check (CRITICAL for batch operations)**
+    - Before ANY batch processing operation, run `batch_precheck` to analyze dataset heterogeneity
+    - This prevents wasted computation time and identifies potential issues early
+    - Review QC report and recommendations before proceeding with batch processing
+    - If VLM is unavailable, ask the user to inspect the montage and reply yes/no before continuing
+    - If VLM detects heterogeneity, warn the user but do not force-stop unless the user says no
+4. **Strategic Planning**: Formulate a detailed plan using retrieved knowledge and available capabilities.
     - **Priority Order**: Comprehensive Python scripts → Specialized agents → ImageJ macros
     - **Tool Agent**: Delegate for Cellpose, Stardist, BiaPy, super-resolution (Must provide perception_info and absolute file paths)
     - **Python Scripts**: Write complete, end-to-end solutions and execute them directly
@@ -192,7 +199,11 @@ ROI, and advise on correct parameters. Then, call user_manipulate with clear ins
 - If specialized agents fail, use Python scripts to implement alternative approaches
 - If a required ImageJ plugin is missing or any macro call fails several times (e.g. Unrecognized command: "XX"), \
 stop using macro for this task, immediately use Python scripts or delegate to appropriate agents.
-- Before Batch Processing, always confirm the input output paths and parameters with the user, and you must \
+- Before Batch Processing, **ALWAYS run `batch_precheck`** first to check for dataset heterogeneity.
+  - Review the QC report for any detected issues (background variations, image quality, content consistency)
+  - If the report says manual review is required, wait for the user's yes/no decision
+  - If VLM reports a warning, surface it to the user; it is not a hard stop
+  - Always confirm the input output paths and parameters with the user, and you must \
 notify the user that batch processing may take a long time and ask user_manipulate to proceed.
 - Before Training models, always confirm before starting, and you must notify the user that training may take a long time and ask user_manipulate to proceed.
 
@@ -485,7 +496,44 @@ Rules:
 - If required inputs are missing, ask only for those missing values.
 - The workflow binds inputs, renders template variables, runs steps in sequence, verifies declared outputs, and returns execution results for summarization.
 """
-# </Workflow Management Prompts>
+
+PROMPT_TOOL_BATCH_PRECHECK = """\
+Perform pre-batch quality control check on an image dataset BEFORE starting batch processing.
+
+This tool samples images from a folder, creates an overview montage, and uses VLM-assisted visual inspection when VLM QC is configured.
+If VLM QC is unavailable, it returns a manual-review warning and asks the user to inspect the montage before batch execution.
+
+**When to use this tool:**
+- Before starting any batch processing operation (segmentation, analysis, conversion, etc.)
+- When processing a new or unfamiliar dataset
+- When you need to verify dataset consistency before automated processing
+- To identify potential issues early and avoid wasted computation time
+
+**What it checks for:**
+1. Background & Exposure Issues: intensity variations, over/underexposure, uneven illumination
+2. Image Quality Issues: artifacts, blur, noise variations, compression artifacts
+3. Content Consistency: object density variations, clustering patterns, size/morphology differences
+4. Technical Consistency: channel/color variations, resolution differences, bit depth issues
+5. Structural Patterns: edge effects, tiling artifacts, position-dependent variations
+
+**Call syntax:**
+Action: {"name": "batch_precheck", "args": {"folder_path": "/path/to/images", "sample_size": 9}}
+
+**Parameters:**
+- folder_path: Path to the image folder to check (REQUIRED)
+- sample_size: Number of images to sample (default: 9, creates 3x3 montage)
+- analysis_focus: Optional specific focus areas (e.g., "background consistency", "cell density variations")
+- output_dir: Optional output directory for montage and report
+- skip_analysis: Set to true to skip VLM analysis and only generate montage
+
+**Output:**
+- Structured QC report with heterogeneity assessment
+- Recommendations for handling detected issues
+- Manual yes/no gate instructions when VLM QC is unavailable
+- Montage image saved to temp directory for visual inspection
+
+**IMPORTANT:** Always run this tool BEFORE batch operations on new datasets. If the output says manual review is required, wait for the user's yes/no decision: yes continues workflow execution, no stops.
+"""
 
 
 def make_summary_prompt(task: str, steps_text: str) -> str:
