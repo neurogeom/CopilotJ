@@ -45,6 +45,6 @@ test-cov:
 add-worktree name:
   scripts/add-worktree.sh {{name}}
 
-# Interactively remove worktrees whose branches are merged or closed
-cleanup-worktree *args:
-  scripts/cleanup-worktree.sh {{args}}
+# Interactively remove branches that are merged or closed
+cleanup-branches *args:
+  scripts/cleanup-branches.sh {{args}}

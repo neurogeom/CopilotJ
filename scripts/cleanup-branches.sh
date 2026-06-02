@@ -15,13 +15,14 @@ elif [ $# -ne 0 ]; then
 fi
 
 root="$(cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd)"
+current_branch="$(git branch --show-current)"
+default_branch="$(git remote show origin 2>/dev/null | sed -n '/HEAD branch/s/.*: //p' || echo main)"
 
-# Phase 1: check all worktrees and collect removable ones
+# Phase 1: check all local branches and collect removable ones
 removable=()
-while IFS= read -r wt; do
-  [ -n "$wt" ] || continue
-  name="$(basename "$wt")"
-  branch="${name//__//}"
+while IFS= read -r branch; do
+  [ -n "$branch" ] || continue
+  [[ "$branch" == "$current_branch" || "$branch" == "$default_branch" ]] && continue
 
   if ! git show-ref --quiet --heads "$branch"; then
     status="gone"
@@ -36,12 +37,19 @@ while IFS= read -r wt; do
 
   [ "$status" = "active" ] && continue
 
-  echo "[$status] $name (branch: $branch)"
-  removable+=("$wt:$branch")
-done < <(git worktree list --porcelain | grep "^worktree " | cut -d' ' -f2 | grep "^$root/.worktrees/")
+  wt_name="${branch//\//__}"
+  wt_path="$root/.worktrees/$wt_name"
+  if git worktree list --porcelain | grep -q "^worktree $wt_path$"; then
+    removable+=("$branch:has-worktree:$wt_path")
+    echo "[$status] $branch (has worktree: $wt_name)"
+  else
+    removable+=("$branch:no-worktree:")
+    echo "[$status] $branch"
+  fi
+done < <(git branch --format='%(refname:short)')
 
 if [ ${#removable[@]} -eq 0 ]; then
-  echo "No worktrees to clean up."
+  echo "No branches to clean up."
   exit 0
 fi
 
@@ -52,7 +60,7 @@ if [ "$dry_run" = true ]; then
 fi
 
 echo ""
-read -r -p "Remove all ${#removable[@]} worktree(s)? [y/N] " answer
+read -r -p "Remove all ${#removable[@]} branch(es)? [y/N] " answer
 if [ "$answer" != "y" ] && [ "$answer" != "Y" ]; then
   echo "Aborted."
   exit 0
@@ -60,11 +68,16 @@ fi
 
 # Phase 3: remove
 for entry in "${removable[@]}"; do
-  wt="${entry%%:*}"
-  branch="${entry#*:}"
-  git worktree remove --force "$wt"
+  branch="${entry%%:*}"
+  rest="${entry#*:}"
+  has_wt="${rest%%:*}"
+  wt_path="${rest#*:}"
+
+  if [ "$has_wt" = "has-worktree" ]; then
+    git worktree remove --force "$wt_path"
+    echo "Removed worktree $(basename "$wt_path")"
+  fi
   git branch -D "$branch" 2>/dev/null || true
-  echo "Removed $(basename "$wt")"
 done
 
 git worktree prune
