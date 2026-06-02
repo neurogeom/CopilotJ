@@ -62,7 +62,7 @@ fi
 for entry in "${removable[@]}"; do
   wt="${entry%%:*}"
   branch="${entry#*:}"
-  git worktree remove "$wt"
+  git worktree remove --force "$wt"
   git branch -D "$branch" 2>/dev/null || true
   echo "Removed $(basename "$wt")"
 done
