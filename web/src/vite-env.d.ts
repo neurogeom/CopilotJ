@@ -7,7 +7,7 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  readonly VITE_DISABLE_CHAT?: boolean;
+  readonly VITE_DEFAULT_ROUTE?: string;
   readonly VITE_API_BASE_URL?: string;
   readonly VITE_CONFIGURABLE_API_BASE?: boolean;
 }
