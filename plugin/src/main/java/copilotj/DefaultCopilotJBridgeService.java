@@ -214,6 +214,10 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
     managed = true;
 
     log.info("copilotj: Python server started on port " + port);
+    if (Boolean.TRUE.equals(initTask.outputs.get("port_changed"))) {
+      log.warn("copilotj: Port changed from " + initTask.outputs.get("previous_port")
+          + " to " + port + " (saved port was unavailable)");
+    }
 
     // 5. Connect WebSocket.
     this.start(managedServerUrl);
