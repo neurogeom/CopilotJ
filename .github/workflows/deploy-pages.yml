@@ -41,6 +41,7 @@ jobs:
       - name: Build with Vite
         env:
           VITE_CONFIGURABLE_API_BASE: true
+          VITE_DEFAULT_ROUTE: "/home"
         run: |
           cd web
           pnpm run build

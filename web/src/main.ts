@@ -20,18 +20,22 @@ const app = createApp(App);
 const pinia = createPinia();
 app.use(pinia);
 
-const baseRoutes = [
-  {
-    path: "/home",
-    component: () => import("./views/Home.vue"),
-  },
+const pageRoutes = [
+  { path: "/home", component: () => import("./views/Home.vue") },
   { path: "/manual", component: () => import("./views/Manual.vue") },
   { path: "/about", component: () => import("./views/About.vue") },
+  { path: "/chat", component: () => import("./views/Chat.vue") },
 ];
 
-const routes = import.meta.env.VITE_DISABLE_CHAT
-  ? [...baseRoutes, { path: "/", redirect: "/home" }]
-  : [...baseRoutes, { path: "/chat", component: () => import("./views/Chat.vue") }, { path: "/", redirect: "/chat" }];
+const defaultRoute = import.meta.env.VITE_DEFAULT_ROUTE || "/chat";
+const isValidPath = pageRoutes.map((r) => r.path).includes(defaultRoute);
+const routes = [
+  ...pageRoutes,
+  {
+    path: "/",
+    redirect: isValidPath ? defaultRoute : "/chat",
+  },
+];
 
 export const router = createRouter({
   history: createWebHashHistory(),
