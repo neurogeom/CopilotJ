@@ -254,6 +254,7 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
           .base(envRoot)
           .env("PYTHONPATH", sourceDir.getAbsolutePath())
           .env("COPILOTJ_HOME", homeDir.getAbsolutePath())
+          .env("COPILOTJ_MANAGED", "1")
           .subscribeOutput(msg -> log.info("copilotj env: " + msg))
           .subscribeError(msg -> log.warn("copilotj env: " + msg))
           .build();

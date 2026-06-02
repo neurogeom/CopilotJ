@@ -12,6 +12,7 @@ import aiohttp
 import aiohttp.web as web
 import pydantic
 
+from copilotj.core.config import is_single_client
 from copilotj.util import Base64ImageTruncator, IndentedRawJson
 
 __all__ = ["BridgeRequest", "BridgeResponse", "Bridge", "DEV_CLIENT_ID"]
@@ -218,6 +219,13 @@ class Bridge:
         self._used_client_ids = dict[uuid.UUID, datetime]()
 
     async def on_plugin_connect(self, request: web.Request) -> web.StreamResponse:
+        if is_single_client() and len(self._clients) > 0:
+            _log.warning("Rejecting plugin connection: managed mode allows only one plugin")
+            ws = web.WebSocketResponse()
+            await ws.prepare(request)
+            await ws.close(code=aiohttp.WSCloseCode.NOT_ACCEPTABLE, message=b"Managed mode: already connected")
+            return ws
+
         client = _Client(self)
         self._clients[client.id] = client
         self._used_client_ids[client.id] = datetime.now()

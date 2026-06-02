@@ -11,6 +11,8 @@ __all__ = [
     "get_home",
     "load_env",
     "is_dev",
+    "is_managed",
+    "is_single_client",
     "get_llm_and_key",
     "get_llm_base_url",
     "get_vlm_and_key",
@@ -42,6 +44,17 @@ def load_env() -> None:
 
 def is_dev() -> bool:
     return os.getenv("COPILOTJ_DEV") is not None
+
+
+def is_managed() -> bool:
+    return os.getenv("COPILOTJ_MANAGED") is not None
+
+
+def is_single_client() -> bool:
+    explicit = os.getenv("COPILOTJ_SINGLE_CLIENT")
+    if explicit is not None:
+        return explicit.lower() not in ("0", "false", "no")
+    return is_dev() or is_managed()
 
 
 def get_llm_and_key(model: str | None = None, api_key: str | None = None) -> tuple[str, str]:
