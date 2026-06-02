@@ -60,6 +60,7 @@ public class CopilotJBridgeDialog
 
   // -- Managed server tab components --
   private JButton installButton;
+  private JButton uninstallButton;
   private JButton serverToggleButton;
   private JLabel envStatusLabel;
   private JLabel managedStatusLabel;
@@ -70,6 +71,15 @@ public class CopilotJBridgeDialog
    * against async syncUIState overwrites.
    */
   private boolean serverStarting;
+
+  /** True while the environment is being installed. */
+  private boolean installing;
+
+  /** True while the environment is being uninstalled. */
+  private boolean uninstalling;
+
+  /** True while the environment is being synced. */
+  private boolean syncing;
 
   /** The connection this dialog is currently listening to. */
   private Connection listenedConnection;
@@ -219,13 +229,35 @@ public class CopilotJBridgeDialog
     // -- Environment row --
     envStatusLabel = new JLabel("Not installed");
     installButton = new JButton("Install");
-    installButton.addActionListener(e -> runInstallWorker());
+    installButton.addActionListener(e -> {
+      if (service.isEnvironmentReady() || service.isEnvironmentOnDisk()) {
+        runSyncWorker();
+      } else {
+        runInstallWorker();
+      }
+    });
+
+    uninstallButton = new JButton("Uninstall");
+    uninstallButton.addActionListener(e -> {
+      final int choice = javax.swing.JOptionPane.showConfirmDialog(
+          opened,
+          "This will delete the Python environment and all cached data.\n"
+              + (serverRunning() ? "The running server will be stopped.\n" : "")
+              + "You can reinstall it later.\n\nContinue?",
+          "Uninstall Environment",
+          javax.swing.JOptionPane.YES_NO_OPTION,
+          javax.swing.JOptionPane.WARNING_MESSAGE);
+      if (choice != javax.swing.JOptionPane.YES_OPTION)
+        return;
+      runUninstallWorker();
+    });
 
     final JPanel envRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
     envRow.add(new JLabel("Environment:"));
     envRow.add(envStatusLabel);
     envRow.add(Box.createHorizontalStrut(10));
     envRow.add(installButton);
+    envRow.add(uninstallButton);
 
     // -- Server row --
     managedStatusLabel = new JLabel("Stopped");
@@ -288,7 +320,8 @@ public class CopilotJBridgeDialog
   // -- SwingWorkers for blocking operations --
 
   private void runInstallWorker() {
-    installButton.setEnabled(false);
+    installing = true;
+    syncUIState();
     envStatusLabel.setText("Installing...");
     progressArea.setText("");
 
@@ -296,7 +329,7 @@ public class CopilotJBridgeDialog
       @Override
       protected Void doInBackground() throws Exception {
         publish("Installing Python environment...\n");
-        service.ensureEnvironment();
+        service.ensureEnvironment(msg -> publish(msg.endsWith("\n") ? msg : msg + "\n"));
         return null;
       }
 
@@ -309,14 +342,90 @@ public class CopilotJBridgeDialog
 
       @Override
       protected void done() {
+        installing = false;
         try {
           get();
           envStatusLabel.setText("Ready");
           progressArea.append("Environment installed successfully.\n");
         } catch (final Exception e) {
           envStatusLabel.setText("Failed");
-          progressArea.append("Installation failed: " + e.getMessage() + "\n");
-          installButton.setEnabled(true);
+          progressArea.append("Installation failed: " + getRootCauseMessage(e) + "\n");
+        }
+        syncUIState();
+      }
+    }.execute();
+  }
+
+  private void runSyncWorker() {
+    syncing = true;
+    syncUIState();
+    envStatusLabel.setText("Syncing...");
+    progressArea.setText("");
+
+    new SwingWorker<Void, String>() {
+      @Override
+      protected Void doInBackground() throws Exception {
+        publish("Syncing Python environment dependencies...\n");
+        service.syncEnvironment(msg -> publish(msg.endsWith("\n") ? msg : msg + "\n"));
+        return null;
+      }
+
+      @Override
+      protected void process(final List<String> chunks) {
+        for (final String msg : chunks) {
+          progressArea.append(msg);
+        }
+      }
+
+      @Override
+      protected void done() {
+        syncing = false;
+        try {
+          get();
+          envStatusLabel.setText("Ready");
+          progressArea.append("Environment synced successfully.\n");
+        } catch (final Exception e) {
+          envStatusLabel.setText("Sync failed");
+          progressArea.append("Sync failed: " + getRootCauseMessage(e) + "\n");
+        }
+        syncUIState();
+      }
+    }.execute();
+  }
+
+  private void runUninstallWorker() {
+    uninstalling = true;
+    syncUIState();
+    envStatusLabel.setText("Uninstalling...");
+    progressArea.setText("");
+
+    new SwingWorker<Void, String>() {
+      @Override
+      protected Void doInBackground() throws Exception {
+        publish("Stopping server (if running)...\n");
+        publish("Deleting Python environment...\n");
+        service.uninstallEnvironment();
+        return null;
+      }
+
+      @Override
+      protected void process(final List<String> chunks) {
+        for (final String msg : chunks) {
+          progressArea.append(msg);
+        }
+      }
+
+      @Override
+      protected void done() {
+        uninstalling = false;
+        try {
+          get();
+          envStatusLabel.setText("Not installed");
+          managedStatusLabel.setText("Stopped");
+          progressArea.append("Environment uninstalled successfully.\n");
+        } catch (final Exception e) {
+          envStatusLabel.setText("Uninstall failed");
+          progressArea.append("Uninstall failed: " + getRootCauseMessage(e) + "\n");
         }
         syncUIState();
       }
@@ -325,13 +434,14 @@ public class CopilotJBridgeDialog
 
   private void runStartWorker() {
     serverStarting = true;
-    serverToggleButton.setEnabled(false);
+    syncUIState();
     managedStatusLabel.setText("Starting...");
 
     new SwingWorker<String, String>() {
       @Override
       protected String doInBackground() throws Exception {
-        service.startManagedServer();
+        publish("Starting managed server...\n");
+        service.startManagedServer(msg -> publish(msg.endsWith("\n") ? msg : msg + "\n"));
         return service.getServerUrl();
       }
 
@@ -354,7 +464,7 @@ public class CopilotJBridgeDialog
           switchConnectionListener(service.getConnection());
         } catch (final Exception e) {
           managedStatusLabel.setText("Failed");
-          progressArea.append("Start failed: " + e.getMessage() + "\n");
+          progressArea.append("Start failed: " + getRootCauseMessage(e) + "\n");
         }
         syncUIState();
       }
@@ -362,6 +472,18 @@ public class CopilotJBridgeDialog
   }
 
   // -- State synchronization --
+
+  private static String getRootCauseMessage(final Throwable t) {
+    String message = t.getMessage();
+    Throwable cause = t.getCause();
+    while (cause != null) {
+      if (cause.getMessage() != null && !cause.getMessage().isEmpty()) {
+        message = cause.getMessage();
+      }
+      cause = cause.getCause();
+    }
+    return message != null ? message : t.getClass().getSimpleName();
+  }
 
   private boolean serverRunning() {
     return service.isServerRunning() && service.isManaged();
@@ -372,13 +494,17 @@ public class CopilotJBridgeDialog
       // Managed tab button states.
       final boolean envReady = service.isEnvironmentReady() || service.isEnvironmentOnDisk();
       final boolean running = serverRunning();
+      final boolean busy = serverStarting || installing || uninstalling || syncing;
 
-      installButton.setEnabled(!serverStarting && !envReady);
-      serverToggleButton.setEnabled(!serverStarting && envReady);
-      serverToggleButton.setText(running ? "Stop Server" : "Start Server");
+      installButton.setEnabled(!busy);
+      installButton.setText(envReady ? "Sync" : "Install");
+      uninstallButton.setEnabled(!busy && envReady);
+      serverToggleButton.setEnabled(!busy && envReady);
+      serverToggleButton.setText(running ? "Stop" : "Start");
 
       if (envReady && !"Ready".equals(envStatusLabel.getText()) &&
-          !"Installing...".equals(envStatusLabel.getText())) {
+          !"Installing...".equals(envStatusLabel.getText()) &&
+          !"Uninstalling...".equals(envStatusLabel.getText())) {
         envStatusLabel.setText("Ready");
       }
       if (!running && !serverStarting && !"Stopped".equals(managedStatusLabel.getText()) &&
