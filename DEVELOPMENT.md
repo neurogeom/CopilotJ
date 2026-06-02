@@ -65,6 +65,67 @@ confirm that the connection is active.
 
 For production deployment, we strongly recommend using the provided Docker-based setup, which includes a preconfigured frontend build and reverse proxy.
 
+## External server mode
+
+By default, the CopilotJ plugin manages the Python backend automatically via the Managed Server tab. For development or advanced setups, you can run the backend server separately and connect via the External Server tab.
+
+### Docker deployment
+
+CopilotJ can be deployed with [Docker](https://docker.com/) and [Docker Compose](https://docs.docker.com/compose/).
+This launches the backend, frontend, and reverse proxy in a unified environment.
+
+```bash
+git clone https://github.com/neurogeom/CopilotJ.git
+cd CopilotJ
+```
+
+Create your `.env.local` in the repository root, then:
+
+```bash
+# Build the images locally
+docker compose build
+
+# Start the full stack
+docker compose up -d
+```
+
+The default Compose setup exposes the web interface on `http://localhost:8786`.
+
+For GPU passthrough (requires NVIDIA Docker support):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
+```
+
+To rebuild after source changes:
+
+```bash
+docker compose up -d --build
+```
+
+### Local development server
+
+```bash
+git clone https://github.com/neurogeom/CopilotJ.git
+cd CopilotJ
+uv sync
+```
+
+Create your `.env.local` in the repository root, then:
+
+```bash
+uv run python -m copilotj.server --host 127.0.0.1 --port 8786
+```
+
+### Connecting from the plugin
+
+1. Open the CopilotJ dialog (**Plugins -> CopilotJ**).
+2. Switch to the **External Server** tab.
+3. Enter the server URL (e.g., `http://localhost:8786`).
+4. Click **(Re)Connect**.
+
+In debug mode (`just dev-plugin`), the plugin auto-connects to `http://127.0.0.1:8786`.
+
 ## Testing
 
 ```bash
@@ -78,26 +139,22 @@ CopilotJ integrates [Langfuse](https://langfuse.com/) for developers who want to
 (API calls, prompts/responses, latency, caching). It is enabled automatically when `LANGFUSE_PUBLIC_KEY` and
 `LANGFUSE_SECRET_KEY` environment variables are set. This is entirely optional — end users do not need it.
 
-### Manual Plugin Deployment
+### Building the plugin from source
 
-If you prefer to manually deploy the plugin to your Fiji installation:
+After cloning the repository, build the plugin with:
 
-1. **Build and install the plugin and its dependencies:**
-   Navigate to the `plugin` directory and build the package:
+```bash
+cd plugin
+mvn clean package
+mvn dependency:copy-dependencies -DoutputDirectory=target/deps
+```
 
-   ```bash
-   cd plugin && mvn clean install -Dscijava.app.directory=/path/to/Fiji
-   ```
+Locate the generated `.jar` file in `target/` and copy it along with all JARs from `target/deps/` into Fiji's `jars/` directory. Then restart Fiji.
 
-   where `/path/to/Fiji` is the file path to your Fiji installation folder.
-   This will create the plugin JAR file (e.g., `CopilotJBridge-1.0.0.jar`)
-   in the `plugin/target/` directory, then copy it along with all of its
-   dependency JAR files into the specified Fiji installation.
+Alternatively, Maven can install directly into a Fiji installation:
 
-   Note that Fiji comes bundled with many of CopilotJ's dependencies, but the
-   [SciJava infrastructure](https://github.com/scijava/scijava-maven-plugin/)
-   takes care to keep only the newer version of each dependency JAR when
-   copying them.
+```bash
+cd plugin && mvn clean install -Dscijava.app.directory=/path/to/Fiji
+```
 
-2. **Restart Fiji:**
-   After the build is complete, restart Fiji for the changes to take effect.
+This copies the plugin JAR and all dependency JARs into the specified Fiji installation. Fiji comes bundled with many of CopilotJ's dependencies; the [SciJava infrastructure](https://github.com/scijava/scijava-maven-plugin/) keeps only the newer version of each dependency JAR.

@@ -2,27 +2,28 @@
 
 ## Installation
 
-### A. System requirements
+CopilotJ consists of three components:
 
-- **Operating systems:** macOS, Linux, Windows
-- **Software:**
-  - [Fiji](https://fiji.sc/#download): Stable and Latest versions are both supported
-  - [Python 3.12](https://www.python.org/downloads/): not required when using Docker
+- **CopilotJ Core Server** — a Python application that manages the language model, reasoning, and tool orchestration.
+- **CopilotJ Bridge Plugin** - a Fiji plugin for communication between the Core Server and ImageJ.
+- **CopilotJ Web Frontend** — a Vue-based web application that provides the conversational interface for users to interact with CopilotJ.
+
+For the convenience of end users, the CopilotJ Bridge plugin supports a **managed server** mode where the Core Server is installed, configured, and launched automatically in the background.
+This provides a seamless experience with minimal setup. For advanced users, an **external server** mode allows connecting to a manually managed Core Server instance, for example running on a remote machine or in a Docker container.
+We also provide a hosted version of the web frontend for users who prefer not to run it locally, accessible at [copilotj.chat](https://copilotj.chat).
+
+**System requirements**:
+
+- **Operating systems**: macOS, Linux, Windows
+- **[Fiji](https://fiji.sc/#download)**: Stable and Latest versions are both supported
 - **Hardware:**
   - RAM: `>= 16 GB` (`32 GB` recommended)
   - GPU: optional, only required for deep-learning models
+- **Network:** required for downloading the Python environment on first use and for LLM API access
 
-### B. Installation overview
+### Install the CopilotJ Bridge plugin
 
-CopilotJ consists of three required components:
-
-- **CopilotJ Bridge Plugin** for Fiji
-- **CopilotJ Core Server**
-- **CopilotJ frontend server**
-
-### C. Install the CopilotJ Bridge plugin
-
-#### Option C1. download prebuilt JAR files
+**Download prebuilt JAR files**:
 
 Download the precompiled JAR files for the CopilotJ Bridge plugin:
 
@@ -30,106 +31,36 @@ Download the precompiled JAR files for the CopilotJ Bridge plugin:
 - [`jackson-datatype-jsr310-2.16.1.jar`](https://repo1.maven.org/maven2/com/fasterxml/jackson/datatype/jackson-datatype-jsr310/2.16.1/jackson-datatype-jsr310-2.16.1.jar)
 - [`Java-WebSocket-1.5.2.jar`](https://repo1.maven.org/maven2/org/java-websocket/Java-WebSocket/1.5.2/Java-WebSocket-1.5.2-sources.jar)
 
-**Install into Fiji:**
+**Install into Fiji**:
 
 Install the CopilotJ Bridge plugin by placing the required JAR files in the appropriate `jars/` directory. The exact steps may vary slightly depending on your operating system and Fiji installation.
 
 1. **Windows:** Open the Fiji installation directory (e.g., `D:\Fiji.app\`).
 2. **macOS:** Locate `Fiji.app` in Finder, then right-click and select **Show Package Contents**.
-3. Copy the files `CopilotJBridge-0.1.0-SNAPSHOT.jar`, `jackson-datatype-jsr310-2.16.1.jar` and `Java-WebSocket-1.5.2.jar` into `jars/`.
+3. Copy the files `CopilotJBridge-0.1.0-SNAPSHOT.jar`, `jackson-datatype-jsr310-2.16.1.jar`, `Java-WebSocket-1.5.2.jar`, `appose-0.11.0.jar` and `groovy-4.0.18.jar` into `jars/`.
 
-**Verify plugin installation**
+**Verify plugin installation**:
 
 1. Restart Fiji.
 2. Confirm that **Plugins -> CopilotJ** appears in the menu.
-3. Click it and verify that the configuration window opens successfully.
+3. Click it and verify that the configuration dialog opens with **Managed Server** and **External Server** tabs.
 
-#### Option C2. Build from source
+### Install the Python environment
 
-After cloning the repository, build the plugin with:
-
-```bash
-cd plugin
-mvn clean package
-mvn dependency:copy-dependencies -DoutputDirectory=target/deps
-```
-
-After building, locate the generated `.jar` file in the `target/` directory, then follow the same installation steps in **Option C1** to copy the built plugin JAR and required dependency JARs into Fiji.
-
-### D. Install the CopilotJ core server
-
-#### Option D1. Docker installation (recommended)
-
-CopilotJ can be deployed with [Docker](https://docker.com/) and [Docker Compose](https://docs.docker.com/compose/).
-This approach is recommended for most users, as it launches the backend, frontend, and reverse proxy in a unified environment.
-
-Recommended workflow:
-
-1. Clone the repository from GitHub.
-
-   ```bash
-   git clone https://github.com/neurogeom/CopilotJ.git
-   cd CopilotJ
-   ```
-
-2. Create your local configuration file. Refer to the section below for detailed instructions.
-3. Build the required images locally.
-
-   ```bash
-   # Build the images locally
-   docker compose build
-   ```
-
-4. Start the full stack with `docker compose up`.
-
-   ```bash
-   # Start the full stack
-   docker compose up -d
-   ```
-
-   The default Compose setup exposes the web interface on `http://localhost:8786`.
-
-   If GPU passthrough is available on your machine and Docker is configured with NVIDIA support, start the GPU-enabled stack with:
-
-   ```bash
-   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
-   ```
-
-   To rebuild the images after updating the source code, run:
-
-   ```bash
-   docker compose up -d --build
-   ```
-
-#### Option D2. local installation
-
-1. Clone the repository from GitHub.
-
-   ```bash
-   git clone https://github.com/neurogeom/CopilotJ.git
-   cd CopilotJ
-   ```
-
-2. Install dependencies with [uv](https://docs.astral.sh/uv/).
-
-   ```bash
-   uv sync
-   ```
-
-3. Create your local configuration file. Refer to the section below for detailed instructions.
-4. Start the core server.
-
-   ```bash
-   uv run python -m copilotj.server --host 127.0.0.1 --port 8786
-   ```
-
-By default, the local development server listens at `http://127.0.0.1:8786`. If you change the host or port, make sure to update all related configurations accordingly so that other components can still communicate with the server.
+1. In the dialog's **Managed Server** tab, click **Install**. The plugin downloads Python, creates a virtual environment, and installs all dependencies automatically.
+2. Wait for the installation to complete. This may take **5–10 minutes** depending on your network speed. Progress is shown in the **Progress Log** area.
+3. Once the status shows **Ready**, the installation is complete and does not need to be repeated.
 
 ## Configuration
 
 ### A. Environment configuration
 
-CopilotJ is configured through a local environment file named `.env.local` in the root directory of the repository. For Docker Compose deployments, this file is mounted into the container at runtime. Sensitive information such as API keys must be stored locally and should never be committed to version control.
+CopilotJ is configured through a local environment file named `.env.local`. In managed mode, this file is located in the CopilotJ home directory:
+
+- **macOS / Linux:** `~/.local/state/copilotj/.env.local`
+- **Windows:** `%LOCALAPPDATA%\copilotj\.env.local`
+
+Create the file if it does not already exist. Sensitive information such as API keys must be stored locally and should never be committed to version control. After updating `.env.local`, restart the managed server from the plugin dialog for changes to take effect.
 
 #### Background: models, providers, and API keys
 
@@ -141,8 +72,6 @@ CopilotJ uses **two separate model slots**:
 
 - **`COPILOTJ_MODEL`**: the main reasoning model, used for planning, tool orchestration, and conversation. This is the most important setting and must always be configured.
 - **`COPILOTJ_VLM_MODEL`**: an optional vision-language model (VLM) used when CopilotJ needs to interpret image content directly. All current models from the three recommended providers (OpenAI, Anthropic, Google) support image input. If omitted, image understanding is disabled.
-
-After updating `.env.local`, restart the CopilotJ core server for changes to take effect.
 
 #### Provider quick reference
 
@@ -217,11 +146,7 @@ COPILOTJ_VLM_API_KEY=AIza-xxxxxxxx
 ollama pull qwen3:30b   # or whichever model you want to use
 ```
 
-Ollama support in CopilotJ also requires an additional Python package not installed by default. Run this once before starting the server:
-
-```bash
-uv sync --group all
-```
+Ollama support in CopilotJ also requires an additional Python package. In managed mode, this dependency is installed automatically. For external server setups, run `uv sync --group all` once before starting the server.
 
 Then configure `.env.local`. No API key is needed:
 
@@ -248,7 +173,6 @@ Overrides the API endpoint for the VLM only. Some LLMs, especially local or smal
 
 Routes all outbound model API requests through an HTTP/HTTPS [proxy server](https://en.wikipedia.org/wiki/Proxy_server) — an intermediary between your machine and the internet. Commonly required in institutional or corporate networks where all traffic must pass through a central gateway. If you are connecting directly to the internet, you do not need this. Example value: `http://proxy.example.com:8080`.
 
-
 **`COPILOTJ_TAVILY_API_KEY`**
 
 Enables live web search during CopilotJ sessions via [Tavily](https://app.tavily.com/), a search API designed for use with language models. Because LLMs have a training cutoff and no built-in internet access, web search allows CopilotJ to look up current documentation, papers, or tool usage examples in real time. Without this key, CopilotJ relies only on what its model already knows. Obtain a key from the [Tavily dashboard](https://app.tavily.com/).
@@ -264,9 +188,6 @@ Enable execution tracing via [Langfuse](https://langfuse.com), an open-source ob
 A complete `.env.local` template with all options:
 
 ```env
-# Set DEV mode for better logging
-COPILOTJ_DEV=1
-
 # LLM configuration (text-based reasoning) — choose one provider
 COPILOTJ_MODEL=gpt-4.1
 COPILOTJ_API_KEY=sk-xxxxxxxx
@@ -304,7 +225,7 @@ Each configuration file defines an agent's system prompt, role description, and 
    - constrain or expand an agent's responsibilities
    - tune domain-specific behavior, such as bioimage-analysis rules
 
-   Changes take effect after restarting the CopilotJ core server.
+   Changes take effect after restarting the managed server from the plugin dialog.
 
 2. **Adding new agents**
 
@@ -322,25 +243,26 @@ Each configuration file defines an agent's system prompt, role description, and 
 
 ### A. Starting CopilotJ
 
-To use CopilotJ, start the core server, then connect from the Fiji interface.
+1. **Configure API keys** — Create a `.env.local` file in the CopilotJ data directory (see the [Configuration](#a-environment-configuration) section above) with your LLM provider credentials.
 
-1. **Start the CopilotJ core server**
-   - Ensure the core server is running locally or via Docker.
-   - In standard local setups, the default server endpoint is sufficient.
+2. **Open the CopilotJ plugin dialog**
+   - In Fiji, navigate to **Plugins -> CopilotJ**.
+   - The dialog opens with the **Managed Server** tab selected.
 
-2. **Open the CopilotJ web interface**
-   - Open a web browser and navigate to [copilotj.chat](https://copilotj.chat). click the "Chat" button at the top right of the web interface
-   - On first visit, configure the backend URL by clicking **Settings → Preferences** and entering your CopilotJ server address (e.g., `http://localhost:8786`). Use the **Test** button to verify connectivity, then click **Save**. This setting is stored locally and will persist across sessions.
+3. **Start the server**
+   - Click **Start**. The backend starts and connects automatically.
+   - The server URL (e.g., `http://127.0.0.1:12345`) is shown next to the **Server** label once startup completes. The port is chosen automatically and persisted across restarts.
+   - The environment is synced on each start, so updates are applied automatically.
 
-3. **Launch Fiji and connect through the plugin**
-   - In Fiji, navigate to **Plugins -> CopilotJ -> Connect**.
-   - In typical local setups, the default server URL does not need modification.
-     If you have changed the server endpoint, enter only the root URL (do not append additional paths).
-   - Click **Connect** to establish the connection between the plugin and the core server.
+4. **Open the web interface**
+   - Open a web browser and navigate to [copilotj.chat](https://copilotj.chat), then click **Chat**.
+   - The web frontend connects to the managed server automatically.
 
-4. **Open an image for analysis**
+5. **Open an image for analysis**
    - Use Fiji to open the image or image stack to be analyzed.
    - Example datasets used in the study can be found in supplementary data for testing and reproducibility.
+
+> **Advanced:** To connect to an externally running server instead, switch to the **External Server** tab in the dialog, enter the server URL, and click **(Re)Connect**. For advanced usage such as Docker deployment, local development servers, and building the plugin from source, see the [development documentation](https://github.com/neurogeom/CopilotJ/blob/main/DEVELOPMENT.md).
 
 ### B. Issuing analysis instructions
 
@@ -408,9 +330,9 @@ CopilotJ treats each analysis session as a structured workflow that can be execu
 
 ### D. File locations and temporary folder
 
-All files generated during execution are stored in a designated temporary working directory, referred to as the `<project_dir>/temp` folder.
+All files generated during execution are stored in a designated temporary working directory, referred to as the `<copilotj_home>/temp` folder.
 
-The `<project_dir>/temp` folder serves as a centralized location for artifacts generated during an analysis session, including:
+The `<copilotj_home>/temp` folder serves as a centralized location for artifacts generated during an analysis session, including:
 
 - processed images and intermediate image results
 - measurement tables such as CSV files
