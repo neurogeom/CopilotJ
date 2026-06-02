@@ -168,4 +168,31 @@
       <url>https://maven.scijava.org/content/groups/public</url>
     </repository>
   </repositories>
+
+  <build>
+    <resources>
+      <resource>
+        <directory>${project.basedir}/src/main/resources</directory>
+      </resource>
+      <resource>
+        <directory>${project.basedir}/..</directory>
+        <targetPath>META-INF/copilotj</targetPath>
+        <includes>
+          <include>copilotj/**/*.py</include>
+          <include>copilotj/**/*.toml</include>
+          <include>knowledge_bank/**/*.toml</include>
+          <include>assets/**</include>
+          <include>pyproject.toml</include>
+        </includes>
+        <excludes>
+          <exclude>**/__pycache__/**</exclude>
+          <exclude>**/test/**</exclude>
+          <exclude>assets/knowledge_base/*.faiss</exclude>
+          <exclude>assets/knowledge_base/*.pkl</exclude>
+          <exclude>assets/knowledge_base/rag_manifest.json</exclude>
+          <exclude>assets/knowledge_base/*.rebuild.hash</exclude>
+        </excludes>
+      </resource>
+    </resources>
+  </build>
 </project>

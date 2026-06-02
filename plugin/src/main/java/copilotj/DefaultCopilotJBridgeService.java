@@ -8,6 +8,14 @@ package copilotj;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.util.Enumeration;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 import org.apposed.appose.Appose;
 import org.apposed.appose.BuildException;
@@ -138,15 +146,34 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
     }
 
     // 2. Stop managed Python process via Appose.
-    if (pythonService != null) {
+    final org.apposed.appose.Service service = pythonService;
+    pythonService = null;
+    if (service != null) {
       try {
-        pythonService.close(); // graceful: closes stdin
-        pythonService.waitFor();
+        service.close(); // graceful: closes stdin
+      } catch (final Exception ignored) {
+        // close() may throw if process already dead
+      }
+
+      // Wait up to 5 seconds for the process to exit
+      final Thread waiter = new Thread(() -> {
+        try {
+          service.waitFor();
+        } catch (final InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
+      }, "copilotj-shutdown");
+      waiter.start();
+      try {
+        waiter.join(5_000);
       } catch (final InterruptedException e) {
-        pythonService.kill(); // force kill if interrupted
         Thread.currentThread().interrupt();
       }
-      pythonService = null;
+      if (waiter.isAlive()) {
+        log.warn("copilotj: Python process did not exit in 5s, killing");
+        service.kill();
+        waiter.interrupt();
+      }
     }
 
     managedServerUrl = null;
@@ -322,9 +349,10 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
     final File envRoot = resolveEnvRoot();
 
     // Resolve copilotj source directory so Python can import it.
-    final File sourceDir = resolveCopilotJSource();
+    File sourceDir = resolveCopilotJSource();
     if (sourceDir == null || !new File(sourceDir, "copilotj/__init__.py").exists()) {
-      throw new IOException("CopilotJ source not found. Set -Dcopilotj.sourcePath=<dir>");
+      // Fallback: extract Python sources from JAR
+      sourceDir = extractPythonSources(envRoot);
     }
 
     // Read pyproject.toml from source directory.
@@ -367,6 +395,8 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
    * Checks in order:
    * 1. System property {@code copilotj.sourcePath}
    * 2. Relative to the current working directory (development mode)
+   * 3. Previously extracted resources (production cache, validated against JAR
+   * version)
    */
   private File resolveCopilotJSource() {
     final String explicit = System.getProperty("copilotj.sourcePath");
@@ -382,7 +412,140 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
     if (parent != null && new File(parent, "copilotj/__init__.py").exists()) {
       return parent;
     }
+
+    // Previously extracted resources from JAR (production cache)
+    final File envRoot = resolveEnvRoot();
+    final File extracted = new File(envRoot, "python_sources");
+    if (new File(extracted, "copilotj/__init__.py").exists()) {
+      // Validate version — re-extract if plugin was upgraded
+      final String fingerprint = jarFingerprint();
+      final String cachedSourcesVersion = readVersionMarker(new File(extracted, ".version"));
+      final String cachedAssetsVersion = readVersionMarker(new File(envRoot, "assets/.version"));
+      final String cachedKbVersion = readVersionMarker(new File(envRoot, "knowledge_bank/.version"));
+      if (fingerprint.equals(cachedSourcesVersion)
+          && fingerprint.equals(cachedAssetsVersion)
+          && fingerprint.equals(cachedKbVersion)) {
+        return extracted;
+      }
+      log.info("copilotj: Cached resources are stale, will re-extract");
+    }
+
     return null;
+  }
+
+  /**
+   * Extracts Python sources, assets, and knowledge bank bundled in the JAR under
+   * {@code META-INF/copilotj/} to {@code $COPILOTJ_HOME/}.
+   *
+   * The extraction target layout:
+   *
+   * <pre>
+   * $COPILOTJ_HOME/
+   * ├── python_sources/
+   * │   ├── copilotj/
+   * │   └── pyproject.toml
+   * ├── assets/
+   * │   ├── knowledge_base/
+   * │   ├── models/
+   * │   └── ...
+   * └── knowledge_bank/
+   *     ├── task/
+   *     ├── macro/
+   *     └── research/
+   * </pre>
+   */
+  private File extractPythonSources(final File envRoot) throws IOException {
+    final File target = new File(envRoot, "python_sources");
+    log.info("copilotj: Extracting Python resources to " + target.getAbsolutePath());
+
+    // Locate the JAR containing this class
+    final URI jarUri;
+    try {
+      jarUri = getClass().getProtectionDomain().getCodeSource().getLocation().toURI();
+    } catch (final URISyntaxException e) {
+      throw new IOException("Cannot locate plugin JAR", e);
+    }
+
+    final File jarFile = new File(jarUri);
+    if (!jarFile.isFile()) {
+      throw new IOException("CopilotJ source not found and plugin is not running from a JAR. "
+          + "Set -Dcopilotj.sourcePath=<dir>");
+    }
+
+    final String prefix = "META-INF/copilotj/";
+    try (final JarFile jar = new JarFile(jarFile)) {
+      final Enumeration<JarEntry> entries = jar.entries();
+      while (entries.hasMoreElements()) {
+        final JarEntry entry = entries.nextElement();
+        if (!entry.getName().startsWith(prefix) || entry.isDirectory()) {
+          continue;
+        }
+        final String relativePath = entry.getName().substring(prefix.length());
+        // Route assets/ and knowledge_bank/ directly to $COPILOTJ_HOME/;
+        // Python sources go to python_sources/
+        final File outFile;
+        if (relativePath.startsWith("assets/") || relativePath.startsWith("knowledge_bank/")) {
+          outFile = new File(envRoot, relativePath);
+        } else {
+          outFile = new File(target, relativePath);
+        }
+        outFile.getParentFile().mkdirs();
+        try (final InputStream is = jar.getInputStream(entry)) {
+          Files.copy(is, outFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        }
+      }
+    }
+
+    if (!new File(target, "copilotj/__init__.py").exists()) {
+      throw new IOException("Python sources not found in plugin JAR");
+    }
+
+    // Write version markers so we can detect stale caches on upgrade
+    final String fingerprint = jarFingerprint();
+    writeVersionMarker(new File(target, ".version"), fingerprint);
+    writeVersionMarker(new File(envRoot, "assets/.version"), fingerprint);
+    writeVersionMarker(new File(envRoot, "knowledge_bank/.version"), fingerprint);
+
+    log.info("copilotj: Python resources extracted successfully");
+    return target;
+  }
+
+  /** Returns a fingerprint string that changes when the plugin JAR is updated. */
+  private String jarFingerprint() {
+    try {
+      final File jarFile = new File(
+          getClass().getProtectionDomain().getCodeSource().getLocation().toURI());
+      if (jarFile.isFile()) {
+        return jarFile.getAbsolutePath() + ":" + jarFile.lastModified();
+      }
+    } catch (final URISyntaxException ignored) {
+    }
+    return "dev";
+  }
+
+  private static String readFirstLine(final File file) {
+    try {
+      final String content = new String(Files.readAllBytes(file.toPath()), "UTF-8").trim();
+      final int newline = content.indexOf('\n');
+      return newline >= 0 ? content.substring(0, newline) : content;
+    } catch (final IOException e) {
+      return "";
+    }
+  }
+
+  /** Reads the version marker file, returning empty string if missing or unreadable. */
+  private static String readVersionMarker(final File file) {
+    return file.isFile() ? readFirstLine(file) : "";
+  }
+
+  /** Writes a version marker file, logging a warning on failure. */
+  private void writeVersionMarker(final File file, final String fingerprint) {
+    try {
+      file.getParentFile().mkdirs();
+      Files.write(file.toPath(), fingerprint.getBytes("UTF-8"));
+    } catch (final IOException e) {
+      log.warn("copilotj: Could not write version marker to " + file.getAbsolutePath(), e);
+    }
   }
 
   private File resolveEnvRoot() {

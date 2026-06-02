@@ -23,6 +23,7 @@ __all__ = [
     "get_vlm_and_key",
     "get_vlm_base_url",
     "get_proxy",
+    "bootstrap_assets",
 ]
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -102,3 +103,20 @@ def get_vlm_base_url() -> str | None:
 
 def get_proxy(default_value: str | None = None) -> str | None:
     return default_value or os.getenv("COPILOTJ_PROXY", None)
+
+
+def bootstrap_assets() -> None:
+    """Copy assets/ from project source to COPILOTJ_HOME if missing."""
+    home = get_home()
+    source_root = Path(__file__).resolve().parent.parent.parent
+    source_assets = source_root / "assets"
+    target_assets = home / "assets"
+
+    if not source_assets.exists():
+        return
+    if target_assets.exists() and any(target_assets.iterdir()):
+        return
+
+    import shutil
+
+    shutil.copytree(source_assets, target_assets, dirs_exist_ok=True)

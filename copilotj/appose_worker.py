@@ -39,7 +39,7 @@ import threading
 from urllib.parse import urlparse
 
 from copilotj.core import load_env
-from copilotj.core.config import load_managed_config, save_managed_config
+from copilotj.core.config import bootstrap_assets, load_managed_config, save_managed_config
 from copilotj.server import Server
 
 __all__ = ["start_server", "query_port", "stop_server"]
@@ -80,6 +80,7 @@ def start_server() -> None:
 
     _ensure_utf8_stdout()
     load_env()
+    bootstrap_assets()
     saved_port = _extract_port(load_managed_config().get("server_url"))
 
     _server = Server()
