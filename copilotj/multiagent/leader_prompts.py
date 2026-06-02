@@ -21,6 +21,7 @@ __all__ = [
     "build_initial_user_message",
     "build_observation_message",
     "make_summary_prompt",
+    "make_workflow_save_prompt",
     "build_tool_prompt",
     "build_available_specialized_agents_prompt",
 ]
@@ -486,17 +487,17 @@ When the user asks to run an existing workflow, call this tool directly with any
 
 def make_summary_prompt(task: str, steps_text: str) -> str:
     return f"""
-You are an expert at summarizing complex technical processes into clear, structured reports.
+You are an expert at compressing a dialog execution trace into concise context for future conversation.
 User ask: {task}
 Execution Steps to Summarize:
 {steps_text}
-Please provide a detailed summary of the following ImageJ task execution steps.
-When the summary may be saved as a reusable workflow, identify runtime inputs, output artifacts, and parameters that should become interface inputs/outputs instead of hardcoded paths.
+Please summarize the ImageJ task execution steps as reusable conversation context.
+Do not generate workflow JSON, workflow steps, or template variables. Workflow saving has a separate prompt.
 
 ## Required Summary Format
 The summary must be comprehensive like:
 <Example>
-Summary of ImageJ Task
+Dialog Context Summary
 1. **Task Overview**: What was the main objective
 2. **Key Actions Taken**: Important tools/agents called and their purposes
 3. **Critical Results**: Important findings, measurements, or outputs
@@ -542,14 +543,14 @@ def build_tool_prompt(tools: list[Tool]) -> str:
     return prompt
 
 
-STEPS_PROMPT = """
+WORKFLOW_SAVE_PROMPT = """
 You are an expert workflow author. Your job is to convert an execution trace into a reusable Workflow JSON definition.
 Now the task is finished. According to the Original Task and Execution History, create a minimal, correct, reproducible workflow.
 
 #Original Task: {{TASK}}
 
 #Execution History:
-{{SETPS}}
+{{STEPS}}
 
 #Existing Summary:
 {{SUMMARY}}
@@ -643,10 +644,10 @@ Rules:
 """
 
 
-def make_steps_prompt(task: str, steps_text: str, summary: object | None = None) -> str:
+def make_workflow_save_prompt(task: str, steps_text: str, summary: object | None = None) -> str:
     return (
-        STEPS_PROMPT.replace("{{TASK}}", task)
-        .replace("{{SETPS}}", steps_text)
+        WORKFLOW_SAVE_PROMPT.replace("{{TASK}}", task)
+        .replace("{{STEPS}}", steps_text)
         .replace("{{SUMMARY}}", "" if summary is None else str(summary))
     )
 

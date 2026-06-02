@@ -50,7 +50,6 @@ from copilotj.multiagent.leader_prompts import (
     build_leader_system_prompt,
     build_observation_message,
     build_tool_prompt,
-    make_steps_prompt,
     make_summary_prompt,
 )
 from copilotj.multiagent.tools import system_info
@@ -58,6 +57,12 @@ from copilotj.plugin import ClientPluginAPI
 from copilotj.util import ReActChatCompletionClient
 
 __all__ = ["LeaderDriven"]
+
+PROMPT_CHAT_HISTORY_LIMIT = 8
+OPTIMIZE_CHAT_HISTORY_LIMIT = 3
+OPTIMIZE_ASSISTANT_SNIPPET_CHARS = 100
+CONTEXT_SNIPPET_CHARS = 500
+SaveWorkflowHandler = Callable[[str, str | None, int | None, list[int] | None], Awaitable[str]]
 
 
 def _reconstruct_react_text(response: ModelResponse) -> str:
@@ -94,9 +99,7 @@ class LeaderAgent(ChatAgent):
         super().__init__(name, description, model_client=model_client)
 
         self.chat_history: list[dict[str, Any]] = []
-        self.workflow_contexts: dict[int, dict[str, Any]] = {}
-        self._workflow_summary_generator: Callable[[dict], Awaitable[tuple[object, str | None]]] | None = None
-        self._workflow_steps_generator: Callable[[dict, object | None], Awaitable[str | None]] | None = None
+        self._save_workflow_handler: SaveWorkflowHandler | None = None
 
         # Per-dialog conversation state. Populated by begin_dialog() and
         # extended by continue_dialog(). Reset at the start of each dialog.
@@ -128,17 +131,35 @@ class LeaderAgent(ChatAgent):
         ]
         self.agents = agents if agents else {}
 
-    def set_workflow_summary_generator(
+    def set_save_workflow_handler(
         self,
-        generator: Callable[[dict], Awaitable[tuple[object, str | None]]],
+        handler: SaveWorkflowHandler,
     ) -> None:
-        self._workflow_summary_generator = generator
+        self._save_workflow_handler = handler
 
-    def set_workflow_steps_generator(
-        self,
-        generator: Callable[[dict, object | None], Awaitable[str | None]],
-    ) -> None:
-        self._workflow_steps_generator = generator
+    def _prompt_chat_history(self) -> list[dict[str, Any]]:
+        return [
+            {
+                "dialog": item.get("dialog"),
+                "user": item.get("user", ""),
+                "assistant": item.get("assistant", ""),
+                "context": item.get("context"),
+            }
+            for item in self.chat_history[-PROMPT_CHAT_HISTORY_LIMIT:]
+        ]
+
+    def _prompt_chat_history_json(self) -> str:
+        if not self.chat_history:
+            return ""
+        return json.dumps(self._prompt_chat_history(), ensure_ascii=False)
+
+    def _recent_history_text(self) -> str:
+        history = [
+            f"User: {item.get('user', '')}\nAssistant: {str(item['assistant'])[:OPTIMIZE_ASSISTANT_SNIPPET_CHARS]}..."
+            for item in self.chat_history[-OPTIMIZE_CHAT_HISTORY_LIMIT:]
+            if item.get("assistant")
+        ]
+        return "\n".join(history)
 
     async def _build_system_prompt(self) -> str:
         """Build the static system prompt for the current session."""
@@ -165,10 +186,9 @@ class LeaderAgent(ChatAgent):
         self.imagej_windowInfo_text = await self.plugin_tools.imagej_windowInfo()
         system_prompt = await self._build_system_prompt()
 
-        chat_history_summary = json.dumps(self.chat_history) if self.chat_history else ""
         initial_user = build_initial_user_message(
             main_task=main_task,
-            chat_history_summary=chat_history_summary,
+            chat_history_summary=self._prompt_chat_history_json(),
             imagej_window_info=self.imagej_windowInfo_text,
         )
 
@@ -254,100 +274,9 @@ class LeaderAgent(ChatAgent):
         dialog_id: int | None = None,
         dialog_ids: list[int] | None = None,
     ) -> str:
-        if not self.chat_history:
-            return "No workflow in chat history to save."
-
-        selected_ids = self._select_workflow_dialog_ids(dialog_id, dialog_ids)
-        if isinstance(selected_ids, str):
-            return selected_ids
-
-        if len(selected_ids) == 1:
-            target = self._find_chat_history_dialog(selected_ids[0])
-            if target is None:
-                return self._dialog_not_found_message(selected_ids)
-            await self._generate_missing_workflow_steps(target)
-        else:
-            missing = [selected_id for selected_id in selected_ids if selected_id not in self.workflow_contexts]
-            if missing:
-                missing_text = ", ".join(str(selected_id) for selected_id in missing)
-                return f"Raw workflow context is unavailable for dialog(s) {missing_text}."
-            if self._workflow_steps_generator is None:
-                return "Workflow steps generator is not configured."
-            summary = self._combined_dialog_summary(selected_ids)
-            steps = await self._workflow_steps_generator(self._combined_dialog_context(selected_ids), summary)
-            if steps is None:
-                return "Failed to generate reusable workflow steps from the selected dialogs."
-            target = {"dialog": selected_ids, "assistant": str(summary), "steps": steps}
-
-        save_status = await workflow_tools.save_workflow_from_steps(
-            workflow_name, target.get("steps"), target.get("assistant"), tags
-        )
-        return f"Workflow saved for dialog(s) {target.get('dialog')}: {save_status}"
-
-    def _select_workflow_dialog_ids(
-        self,
-        dialog_id: int | None,
-        dialog_ids: list[int] | None,
-    ) -> list[int] | str:
-        if dialog_id is not None and dialog_ids is not None:
-            return "Use either dialog_id or dialog_ids, not both."
-        if dialog_ids is not None:
-            if not dialog_ids:
-                return "dialog_ids must not be empty."
-            if len(set(dialog_ids)) != len(dialog_ids):
-                return "dialog_ids must not contain duplicates."
-            return dialog_ids
-        if dialog_id is not None:
-            return [dialog_id]
-        latest_dialog = self.chat_history[-1].get("dialog")
-        if not isinstance(latest_dialog, int):
-            return "Latest dialog does not have a dialog id."
-        return [latest_dialog]
-
-    def _find_chat_history_dialog(self, dialog_id: int) -> dict[str, Any] | None:
-        for item in reversed(self.chat_history):
-            if item.get("dialog") == dialog_id:
-                return item
-        return None
-
-    def _dialog_not_found_message(self, missing_ids: list[int]) -> str:
-        available = ", ".join(str(x.get("dialog")) for x in self.chat_history if x.get("dialog") is not None)
-        missing = ", ".join(str(dialog_id) for dialog_id in missing_ids)
-        return f"Dialog(s) {missing} not found. Available dialogs: {available}"
-
-    def _combined_dialog_context(self, dialog_ids: list[int]) -> dict[str, Any]:
-        contexts = [self.workflow_contexts[dialog_id] for dialog_id in dialog_ids]
-        tasks = [str(context.get("task", "")) for context in contexts]
-        return {
-            "task": "\n".join(f"Dialog {dialog_id}: {task}" for dialog_id, task in zip(dialog_ids, tasks)),
-            "steps": [
-                {
-                    "dialog": dialog_id,
-                    "task": task,
-                    "steps": self.workflow_contexts[dialog_id].get("steps", []),
-                }
-                for dialog_id, task in zip(dialog_ids, tasks)
-            ],
-        }
-
-    def _combined_dialog_summary(self, dialog_ids: list[int]) -> str:
-        items = [self._find_chat_history_dialog(dialog_id) for dialog_id in dialog_ids]
-        summaries = [str(item.get("assistant", "")) for item in items if item is not None]
-        return "\n\n".join(summaries)
-
-    async def _generate_missing_workflow_steps(self, target: dict[str, Any]) -> None:
-        if isinstance(target.get("steps"), str) and target["steps"].strip():
-            return
-        dialog_id = target.get("dialog")
-        if not isinstance(dialog_id, int):
-            return
-        dialog_context = self.workflow_contexts.get(dialog_id)
-        if dialog_context is None or self._workflow_steps_generator is None:
-            return
-        steps = await self._workflow_steps_generator(dialog_context.copy(), target.get("assistant"))
-        if steps is None:
-            return
-        target["steps"] = steps
+        if self._save_workflow_handler is None:
+            return "Workflow save handler is not configured."
+        return await self._save_workflow_handler(workflow_name, tags, dialog_id, dialog_ids)
 
     async def delegate_task(self, agent: str, task: str) -> str:
         if agent not in self.agents:
@@ -357,9 +286,8 @@ class LeaderAgent(ChatAgent):
         self.log_info(f"[CALL] Calling Agent: {agent} | Params/Task: {task}")
         self.imagej_windowInfo_text = await self.plugin_tools.imagej_windowInfo()
 
-        return await agent_instance.run(
-            task + self.imagej_windowInfo_text + "Previous Chat History: \n" + json.dumps(self.chat_history)
-        )
+        context = f"{task}{self.imagej_windowInfo_text}Previous Chat History: \n{self._prompt_chat_history_json()}"
+        return await agent_instance.run(context)
 
     def _mk_tool_delegate(self) -> Tool:
         def get_handoff(id: str, args: pydantic.BaseModel) -> Handoff:
@@ -388,31 +316,12 @@ class LeaderAgent(ChatAgent):
         except Exception:
             window_info = ""
 
-        # Build filtered chat history (only final answers, no intermediate steps)
-        history_context = ""
-        if self.chat_history:
-            # Filter: only include entries with 'assistant' field (final answers)
-            # Exclude: entries with only 'thought', 'steps', 'response', etc.
-            filtered_history = [
-                {k: v for k, v in item.items() if k == "assistant" or k == "user"}
-                for item in self.chat_history[-3:]  # Only last 3 for brevity
-                if "assistant" in item and item["assistant"]
-            ]
-
-            if filtered_history:
-                history_text = "\n".join(
-                    [f"User: {h.get('user', '')}\nAssistant: {h['assistant'][:100]}..." for h in filtered_history]
-                )
-                history_context = f"\n## Recent Conversation\n{history_text}"
-            else:
-                history_context = ""
-
         # Build context section
         context_parts = []
         if window_info:
             context_parts.append(f"## ImageJ Window\n{window_info}")
-        if history_context:
-            context_parts.append(history_context)
+        if history_text := self._recent_history_text():
+            context_parts.append(f"\n## Recent Conversation\n{history_text}")
 
         context_section = "\n".join(context_parts) if context_parts else ""
 
@@ -475,6 +384,12 @@ class LeaderDriven(Pattern):
 
         self.dialog_counter = 1
         self.max_steps_before_summary = max_steps_before_summary
+        self.workflow_contexts: dict[int, dict[str, Any]] = {}
+        self.workflow_saver = workflow_tools.WorkflowSaveService(
+            model_client=self.model_client,
+            chat_history=[],
+            workflow_contexts=self.workflow_contexts,
+        )
 
         self._summarize_task: asyncio.Task[None] | None = None
 
@@ -512,8 +427,8 @@ class LeaderDriven(Pattern):
             agents=self.specialized_agents,
             apis=apis,
         )
-        self.leader_agent.set_workflow_summary_generator(self._generate_dialog_summary_and_steps)
-        self.leader_agent.set_workflow_steps_generator(self._generate_workflow_steps)
+        self.workflow_saver.chat_history = self.leader_agent.chat_history
+        self.leader_agent.set_save_workflow_handler(self.workflow_saver.save)
         self.log_info("Leader Agent initialized.")
 
     def update_config(
@@ -523,6 +438,7 @@ class LeaderDriven(Pattern):
             model = model or self.model_client.get_model()
             api_key = api_key or self.model_client.get_api_key()
             self.model_client = new_model_client(model=model, api_key=api_key, base_url=base_url)
+            self.workflow_saver.model_client = self.model_client
             self.leader_agent.set_model_client(self.model_client)
             for agent in self.specialized_agents.values():
                 agent.set_model_client(self.model_client)
@@ -553,26 +469,12 @@ class LeaderDriven(Pattern):
         except Exception:
             window_info = ""
 
-        # Build filtered chat history (only final answers, no intermediate steps)
-        history_context = ""
-        if self.leader_agent.chat_history:
-            filtered_history = [
-                {k: v for k, v in item.items() if k == "assistant" or k == "user"}
-                for item in self.leader_agent.chat_history[-3:]
-                if "assistant" in item and item["assistant"]
-            ]
-            if filtered_history:
-                history_text = "\n".join(
-                    [f"User: {h.get('user', '')}\nAssistant: {h['assistant'][:100]}..." for h in filtered_history]
-                )
-                history_context = f"\n## Recent Conversation\n{history_text}"
-
         # Build context section
         context_parts = []
         if window_info:
             context_parts.append(f"## ImageJ Window\n{window_info}")
-        if history_context:
-            context_parts.append(history_context)
+        if history_text := self.leader_agent._recent_history_text():
+            context_parts.append(f"\n## Recent Conversation\n{history_text}")
         context_section = "\n".join(context_parts) if context_parts else ""
 
         system_prompt = f"""You are a prompt optimization assistant for an AI that specializes in image analysis and ImageJ processing.
@@ -607,31 +509,76 @@ User prompt to optimize:
             self.log_error(f"Failed to optimize prompt: {e}")
             return user_prompt
 
-    async def summarize_dialog_context(self, dialog_context: dict, dialog_id: int | None = None):
+    async def _build_chat_history_entry(
+        self,
+        dialog_id: int,
+        task: str,
+        dialog_context: dict[str, Any],
+    ) -> dict[str, Any]:
+        context = await self._build_chat_context(dialog_context)
+        assistant = self._assistant_text_from_context(context)
+        return {"dialog": dialog_id, "user": task, "assistant": assistant, "context": context}
+
+    async def _build_chat_context(self, dialog_context: dict[str, Any]) -> dict[str, Any]:
         steps = dialog_context["steps"]
         if len(steps) <= self.max_steps_before_summary:
-            return dialog_context, None
+            return self._inline_chat_context(dialog_context)
 
-        summary, steps = await self._generate_dialog_summary_and_steps(dialog_context)
-        if steps is None:
-            return dialog_context, None
+        summary = await self._generate_dialog_summary(dialog_context)
+        if summary:
+            return {"mode": "summary", "summary": summary}
 
-        if str(os.getenv("COPILOTJ_KB_AUTOSAVE")) != "1":
-            return summary, steps
+        return self._inline_chat_context(dialog_context)
 
-        # Persist to knowledge bank (non-blocking failure)
+    def _inline_chat_context(self, dialog_context: dict[str, Any]) -> dict[str, Any]:
+        steps = dialog_context.get("steps", [])
+        return {
+            "mode": "inline_steps",
+            "status": dialog_context.get("status"),
+            "steps": self._compact_steps(steps),
+        }
+
+    def _compact_steps(self, steps: list[Any]) -> list[dict[str, Any]]:
+        def shorten(value: Any) -> Any:
+            text = json.dumps(value, ensure_ascii=False) if isinstance(value, (dict, list)) else str(value)
+            return value if len(text) <= CONTEXT_SNIPPET_CHARS else text[:CONTEXT_SNIPPET_CHARS] + "..."
+
+        compact_steps = []
+        for step in steps:
+            if not isinstance(step, dict):
+                compact_steps.append({"event": shorten(step)})
+                continue
+            compact = {key: shorten(step[key]) for key in ("thought", "name", "agent", "agent_response", "error") if step.get(key)}
+            if step.get("args"):
+                compact["args"] = shorten(step["args"])
+            if step.get("response"):
+                compact["response"] = shorten(step["response"])
+            compact_steps.append(compact)
+        return compact_steps
+
+    def _assistant_text_from_context(self, context: dict[str, Any]) -> str:
+        if context.get("mode") == "summary":
+            return str(context.get("summary", ""))
+        return f"Dialog completed with {len(context.get('steps', []))} compact step(s)."
+
+    async def _persist_dialog_to_kb(
+        self,
+        dialog_context: dict[str, Any],
+        context: dict[str, Any],
+        dialog_id: int | None,
+    ) -> None:
         try:
             kb_result = await kb_build(
                 dialog=dialog_context,
-                summary=summary,
-                steps=steps,
+                summary=json.dumps(context, ensure_ascii=False, indent=2),
+                steps=dialog_context.get("steps", []),
                 question=dialog_context["task"] if dialog_context.get("task") else None,
             )
             result_data = json.loads(kb_result)
             if result_data.get("status") != "ok":
                 error_msg = result_data.get("error", "Unknown error")
                 self.log_info(f"[WARNING] Dialog {dialog_id} knowledge processing failed: {error_msg}")
-                return summary, steps
+                return
 
             created_files = []
             skipped_items = []
@@ -662,10 +609,7 @@ User prompt to optimize:
         except Exception as kb_e:
             self.log_error(f"[WARNING] KB build failed for dialog {dialog_id}: {kb_e}")
 
-        finally:
-            return summary, steps
-
-    async def _generate_dialog_summary_and_steps(self, dialog_context: dict) -> tuple[object, str | None]:
+    async def _generate_dialog_summary(self, dialog_context: dict) -> str | None:
         steps = dialog_context["steps"]
         self.log_info(f"[SUMMARY] Generating dialog summary from {len(steps)} dialog steps...")
 
@@ -676,44 +620,23 @@ User prompt to optimize:
             response = await self.model_client.create([TextMessage(role="user", text=summary_prompt)])
         except Exception as e:
             self.log_error(f"[ERROR] Error generating dialog context summary: {e}")
-            return dialog_context, None
+            return None
 
         if response.content is None:
             self.log_error("[ERROR] Failed to generate summary - empty response")
-            return dialog_context, None
+            return None
 
         summary = response.content.strip()
-        steps_response = await self._generate_workflow_steps(dialog_context, summary)
-        if steps_response is None:
-            return dialog_context, None
-
         self.log_info("[SUCCESS] Successfully generated dialog context summary")
-        return summary, steps_response
-
-    async def _generate_workflow_steps(self, dialog_context: dict, summary: object | None = None) -> str | None:
-        steps = dialog_context["steps"]
-        self.log_info(f"[SUMMARY] Generating reusable workflow steps from {len(steps)} dialog steps...")
-        steps_text = json.dumps(steps, indent=2, ensure_ascii=False)
-        steps_prompt = make_steps_prompt(dialog_context["task"], steps_text, summary)
-
-        try:
-            response = await self.model_client.create([TextMessage(role="user", text=steps_prompt)])
-        except Exception as e:
-            self.log_error(f"[ERROR] Error generating reusable workflow steps: {e}")
-            return None
-
-        if response.content is None:
-            self.log_error("[ERROR] Failed to generate reusable workflow steps - empty response")
-            return None
-        return response.content.strip()
+        return summary
 
     async def _background_summarize_and_store(self, dialog_id: int, task: str, dialog_context: dict) -> None:
         try:
-            self.leader_agent.workflow_contexts[dialog_id] = dialog_context.copy()
-            summary, steps = await self.summarize_dialog_context(dialog_context.copy(), dialog_id)
-            self.leader_agent.chat_history.append(
-                {"dialog": dialog_id, "user": task, "assistant": str(summary), "steps": steps}
-            )
+            self.workflow_contexts[dialog_id] = dialog_context.copy()
+            entry = await self._build_chat_history_entry(dialog_id, task, dialog_context.copy())
+            self.leader_agent.chat_history.append(entry)
+            if str(os.getenv("COPILOTJ_KB_AUTOSAVE")) == "1":
+                await self._persist_dialog_to_kb(dialog_context, entry["context"], dialog_id)
         except Exception as e:
             self.log_error(f"Background summarization failed: {e}")
 

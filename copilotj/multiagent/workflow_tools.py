@@ -6,10 +6,99 @@ import json
 from typing import Annotated, Any, Optional
 
 import copilotj.multiagent.leader_multiagent as leader_multiagent
-from copilotj.core import load_env
+from copilotj.core import ModelClient, TextMessage, load_env
+from copilotj.multiagent.leader_prompts import make_workflow_save_prompt
 from copilotj.workflow.converter import DialogToWorkflowConverter
 from copilotj.workflow.executor import WorkflowExecutor
 from copilotj.workflow.manager import WorkflowManager
+
+
+class WorkflowSaveService:
+    def __init__(
+        self,
+        *,
+        model_client: ModelClient,
+        chat_history: list[dict[str, Any]],
+        workflow_contexts: dict[int, dict[str, Any]],
+    ) -> None:
+        self.model_client = model_client
+        self.chat_history = chat_history
+        self.workflow_contexts = workflow_contexts
+
+    async def save(
+        self,
+        workflow_name: str,
+        tags: str | None,
+        dialog_id: int | None,
+        dialog_ids: list[int] | None,
+    ) -> str:
+        if not self.chat_history:
+            return "No workflow in chat history to save."
+        selected_ids = self._select_dialog_ids(dialog_id, dialog_ids)
+        if isinstance(selected_ids, str):
+            return selected_ids
+        missing = [dialog_id for dialog_id in selected_ids if dialog_id not in self.workflow_contexts]
+        if missing:
+            missing_text = ", ".join(str(dialog_id) for dialog_id in missing)
+            return f"Raw workflow context is unavailable for dialog(s) {missing_text}."
+        summary = self._combined_summary(selected_ids)
+        try:
+            steps = await self._generate_workflow_steps(self._combined_context(selected_ids), summary)
+        except Exception as e:
+            return f"Error generating reusable workflow steps: {e}"
+        if steps is None:
+            return "Failed to generate reusable workflow steps from the selected dialogs."
+        save_status = await save_workflow_from_steps(workflow_name, steps, summary, tags)
+        return f"Workflow saved for dialog(s) {selected_ids}: {save_status}"
+
+    def _select_dialog_ids(self, dialog_id: int | None, dialog_ids: list[int] | None) -> list[int] | str:
+        if dialog_id is not None and dialog_ids is not None:
+            return "Use either dialog_id or dialog_ids, not both."
+        if dialog_ids is not None:
+            if not dialog_ids:
+                return "dialog_ids must not be empty."
+            if len(set(dialog_ids)) != len(dialog_ids):
+                return "dialog_ids must not contain duplicates."
+            return dialog_ids
+        if dialog_id is not None:
+            return [dialog_id]
+        latest_dialog = self.chat_history[-1].get("dialog")
+        return [latest_dialog] if isinstance(latest_dialog, int) else "Latest dialog does not have a dialog id."
+
+    def _combined_context(self, dialog_ids: list[int]) -> dict[str, Any]:
+        tasks = [str(self.workflow_contexts[dialog_id].get("task", "")) for dialog_id in dialog_ids]
+        return {
+            "task": "\n".join(f"Dialog {dialog_id}: {task}" for dialog_id, task in zip(dialog_ids, tasks)),
+            "steps": [
+                {"dialog": dialog_id, "task": task, "steps": self.workflow_contexts[dialog_id].get("steps", [])}
+                for dialog_id, task in zip(dialog_ids, tasks)
+            ],
+        }
+
+    def _combined_summary(self, dialog_ids: list[int]) -> str:
+        return "\n\n".join(
+            self._format_history_item(item)
+            for dialog_id in dialog_ids
+            if (item := self._find_chat_history_dialog(dialog_id)) is not None
+        )
+
+    def _find_chat_history_dialog(self, dialog_id: int) -> dict[str, Any] | None:
+        for item in reversed(self.chat_history):
+            if item.get("dialog") == dialog_id:
+                return item
+        return None
+
+    def _format_history_item(self, item: dict[str, Any]) -> str:
+        text = f"Dialog {item.get('dialog')}: {item.get('assistant', '')}"
+        return (
+            text if not item.get("context") else text + "\n" + json.dumps(item["context"], ensure_ascii=False, indent=2)
+        )
+
+    async def _generate_workflow_steps(self, dialog_context: dict, summary: object | None = None) -> str | None:
+        steps_text = json.dumps(dialog_context["steps"], indent=2, ensure_ascii=False)
+        steps_prompt = make_workflow_save_prompt(dialog_context["task"], steps_text, summary)
+        response = await self.model_client.create([TextMessage(role="user", text=steps_prompt)])
+        return response.content.strip() if response.content is not None else None
 
 
 async def save_workflow_from_steps(
