@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { getBaseUrl } from "./base.ts";
+import { getBaseUrl } from "./base";
 
 interface Payload<T extends string, K> {
   type: T;
