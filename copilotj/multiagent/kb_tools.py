@@ -1041,9 +1041,12 @@ async def kb_build(
     final_summary, steps, question = _sanitize_inputs(summary, steps, question)
 
     _llm_prompt_template = f"""
-Based on the following dialog, extract key knowledge for the knowledge bank:
+Knowledge Base extraction action: extract reusable knowledge from the following dialog.
 Dialog: {json.dumps(dialog, ensure_ascii=False)}
-Generate a structured JSON output focusing on:
+Dialog context summary: {final_summary}
+
+Generate a structured JSON output for KB metadata only. Do not generate workflow JSON and do not reformat the raw steps.
+The raw execution steps are passed separately and will be stored as detailed KB steps.
 
 {{
   "task": {{
@@ -1095,7 +1098,7 @@ Generate a structured JSON output focusing on:
 }}
 
 Focus on:
-- Task: Extract workflow metadata, not steps (steps are provided separately)
+- Task: Extract reusable task metadata, requirements, defaults, and tips. Do not invent steps.
 - Macros: Only include macros that had errors/issues(e.g. Command error, Timeout) in dialog, with prevention tips, if no error, return empty list
 - Research: Capture findings and useful references from dialog, if no findings, return empty list. Only works if the dialog has Research Agent usage.
 
