@@ -9,7 +9,8 @@ dev-server:
 dev-plugin:
   cd plugin && \
     mvn compile exec:java -D"exec.mainClass=copilotj.DefaultCopilotJBridgeService" \
-      -D"ij.debug=true" -D"scijava.log.level=debug" -D"copilotj.maxRetryWaitSecond=1"
+      -D"ij.debug=true" -D"scijava.log.level=debug" -D"copilotj.maxRetryWaitSecond=1" \
+      -D"copilotj.sourcePath={{justfile_directory()}}"
 
 dev-plugin-full: clean-plugin dev-plugin
 
