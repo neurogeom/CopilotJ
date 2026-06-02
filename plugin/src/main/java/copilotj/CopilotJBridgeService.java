@@ -22,11 +22,19 @@ public interface CopilotJBridgeService extends SciJavaService {
 
   public void ensureEnvironment() throws java.io.IOException;
 
+  public void ensureEnvironment(ProgressListener listener) throws java.io.IOException;
+
+  public void syncEnvironment(ProgressListener listener) throws java.io.IOException;
+
+  public void uninstallEnvironment() throws java.io.IOException;
+
   public boolean isEnvironmentReady();
 
   public boolean isEnvironmentOnDisk();
 
   public void startManagedServer() throws java.io.IOException, InterruptedException;
+
+  public void startManagedServer(ProgressListener listener) throws java.io.IOException, InterruptedException;
 
   public boolean isManaged();
 

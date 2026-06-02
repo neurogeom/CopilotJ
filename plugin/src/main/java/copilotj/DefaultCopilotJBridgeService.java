@@ -185,28 +185,48 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
 
   @Override
   public void startManagedServer() throws IOException, InterruptedException {
-    // 1. Ensure environment is ready (also sets PYTHONPATH + COPILOTJ_HOME on
-    // builder).
-    ensureEnvironment();
+    startManagedServer(null);
+  }
+
+  @Override
+  public void startManagedServer(final ProgressListener listener) throws IOException, InterruptedException {
+    // 1. Ensure environment exists (does not re-sync dependencies).
+    ensureEnvironment(listener);
+
+    log.info("copilotj: Environment ready");
+    if (listener != null) listener.onMessage("Environment ready. Starting Python server...");
 
     // 2. Create Appose Service.
     final Environment env = apposeEnv;
     pythonService = env.python();
+    // Forward Python process debug output (includes stderr/logging) to Java log.
+    pythonService.debug(msg -> log.info("copilotj python: " + msg));
+
+    log.info("copilotj: Python service created");
+    if (listener != null) listener.onMessage("Python process started. Initializing server...");
 
     // 3. Send init task: Python starts server on port 0, returns port.
     final String script = "from copilotj.appose_worker import start_server\n"
         + "task.outputs.update(start_server())\n";
 
     final org.apposed.appose.Service.Task initTask = pythonService.task(script);
+
+    log.info("copilotj: Waiting for Python server to start...");
+    if (listener != null) listener.onMessage("Waiting for server to start...");
+
     try {
       initTask.waitFor();
     } catch (final org.apposed.appose.TaskException e) {
+      logServicePythonOutput(pythonService);
+      if (listener != null) listener.onMessage("Server start failed: " + e.getMessage());
       throw new IOException("Python server task failed: " + e.getMessage(), e);
     }
 
     // 4. Extract port from task response.
     final Object portObj = initTask.outputs.get("port");
     if (portObj == null) {
+      logServicePythonOutput(pythonService);
+      if (listener != null) listener.onMessage("Server start failed: no port returned");
       throw new IOException("Python server did not return a port");
     }
     final int port = ((Number) portObj).intValue();
@@ -214,20 +234,84 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
     managed = true;
 
     log.info("copilotj: Python server started on port " + port);
+    if (listener != null) listener.onMessage("Python server started on port " + port);
+
     if (Boolean.TRUE.equals(initTask.outputs.get("port_changed"))) {
       log.warn("copilotj: Port changed from " + initTask.outputs.get("previous_port")
           + " to " + port + " (saved port was unavailable)");
     }
 
     // 5. Connect WebSocket.
+    if (listener != null) listener.onMessage("Connecting WebSocket...");
     this.start(managedServerUrl);
+
+    log.info("copilotj: Managed server fully connected");
+    if (listener != null) listener.onMessage("Server ready.");
+  }
+
+  /** Dump captured Python stderr and invalid stdout lines for diagnostics. */
+  private void logServicePythonOutput(final org.apposed.appose.Service svc) {
+    for (final String line : svc.errorLines()) {
+      log.warn("copilotj python stderr: " + line);
+    }
+    for (final String line : svc.invalidLines()) {
+      log.warn("copilotj python stdout (invalid): " + line);
+    }
   }
 
   @Override
   public void ensureEnvironment() throws IOException {
+    ensureEnvironment(null);
+  }
+
+  @Override
+  public void ensureEnvironment(final ProgressListener listener) throws IOException {
     if (apposeEnv != null)
       return;
+    try {
+      apposeEnv = createEnvBuilder(listener).build();
+    } catch (final BuildException e) {
+      throw unwrapBuildException("Failed to build CopilotJ Python environment", e);
+    }
+  }
 
+  @Override
+  public void uninstallEnvironment() throws IOException {
+    stop();
+    if (apposeEnv != null) {
+      try {
+        apposeEnv.delete();
+      } catch (final BuildException e) {
+        throw new IOException("Failed to delete CopilotJ Python environment", e);
+      }
+    } else if (isEnvironmentOnDisk()) {
+      createEnvBuilder(null).delete();
+    }
+    apposeEnv = null;
+  }
+
+  private IOException unwrapBuildException(final String context, final BuildException e) {
+    Throwable cause = e.getCause();
+    if (cause != null && cause.getMessage() != null && !cause.getMessage().isEmpty()) {
+      return new IOException(context + ": " + cause.getMessage(), e);
+    }
+    return new IOException(context, e);
+  }
+
+  @Override
+  public void syncEnvironment(final ProgressListener listener) throws IOException {
+    if (apposeEnv == null) {
+      ensureEnvironment(listener);
+      return;
+    }
+    try {
+      apposeEnv = createEnvBuilder(listener).build();
+    } catch (final BuildException e) {
+      throw unwrapBuildException("Failed to sync CopilotJ Python environment", e);
+    }
+  }
+
+  private org.apposed.appose.Builder createEnvBuilder(final ProgressListener listener) throws IOException {
     final File envRoot = resolveEnvRoot();
 
     // Resolve copilotj source directory so Python can import it.
@@ -250,24 +334,24 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
         ? sourceDir
         : envRoot;
 
-    try {
-      final Environment env = Appose.uv()
-          .content(pyprojectContent)
-          .scheme("pyproject.toml")
-          .python("3.12")
-          .base(envRoot)
-          .env("PYTHONPATH", sourceDir.getAbsolutePath())
-          .env("COPILOTJ_HOME", homeDir.getAbsolutePath())
-          .env("COPILOTJ_MANAGED", "1")
-          .subscribeOutput(msg -> log.info("copilotj env: " + msg))
-          .subscribeError(msg -> log.warn("copilotj env: " + msg))
-          .build();
+    final org.apposed.appose.Builder builder = Appose.uv()
+        .content(pyprojectContent)
+        .scheme("pyproject.toml")
+        .python("3.12")
+        .base(envRoot)
+        .env("PYTHONPATH", sourceDir.getAbsolutePath())
+        .env("COPILOTJ_HOME", homeDir.getAbsolutePath())
+        .env("COPILOTJ_MANAGED", "1")
+        .subscribeOutput(msg -> log.info("copilotj env: " + msg))
+        .subscribeError(msg -> log.warn("copilotj env: " + msg));
 
-      apposeEnv = env;
-      return;
-    } catch (final BuildException e) {
-      throw new IOException("Failed to build CopilotJ Python environment", e);
+    if (listener != null) {
+      final org.apposed.appose.Builder<?> typed = builder;
+      typed.subscribeOutput(msg -> listener.onMessage(msg))
+          .subscribeError(msg -> listener.onMessage(msg));
     }
+
+    return builder;
   }
 
   /**
