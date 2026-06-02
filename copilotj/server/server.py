@@ -21,7 +21,7 @@ class Server:
     def __init__(self):
         super().__init__()
         self._bridge = Bridge()
-        self._threads = Threads()
+        self._threads = Threads(self._bridge)
         self._app = self._create_app()
 
     def add_background_task(self, task: asyncio.Task) -> None:

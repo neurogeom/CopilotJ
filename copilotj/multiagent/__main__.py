@@ -13,7 +13,7 @@ async def main():
     load_env()
 
     apis: PluginAPI = HTTPPluginAPI("http://127.0.0.1:8786")
-    client_apis = apis.attach_dev_client()
+    client_apis = apis.attach_single_client()
 
     # Initialize the main orchestrator
     orchestrator = LeaderDriven(client_apis)

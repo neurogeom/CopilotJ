@@ -8,7 +8,7 @@ import threading
 import uuid
 from asyncio import Future
 from contextlib import suppress
-from typing import AsyncGenerator, Literal, override
+from typing import TYPE_CHECKING, AsyncGenerator, Literal, override
 
 import aiohttp.web as web
 import langfuse
@@ -19,7 +19,10 @@ from copilotj.core import UI, UIEvent, UIEventPost, UIEventState
 from copilotj.core.config import get_llm_and_key
 from copilotj.core.ui import UIEventContentMarkdown
 from copilotj.multiagent.leader_multiagent import LeaderDriven
-from copilotj.plugin.api import HTTPPluginAPI, PluginAPI
+from copilotj.plugin.api import BridgePluginAPI, PluginAPI
+
+if TYPE_CHECKING:
+    from copilotj.server.bridge import Bridge
 
 __all__ = ["Threads"]
 
@@ -62,14 +65,16 @@ class _OptimizePrompt(pydantic.BaseModel):
 
 
 class _Thread(UI):
-    def __init__(self, thread_id: str, *, config: _ConfigQuery | None = None, trace_context: langfuse.Langfuse):
+    def __init__(
+        self, thread_id: str, *, config: _ConfigQuery | None = None, trace_context: langfuse.Langfuse, bridge: "Bridge"
+    ):
         self.thread_id = thread_id
         self._trace_ctx = trace_context
 
         self._mailbox = asyncio.Queue[UIEvent | _Signal]()
 
-        self._apis: PluginAPI = HTTPPluginAPI("http://127.0.0.1:8786")  # TODO: make configurable
-        client_apis = self._apis.attach_dev_client()  # TODO: should be removed
+        self._apis: PluginAPI = BridgePluginAPI(bridge)
+        client_apis = self._apis.attach_single_client()
 
         config_model = config and config.model
         self._agent = LeaderDriven(
@@ -189,7 +194,10 @@ class _Thread(UI):
                     await self._agent.run(prompt, trace_ctx=self._trace_ctx)
 
         except Exception:
+            import traceback
+
             _log.exception("Agent run failed for thread %s", self.thread_id)
+            self._agent.log_error(f"Agent run failed for thread {self.thread_id}:\n{traceback.format_exc()}")
         finally:
             done_event.set()  # Signal that the chat is done
 
@@ -243,8 +251,9 @@ class _Thread(UI):
 
 
 class Threads:
-    def __init__(self):
+    def __init__(self, bridge: "Bridge"):
         super().__init__()
+        self._bridge = bridge
         self._threads: dict[str, tuple[_Thread, threading.Lock]] = {}
         self._threads_lock = threading.Lock()
         self._trace_ctx = langfuse.Langfuse()
@@ -272,7 +281,7 @@ class Threads:
                 )
 
         thread_id = str(uuid.uuid4())
-        thread = _Thread(thread_id, config=config, trace_context=self._trace_ctx)
+        thread = _Thread(thread_id, config=config, trace_context=self._trace_ctx, bridge=self._bridge)
         thread_lock = threading.Lock()
         with self._threads_lock:
             self._threads[thread_id] = (thread, thread_lock)
@@ -431,8 +440,8 @@ class Threads:
 
             # Create a temporary agent instance for optimization
             # Use default model from settings
-            apis = HTTPPluginAPI("http://127.0.0.1:8786")
-            client = apis.attach_dev_client()  # TODO: should be removed or made configurable
+            apis = HTTPPluginAPI("http://127.0.0.1:8786")  # FIXME: should not depend on this address
+            client = apis.attach_single_client()  # TODO: should be removed or made configurable
             temp_agent = LeaderDriven(apis=client)
             # Optimize the prompt (without chat history context)
             optimized = await temp_agent.optimize_prompt(prompt_data.prompt)
