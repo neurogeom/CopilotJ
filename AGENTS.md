@@ -76,6 +76,9 @@ Task runner is [just](https://github.com/casey/just). Run `just` or `just --list
 | `just dev-web`      | Start the Vue frontend dev server                            |
 | `just build-plugin` | Build the plugin JAR via Maven                               |
 | `just test`         | Run Python tests via pytest (with doctest)                   |
+| `just build-kb`     | Build knowledge base from source data                        |
+| `just rebuild-kb`   | Rebuild FAISS index from JSONL export                        |
+| `just status-kb`    | Show knowledge base status                                   |
 
 ### Running a single test
 

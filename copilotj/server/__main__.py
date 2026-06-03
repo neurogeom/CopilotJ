@@ -25,6 +25,7 @@ def cli(host: str, port: int, log_level: str):
     """Start the CopilotJ server."""
     load_env()
     logging.basicConfig(level=getattr(logging, log_level.upper()))
+
     server = Server()
     server.run(host, port)
 

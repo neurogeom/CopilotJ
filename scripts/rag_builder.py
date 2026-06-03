@@ -28,9 +28,11 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from copilotj.core import load_env  # noqa: E402
 from copilotj.core.embedding import get_embeddings  # noqa: E402
+from copilotj.core.kb import _file_hash, ensure_faiss_index, export_jsonl, save_rebuild_hash  # noqa: E402
 
 DEFAULT_DATA_DIR = PROJECT_ROOT / "data"
 DEFAULT_INDEX_DIR = PROJECT_ROOT / "assets" / "knowledge_base"
+DEFAULT_MANIFEST_DIR = DEFAULT_INDEX_DIR
 INDEX_NAME = "knowledge_base"
 MANIFEST_FILE = "rag_manifest.json"
 SUPPORTED_EXTENSIONS = (".md", ".markdown", ".pdf", ".txt")
@@ -110,7 +112,10 @@ def build_rag(data_dir: Path = DEFAULT_DATA_DIR, index_dir: Path = DEFAULT_INDEX
     index_dir.mkdir(parents=True, exist_ok=True)
     vector_store = FAISS.from_documents(chunks, get_embeddings())
     vector_store.save_local(str(index_dir), index_name=INDEX_NAME)
-    save_manifest(index_dir, build_manifest(files, len(chunks)))
+    jsonl_path = index_dir / f"{INDEX_NAME}.jsonl.gz"
+    export_jsonl(chunks, jsonl_path)
+    save_rebuild_hash(index_dir, _file_hash(jsonl_path))
+    save_manifest(DEFAULT_MANIFEST_DIR, build_manifest(files, len(chunks)))
 
 
 def load_documents(files: list[Path]) -> list[Document]:
@@ -142,14 +147,15 @@ def get_file_metadata(filepath: Path) -> dict[str, Any]:
     }
 
 
-def save_manifest(index_dir: Path, manifest: dict[str, Any]) -> None:
-    manifest_path = index_dir / MANIFEST_FILE
+def save_manifest(manifest_dir: Path, manifest: dict[str, Any]) -> None:
+    manifest_dir.mkdir(parents=True, exist_ok=True)
+    manifest_path = manifest_dir / MANIFEST_FILE
     with manifest_path.open("w", encoding="utf-8") as handle:
         json.dump(manifest, handle, indent=2)
 
 
-def load_manifest(index_dir: Path) -> dict[str, Any]:
-    manifest_path = index_dir / MANIFEST_FILE
+def load_manifest(manifest_dir: Path) -> dict[str, Any]:
+    manifest_path = manifest_dir / MANIFEST_FILE
     with manifest_path.open("r", encoding="utf-8") as handle:
         return json.load(handle)
 
@@ -161,10 +167,11 @@ def show_status(data_dir: Path = DEFAULT_DATA_DIR, index_dir: Path = DEFAULT_IND
     print(f"Index Directory: {index_dir}")
     print(f"  FAISS index: {_format_exists(paths['faiss'])}")
     print(f"  Document store: {_format_exists(paths['pkl'])}")
+    print(f"  JSONL export: {_format_exists(paths['jsonl'])}")
     print(f"  Manifest: {_format_exists(paths['manifest'])}")
 
     if paths["manifest"].exists():
-        manifest = load_manifest(index_dir)
+        manifest = load_manifest(DEFAULT_MANIFEST_DIR)
         print_manifest(manifest)
         print_change_summary(data_dir, manifest)
 
@@ -173,7 +180,8 @@ def index_paths(index_dir: Path) -> dict[str, Path]:
     return {
         "faiss": index_dir / f"{INDEX_NAME}.faiss",
         "pkl": index_dir / f"{INDEX_NAME}.pkl",
-        "manifest": index_dir / MANIFEST_FILE,
+        "jsonl": index_dir / f"{INDEX_NAME}.jsonl.gz",
+        "manifest": DEFAULT_MANIFEST_DIR / MANIFEST_FILE,
     }
 
 
@@ -225,12 +233,13 @@ def _modified_paths(current_paths: dict[str, Path], manifest_files: dict[str, An
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--build", action="store_true", help="Rebuild the RAG index from the data directory")
+    parser.add_argument("--rebuild", action="store_true", help="Rebuild FAISS index from JSONL export")
     parser.add_argument("--status", action="store_true", help="Show index and data directory status")
     parser.add_argument("--data-dir", type=Path, default=DEFAULT_DATA_DIR)
     parser.add_argument("--index-dir", type=Path, default=DEFAULT_INDEX_DIR)
     args = parser.parse_args(argv)
 
-    if not args.build and not args.status:
+    if not args.build and not args.status and not args.rebuild:
         args.status = True
     return args
 
@@ -242,6 +251,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.build:
         build_rag(data_dir=args.data_dir, index_dir=args.index_dir)
         return 0
+
+    if args.rebuild:
+        ok = ensure_faiss_index(args.index_dir)
+        return 0 if ok else 1
 
     show_status(data_dir=args.data_dir, index_dir=args.index_dir)
     return 0
