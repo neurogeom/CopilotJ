@@ -41,6 +41,18 @@ test-cov:
       --cov=copilotj --cov-report=xml --cov-report=html \
       --pyargs copilotj
 
+# Build knowledge base from source data
+build-kb:
+  python scripts/rag_builder.py --build
+
+# Rebuild FAISS index from JSONL export
+rebuild-kb:
+  python scripts/rag_builder.py --rebuild
+
+# Show knowledge base status
+status-kb:
+  python scripts/rag_builder.py --status
+
 # Create a git worktree under .worktrees/<name> with a new branch
 add-worktree name:
   scripts/add-worktree.sh {{name}}

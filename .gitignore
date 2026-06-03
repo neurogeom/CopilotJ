@@ -31,6 +31,11 @@ pnpm-debug.log*
 coverage*
 temp/
 knowledge_bank/index/registry.jsonl
+assets/knowledge_base/*.faiss
+assets/knowledge_base/*.pkl
+assets/knowledge_base/rag_manifest.json
+assets/knowledge_base/*.rebuild.hash
+data/
 
 # Editor directories and files
 .vscode/*

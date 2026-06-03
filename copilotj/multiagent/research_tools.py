@@ -37,6 +37,7 @@ __all__ = [
     "bioimage_search_models",
     "bioimage_get_model_info",
     "bioimage_download_model",
+    "init_knowledge_base",
 ]
 
 # BioImage Model Zoo constants
@@ -512,21 +513,24 @@ class ImageJRetriever:
 
 def _load_kb_retriever(*, max_results: int = 10) -> VectorStoreRetriever:
     try:
-        kb_path = "./assets/knowledge_base"
-        pkl_files = []
-        for root, _, files in os.walk(kb_path):
-            for file in files:
-                if file.endswith(".pkl"):
-                    pkl_files.append(os.path.join(root, file))
+        from copilotj.core.kb import DEFAULT_INDEX_DIR, ensure_faiss_index
 
-        if not pkl_files:
-            raise Exception("No .pkl files found in knowledge base directory")
+        ensure_faiss_index(DEFAULT_INDEX_DIR)
+
+        jsonl_files = []
+        for root, _, files in os.walk(str(DEFAULT_INDEX_DIR)):
+            for file in files:
+                if file.endswith(".jsonl.gz"):
+                    jsonl_files.append(os.path.join(root, file))
+
+        if not jsonl_files:
+            raise Exception("No .jsonl.gz files found in knowledge base directory")
 
         retrievers = []
-        for pkl_file in pkl_files:
+        for jsonl_file in jsonl_files:
             try:
-                collection_name = os.path.splitext(os.path.basename(pkl_file))[0]
-                vector_store = _load_docs_store(os.path.dirname(pkl_file), collection_name)
+                collection_name = Path(jsonl_file).stem.replace(".jsonl", "")
+                vector_store = _load_docs_store(os.path.dirname(jsonl_file), collection_name)
                 retriever = vector_store.as_retriever(search_kwargs={"k": max_results})
                 retrievers.append((retriever, collection_name))
             except Exception:
@@ -549,7 +553,9 @@ def _load_docs_store(db_path: str, collection_name: str) -> FAISS:
         store_path = os.path.join(db_path, f"{collection_name}")
 
         if not os.path.exists(f"{store_path}.faiss") or not os.path.exists(f"{store_path}.pkl"):
-            raise FileNotFoundError(f"Docs store {collection_name} not found. Run `python scripts/rag_builder.py --build` first.")
+            raise FileNotFoundError(
+                f"Docs store {collection_name} not found. Run `python scripts/rag_builder.py --build` first."
+            )
 
         embeddings = get_embeddings()
 
@@ -844,6 +850,10 @@ def bioimage_download_model(
         return f"✅ Model downloaded successfully to: {result_path}"
     except Exception as e:
         return f"❌ Error downloading model: {str(e)}"
+
+
+# Re-export init_knowledge_base for convenience
+from copilotj.core.kb import init_knowledge_base  # noqa: E402
 
 
 if __name__ == "__main__":

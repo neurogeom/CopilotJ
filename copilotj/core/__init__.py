@@ -5,6 +5,7 @@
 from copilotj.core.agent import *  # noqa: F403
 from copilotj.core.config import *  # noqa: F403
 from copilotj.core.embedding import *  # noqa: F403
+from copilotj.core.kb import *  # noqa: F403
 from copilotj.core.message import *  # noqa: F403
 from copilotj.core.model_client import *  # noqa: F403
 from copilotj.core.pattern import *  # noqa: F403

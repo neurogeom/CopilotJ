@@ -73,6 +73,14 @@ class Server:
             await asyncio.gather(self._threads.close(), self._bridge.close())
 
         app.on_shutdown.append(on_shutdown)
+
+        async def _ensure_kb(app: web.Application):
+            from copilotj.core.kb import ensure_faiss_index_async
+
+            asyncio.ensure_future(ensure_faiss_index_async())
+            yield
+
+        app.cleanup_ctx.append(_ensure_kb)
         return app
 
 
