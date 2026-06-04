@@ -2,20 +2,38 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Appose task script adapter for CopilotJ server.
+"""Appose init script adapter for CopilotJ server.
 
-This module is invoked as an Appose task script. It starts the aiohttp
-server on a port, returns the assigned port via ``task.outputs``, and keeps
-the server running in a background event loop thread.
+This module is designed to be called from an Appose **init script**, not a
+task script.  Using the init model ensures that all heavy library imports
+(numpy, scikit-image, stardist, etc.) happen on the **main thread** before
+the Appose worker enters its stdin I/O loop.  This avoids the stdin/thread
+deadlock on Windows (see numpy/numpy#24290, apposed/appose#23).
+
+Usage from the Java side::
+
+    Service python = env.python().init(
+        "from copilotj.appose_worker import start_server; start_server()"
+    );
+    // The server is now running.  Query the port with a lightweight task:
+    Task t = python.task(
+        "from copilotj.appose_worker import query_port; task.outputs.update(query_port())"
+    );
+    t.waitFor();
+    int port = ((Number) t.outputs().get("port")).intValue();
+    // ...
+    // When done, shut down the server:
+    python.task("from copilotj.appose_worker import stop_server").waitFor();
 
 In managed mode, the server attempts to reuse the last-used port from
 ``$COPILOTJ_HOME/config.json`` for a stable URL across restarts.
 
-The Appose worker's main loop keeps the process alive. When Appose closes
+The Appose worker's main loop keeps the process alive.  When Appose closes
 stdin (graceful shutdown), the worker exits and the daemon thread is killed.
 """
 
 import asyncio
+import logging
 import threading
 from urllib.parse import urlparse
 
@@ -23,7 +41,15 @@ from copilotj.core import load_env
 from copilotj.core.config import load_managed_config, save_managed_config
 from copilotj.server import Server
 
-__all__ = ["start_server"]
+__all__ = ["start_server", "query_port", "stop_server"]
+
+_log = logging.getLogger(__name__)
+
+# Module-level references to the running server and its event loop.
+# Set by start_server(); read by query_port() / stop_server().
+_server: Server | None = None
+_loop: asyncio.AbstractEventLoop | None = None
+_previous_port: int | None = None
 
 
 def _extract_port(url: str | None) -> int | None:
@@ -35,39 +61,100 @@ def _extract_port(url: str | None) -> int | None:
         return None
 
 
-def start_server() -> dict:
-    """Start the aiohttp server and return the assigned port.
+def start_server() -> None:
+    """Start the aiohttp server (call from Appose init script).
 
-    In managed mode, reuses the previously saved port if available.
-    Falls back to port 0 (OS-assigned) if the saved port is unavailable.
+    Starts the server on the main thread before the Appose worker enters its
+    stdin I/O loop.  This ensures all heavy imports (numpy, skimage, stardist,
+    etc.) complete on the main thread, avoiding stdin/thread deadlocks on
+    Windows.
 
-    Returns:
-        dict with ``"port"`` key containing the assigned port number.
+    The server runs in a background daemon thread so it keeps processing
+    requests while the Appose worker main loop handles stdin.
+
+    The assigned port is persisted to ``$COPILOTJ_HOME/config.json`` and can
+    be retrieved later via :func:`query_port`.
     """
+    global _server, _loop, _previous_port
+
     load_env()
     saved_port = _extract_port(load_managed_config().get("server_url"))
 
-    server = Server()
-    loop = asyncio.new_event_loop()
+    _server = Server()
+    _loop = asyncio.new_event_loop()
 
     async def _start():
+        assert _server is not None
         try:
-            port = await server.start("127.0.0.1", saved_port or 0)
+            return await _server.start("127.0.0.1", saved_port or 0)
         except OSError:
-            port = await server.start("127.0.0.1", 0)
-        return port
+            return await _server.start("127.0.0.1", 0)
 
-    port = loop.run_until_complete(_start())
+    _loop.run_until_complete(_start())
 
     # Keep the event loop alive in a daemon thread so the server continues
     # processing requests while the Appose worker main loop handles stdin.
-    threading.Thread(target=loop.run_forever, daemon=True).start()
+    threading.Thread(target=_loop.run_forever, daemon=True).start()
 
     # Persist the URL for next start
+    port = _server.port
     save_managed_config({"server_url": f"http://127.0.0.1:{port}"})
 
-    result = {"port": port}
-    if saved_port and saved_port != port:
+    # Remember if the port changed from the saved value.
+    _previous_port = saved_port if (saved_port and saved_port != port) else None
+
+
+def query_port() -> dict:
+    """Return the port of the running managed server.
+
+    Lightweight helper meant to be called from an Appose **task** (not init).
+    Reads the port directly from the live server instance.
+
+    Returns:
+        dict with ``"port"`` key.  If the saved port was unavailable,
+        also includes ``"port_changed"`` (``True``) and ``"previous_port"``
+        (the originally requested port).
+
+    Raises:
+        RuntimeError: If the server has not been started.
+    """
+    if _server is None:
+        raise RuntimeError("Server has not been started")
+    result: dict = {"port": _server.port}
+    if _previous_port is not None:
         result["port_changed"] = True
-        result["previous_port"] = saved_port
+        result["previous_port"] = _previous_port
     return result
+
+
+def stop_server() -> dict:
+    """Stop the managed server gracefully.
+
+    Delegates to :meth:`copilotj.server.Server.stop` which cleans up the
+    aiohttp runner, triggers on_shutdown hooks, and tears down connections.
+    Can be called from an Appose task to shut down the server cleanly.
+
+    Returns:
+        dict with ``"stopped"`` key set to ``True``.
+
+    Raises:
+        RuntimeError: If the server has not been started.
+    """
+    global _server, _loop, _previous_port
+
+    if _server is None or _loop is None:
+        raise RuntimeError("Server has not been started")
+
+    _log.info("Stopping managed server on port %d", _server.port)
+
+    future = asyncio.run_coroutine_threadsafe(_server.stop(), _loop)
+    future.result(timeout=10)
+
+    _loop.call_soon_threadsafe(_loop.stop)
+
+    _server = None
+    _loop = None
+    _previous_port = None
+
+    _log.info("Managed server stopped")
+    return {"stopped": True}
