@@ -45,11 +45,29 @@ class Server:
         Unlike ``run()``, this does not block. The caller is responsible for
         keeping the event loop alive (e.g. via ``loop.run_forever()``).
         """
-        runner = web.AppRunner(self._app)
-        await runner.setup()
-        site = web.TCPSite(runner, host, port)
+        self._runner = web.AppRunner(self._app)
+        await self._runner.setup()
+        site = web.TCPSite(self._runner, host, port)
         await site.start()
-        return site._server.sockets[0].getsockname()[1]
+        self._port = site._server.sockets[0].getsockname()[1]
+        return self._port
+
+    @property
+    def port(self) -> int | None:
+        """The bound port number, or ``None`` if the server is not running."""
+        return self._port
+
+    async def stop(self) -> None:
+        """Shut down the server gracefully.
+
+        ``AppRunner.cleanup()`` handles the full shutdown sequence: it stops
+        listening sites, fires ``on_shutdown`` hooks (closing threads and
+        WebSocket connections), and then runs ``on_cleanup`` hooks.
+        """
+        if hasattr(self, "_runner") and self._runner is not None:
+            await self._runner.cleanup()
+            self._runner = None
+            self._port = None
 
     def _create_app(self) -> web.Application:
         app = web.Application()

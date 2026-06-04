@@ -196,34 +196,41 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
     log.info("copilotj: Environment ready");
     if (listener != null) listener.onMessage("Environment ready. Starting Python server...");
 
-    // 2. Create Appose Service.
+    // 2. Create Appose Service with init script.
+    // Using init() ensures all heavy library imports (numpy, scikit-image,
+    // stardist, etc.) happen on the main thread before the Appose worker
+    // enters its stdin I/O loop. This avoids the stdin/thread deadlock on
+    // Windows (see numpy/numpy#24290, apposed/appose#23).
     final Environment env = apposeEnv;
-    pythonService = env.python();
+    final String initScript = "from copilotj.appose_worker import start_server; start_server()";
+    pythonService = env.python().init(initScript);
     // Forward Python process debug output (includes stderr/logging) to Java log.
     pythonService.debug(msg -> log.info("copilotj python: " + msg));
 
-    log.info("copilotj: Python service created");
-    if (listener != null) listener.onMessage("Python process started. Initializing server...");
+    log.info("copilotj: Python service created (server started via init script)");
+    if (listener != null) listener.onMessage("Python process started. Server initializing...");
 
-    // 3. Send init task: Python starts server on port 0, returns port.
-    final String script = "from copilotj.appose_worker import start_server\n"
-        + "task.outputs.update(start_server())\n";
+    // 3. Query the port via a lightweight task (no heavy imports).
+    // NB: Use task.outputs.update(), not task.export(). The export() method
+    // writes to the worker's global exports dict (cross-task persistent
+    // variables), while outputs.update() sets the current task's return value
+    // that is sent back in the COMPLETION response.
+    final String queryScript = "from copilotj.appose_worker import query_port; task.outputs.update(query_port())";
+    final org.apposed.appose.Service.Task portTask = pythonService.task(queryScript);
 
-    final org.apposed.appose.Service.Task initTask = pythonService.task(script);
-
-    log.info("copilotj: Waiting for Python server to start...");
-    if (listener != null) listener.onMessage("Waiting for server to start...");
+    log.info("copilotj: Querying server port...");
+    if (listener != null) listener.onMessage("Querying server port...");
 
     try {
-      initTask.waitFor();
+      portTask.waitFor();
     } catch (final org.apposed.appose.TaskException e) {
       logServicePythonOutput(pythonService);
       if (listener != null) listener.onMessage("Server start failed: " + e.getMessage());
-      throw new IOException("Python server task failed: " + e.getMessage(), e);
+      throw new IOException("Python server port query failed: " + e.getMessage(), e);
     }
 
     // 4. Extract port from task response.
-    final Object portObj = initTask.outputs.get("port");
+    final Object portObj = portTask.outputs.get("port");
     if (portObj == null) {
       logServicePythonOutput(pythonService);
       if (listener != null) listener.onMessage("Server start failed: no port returned");
@@ -236,8 +243,8 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
     log.info("copilotj: Python server started on port " + port);
     if (listener != null) listener.onMessage("Python server started on port " + port);
 
-    if (Boolean.TRUE.equals(initTask.outputs.get("port_changed"))) {
-      log.warn("copilotj: Port changed from " + initTask.outputs.get("previous_port")
+    if (Boolean.TRUE.equals(portTask.outputs.get("port_changed"))) {
+      log.warn("copilotj: Port changed from " + portTask.outputs.get("previous_port")
           + " to " + port + " (saved port was unavailable)");
     }
 
