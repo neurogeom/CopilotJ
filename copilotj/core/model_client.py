@@ -769,7 +769,7 @@ class OllamaChatCompletionClient(ModelClient):
             if isinstance(msg, TextMessage):
                 ollama_messages.append({"role": msg.role, "content": msg.text})
             elif isinstance(msg, ImageMessage):
-                print("Warning: Image messages not fully supported by Ollama client yet. Skipping image.")
+                logger.warning("Image messages not fully supported by Ollama client yet. Skipping image.")
             else:
                 raise ValueError(f"Unsupported message type: {msg}")
         return ollama_messages
@@ -809,7 +809,7 @@ class OllamaChatCompletionClient(ModelClient):
         except openai.OpenAIError as e:
             raise ModelProviderError(f"OpenAI error: {str(e)}", "openai") from e
         except Exception as e:
-            print(f"Error during Ollama API call: {e}")
+            logger.error("Error during Ollama API call: %s", e)
             return ModelResponse(
                 reasoning_content=None, content=f"Error: {e}", tool_calls=None, finish_reason="unknown"
             )
@@ -823,7 +823,7 @@ class OllamaChatCompletionClient(ModelClient):
         extra_args: dict[str, Any] | None = None,
     ) -> AsyncGenerator[ModelResponseChunk | ToolCall, None]:
         if tools:
-            print("Warning: Tool usage not implemented for Ollama client yet. Ignoring tools.")
+            logger.warning("Tool usage not implemented for Ollama client yet. Ignoring tools.")
 
         ollama_messages = self._format_messages(messages)
         try:

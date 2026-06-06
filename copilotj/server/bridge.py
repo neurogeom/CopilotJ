@@ -157,7 +157,6 @@ class _Client:
             response = _BridgeEvent.model_validate_json(msg.data)
 
         except Exception as e:
-            print(e)
             _log.error(f"Failed to handle message: {e}")
             return
 
