@@ -13,7 +13,7 @@ import rich
 import textual_image.renderable
 from PIL import Image as PILImage
 
-from copilotj.core import load_env
+from copilotj.core import load_config
 from copilotj.plugin import HTTPPluginAPI, Verbosity
 from copilotj.plugin.api import ClientPluginAPI
 from copilotj.util import extract_base64_image
@@ -25,7 +25,7 @@ from copilotj.util import extract_base64_image
 @click.pass_context
 def cli(ctx, server, verbosity):
     """CLI for interacting with the ImageJ plugin API."""
-    load_env()
+    load_config()
     ctx.ensure_object(dict)
     ctx.obj["server"] = server
     match verbosity:

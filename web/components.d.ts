@@ -11,6 +11,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AutoComplete: typeof import('primevue/autocomplete')['default']
     Button: typeof import('primevue/button')['default']
     Chatbox: typeof import('./src/components/Chatbox.vue')['default']
     ChatboxHello: typeof import('./src/components/ChatboxHello.vue')['default']
@@ -31,10 +32,16 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     Select: typeof import('primevue/select')['default']
+    SettingLLM: typeof import('./src/components/SettingLLM.vue')['default']
     SettingModel: typeof import('./src/components/SettingModel.vue')['default']
     Settings: typeof import('./src/components/Settings.vue')['default']
     Showcases: typeof import('./src/components/Showcases.vue')['default']
     Sidebar: typeof import('./src/components/Sidebar.vue')['default']
+    Step: typeof import('primevue/step')['default']
+    StepList: typeof import('primevue/steplist')['default']
+    StepPanel: typeof import('primevue/steppanel')['default']
+    StepPanels: typeof import('primevue/steppanels')['default']
+    Stepper: typeof import('primevue/stepper')['default']
     Tab: typeof import('primevue/tab')['default']
     TabList: typeof import('primevue/tablist')['default']
     TabPanel: typeof import('primevue/tabpanel')['default']

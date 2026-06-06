@@ -196,7 +196,7 @@ Features:
 """
 
 [[tools]]
-function = "copilotj.multiagent.research_tools.deep_research"
+factory = "copilotj.multiagent.research_tools.make_deep_research"
 description = """
 Use this tool to conduct comprehensive deep research using systematic multi-source analysis.
 

@@ -8,7 +8,7 @@ import logging
 
 import click
 
-from copilotj.core import load_env
+from copilotj.core import load_config
 from copilotj.server import Server
 
 
@@ -23,10 +23,10 @@ from copilotj.server import Server
 )
 def cli(host: str, port: int, log_level: str):
     """Start the CopilotJ server."""
-    load_env()
+    cfg = load_config()
     logging.basicConfig(level=getattr(logging, log_level.upper()))
 
-    server = Server()
+    server = Server(cfg)
     server.run(host, port)
 
 

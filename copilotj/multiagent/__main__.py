@@ -4,13 +4,13 @@
 
 import asyncio
 
-from copilotj.core import load_env
+from copilotj.core import load_config
 from copilotj.multiagent.leader_multiagent import LeaderDriven
 from copilotj.plugin.api import HTTPPluginAPI, PluginAPI
 
 
 async def main():
-    load_env()
+    load_config()
 
     apis: PluginAPI = HTTPPluginAPI("http://127.0.0.1:8786")
     client_apis = apis.attach_single_client()

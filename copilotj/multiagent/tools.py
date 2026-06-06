@@ -13,7 +13,8 @@ import warnings
 from pathlib import Path
 from typing import Annotated
 
-from copilotj.core import ImageMessage, TextMessage, load_env, new_vlm_model_client
+from copilotj.core import ImageMessage, TextMessage, new_vlm_model_client
+from copilotj.core.config import Config
 from copilotj.plugin.api import ClientPluginAPI
 from copilotj.util import JupyterNotebook
 
@@ -27,9 +28,10 @@ _log = logging.getLogger(__name__)
 
 
 class PluginTools:
-    def __init__(self, apis: ClientPluginAPI):
+    def __init__(self, apis: ClientPluginAPI, *, cfg: Config):
         super().__init__()
         self.apis = apis
+        self._cfg = cfg
 
     def _detect_timeout_from_script(self, script: str) -> float:
         script_lower = script.lower()
@@ -85,7 +87,12 @@ class PluginTools:
 
     async def capture_screen(self, query: str | None = None) -> str:
         """Capture ImageJ Screen."""
-        vlm = new_vlm_model_client()
+        vlm = new_vlm_model_client(
+            model=self._cfg.vlm_model or None,
+            api_key=self._cfg.vlm_api_key or None,
+            base_url=self._cfg.vlm_base_url,
+            cfg=self._cfg,
+        )
         imagejCapture_resp = await self.apis.capture_screen()
         vision_prompt = """
 You are an ImageJ Vision Perception tool.  
@@ -194,7 +201,12 @@ imagejOperation is the monitor event history of ImageJ.
 
     async def simple_result_verification(self, operation_intent: str, expected_outcome: str = None) -> str:
         """Simple perception-based result verification."""
-        vlm = new_vlm_model_client()
+        vlm = new_vlm_model_client(
+            model=self._cfg.vlm_model or None,
+            api_key=self._cfg.vlm_api_key or None,
+            base_url=self._cfg.vlm_base_url,
+            cfg=self._cfg,
+        )
         imagejCapture_resp = await self.apis.capture_screen()
 
         verification_prompt = f"""
@@ -674,9 +686,9 @@ function enforce_binary_and_fill_windowID(winID) {
 
 
 if __name__ == "__main__":
-    from copilotj.core import load_env
+    from copilotj.core import load_config
 
-    load_env()
+    load_config()
 
     # Run the test
     # async def test_deep_research():

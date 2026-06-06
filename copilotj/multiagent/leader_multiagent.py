@@ -28,6 +28,7 @@ from copilotj.core import (
     Tool,
     new_model_client,
 )
+from copilotj.core.config import Config
 from copilotj.multiagent.agent_loader import load_agent_configs
 from copilotj.multiagent.Executor import Executor
 from copilotj.multiagent.kb_tools import _load_macro_plugin_names, kb_build, kb_retrieve, rebuild_registry
@@ -95,6 +96,7 @@ class LeaderAgent(ChatAgent):
         agents: dict[str, Executor] | None = None,
         model_client: ModelClient,
         apis: ClientPluginAPI,
+        cfg: Config,
     ):
         super().__init__(name, description, model_client=model_client)
 
@@ -106,7 +108,7 @@ class LeaderAgent(ChatAgent):
         self._dialog_messages: list[TextMessage] = []
 
         self._apis = apis
-        self.plugin_tools = tools.PluginTools(apis)
+        self.plugin_tools = tools.PluginTools(apis, cfg=cfg)
 
         # Store the combined tools and agents
         self.tools: list[Tool] = [
@@ -376,15 +378,20 @@ class LeaderDriven(Pattern):
         self,
         apis: ClientPluginAPI,
         *,
+        cfg: Config,
         ui: UI | None = None,
         max_steps_before_summary: int = 8,
-        model: str | None = None,
-        api_key: str | None = None,
-        base_url: str | None = None,
     ) -> None:
         super().__init__("copilotj.leader_driven", ui=ui)
 
-        self.model_client = new_model_client(model=model, api_key=api_key, base_url=base_url)
+        self._cfg = cfg
+
+        self.model_client = new_model_client(
+            model=cfg.llm_model or None,
+            api_key=cfg.llm_api_key or None,
+            base_url=cfg.llm_base_url,
+            cfg=cfg,
+        )
         # wrap the model client to handle ReAct-style responses
         wrapped_model_client = ReActChatCompletionClient(self.model_client)
 
@@ -432,6 +439,7 @@ class LeaderDriven(Pattern):
             model_client=wrapped_model_client,
             agents=self.specialized_agents,
             apis=apis,
+            cfg=cfg,
         )
         self.workflow_saver.chat_history = self.leader_agent.chat_history
         self.leader_agent.set_save_workflow_handler(self.workflow_saver.save)
@@ -443,7 +451,7 @@ class LeaderDriven(Pattern):
         if model is not None or api_key is not None or base_url is not None:
             model = model or self.model_client.get_model()
             api_key = api_key or self.model_client.get_api_key()
-            self.model_client = new_model_client(model=model, api_key=api_key, base_url=base_url)
+            self.model_client = new_model_client(model=model, api_key=api_key, base_url=base_url, cfg=self._cfg)
             self.workflow_saver.model_client = self.model_client
             self.leader_agent.set_model_client(self.model_client)
             for agent in self.specialized_agents.values():
@@ -554,7 +562,11 @@ User prompt to optimize:
             if not isinstance(step, dict):
                 compact_steps.append({"event": shorten(step)})
                 continue
-            compact = {key: shorten(step[key]) for key in ("thought", "name", "agent", "agent_response", "error") if step.get(key)}
+            compact = {
+                key: shorten(step[key])
+                for key in ("thought", "name", "agent", "agent_response", "error")
+                if step.get(key)
+            }
             if step.get("args"):
                 compact["args"] = shorten(step["args"])
             if step.get("response"):
@@ -641,7 +653,7 @@ User prompt to optimize:
             self.workflow_contexts[dialog_id] = dialog_context.copy()
             entry = await self._build_chat_history_entry(dialog_id, task, dialog_context.copy())
             self.leader_agent.chat_history.append(entry)
-            if str(os.getenv("COPILOTJ_KB_AUTOSAVE")) == "1":
+            if self._cfg.kb_autosave:
                 await self._persist_dialog_to_kb(dialog_context, entry["context"], dialog_id)
         except Exception as e:
             self.log_error(f"Background summarization failed: {e}")

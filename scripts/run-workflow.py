@@ -13,8 +13,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from copilotj.core.config import load_config
 import copilotj.multiagent.tools as tools  # noqa: E402
-from copilotj.core import FunctionTool, ToolCall, load_env  # noqa: E402
+from copilotj.core import FunctionTool, ToolCall  # noqa: E402
 from copilotj.multiagent.leader_prompts import (  # noqa: E402
     PROMPT_TOOL_EXECUTE_PYTHON_SCRIPT,
     PROMPT_TOOL_FOLDER_SUMMARY,
@@ -142,7 +143,7 @@ def prompt_text(label: str, default: str | None = None) -> str:
 
 
 async def execute_workflow(workflow: Workflow, inputs: dict[str, Any], server: str) -> list[dict[str, Any]]:
-    load_env()
+    load_config()
     api = HTTPPluginAPI(server)
     try:
         executor = WorkflowExecutor(ScriptWorkflowAgent(api.attach_single_client()))

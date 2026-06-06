@@ -2,17 +2,21 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+from __future__ import annotations
+
 import json
 import os
 import uuid
+from dataclasses import dataclass
 from pathlib import Path
 
 import dotenv
 
 __all__ = [
+    "Config",
+    "load_config",
     "SINGLE_CLIENT_ID",
     "get_home",
-    "load_env",
     "is_dev",
     "is_managed",
     "is_single_client",
@@ -42,10 +46,77 @@ def get_home() -> Path:
     return _PROJECT_ROOT
 
 
-def load_env() -> None:
+@dataclass(frozen=True)
+class Config:
+    """Application configuration loaded from environment variables.
+
+    Created once at server startup via ``load_config()`` and passed through
+    the constructor chain (Server → Threads → LeaderDriven → …).
+    Each component reads only the fields it needs.
+    """
+
+    # LLM
+    llm_model: str = ""
+    llm_api_key: str = ""
+    llm_base_url: str | None = None
+
+    # VLM (already resolved: VLM_* falls back to generic *)
+    vlm_model: str = ""
+    vlm_api_key: str = ""
+    vlm_base_url: str | None = None
+
+    # Network
+    proxy: str | None = None
+
+    # Tool keys
+    tavily_api_key: str | None = None
+
+    # Feature flags
+    kb_autosave: bool = False
+    dev: bool = False
+
+    # BioImage Model Zoo
+    bioimage_model_zoo_url: str = "https://bioimage-io.github.io/collection-bioimage-io/collection.json"
+    bioimage_model_zoo_cache: str = ""
+    bioimage_model_zoo_cache_ttl: int = 86400
+
+
+def load_config() -> Config:
+    """Load .env files and return a Config object.
+
+    Called once at server startup (or CLI entry).  Returns the populated
+    Config directly — no global state is stored.
+    """
     home = get_home()
     dotenv.load_dotenv(home / ".env", override=False)
     dotenv.load_dotenv(home / ".env.local", override=False)
+
+    return Config(
+        llm_model=os.getenv("COPILOTJ_MODEL", ""),
+        llm_api_key=os.getenv("COPILOTJ_API_KEY", "") or "",
+        llm_base_url=os.getenv("COPILOTJ_BASE_URL", None),
+        vlm_model=os.getenv("COPILOTJ_VLM_MODEL") or os.getenv("COPILOTJ_MODEL", ""),
+        vlm_api_key=os.getenv("COPILOTJ_VLM_API_KEY", os.getenv("COPILOTJ_API_KEY", "")) or "",
+        vlm_base_url=os.getenv("COPILOTJ_VLM_BASE_URL", None) or os.getenv("COPILOTJ_BASE_URL", None),
+        proxy=os.getenv("COPILOTJ_PROXY", None),
+        tavily_api_key=os.getenv("COPILOTJ_TAVILY_API_KEY", None),
+        kb_autosave=os.getenv("COPILOTJ_KB_AUTOSAVE", "0") == "1",
+        dev=os.getenv("COPILOTJ_DEV") is not None,
+        bioimage_model_zoo_url=os.getenv(
+            "BIOIMAGE_MODEL_ZOO_URL",
+            "https://bioimage-io.github.io/collection-bioimage-io/collection.json",
+        ),
+        bioimage_model_zoo_cache=os.getenv(
+            "BIOIMAGE_MODEL_ZOO_CACHE",
+            str(Path(__file__).resolve().parent.parent.parent / "temp" / "bioimage_model_zoo"),
+        ),
+        bioimage_model_zoo_cache_ttl=int(os.getenv("BIOIMAGE_MODEL_ZOO_CACHE_TTL", "86400")),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Legacy helpers — still used by bridge.py, plugin/api.py, appose_worker.py
+# ---------------------------------------------------------------------------
 
 
 def is_dev() -> bool:
@@ -120,3 +191,33 @@ def bootstrap_assets() -> None:
     import shutil
 
     shutil.copytree(source_assets, target_assets, dirs_exist_ok=True)
+
+
+# ---------------------------------------------------------------------------
+# Private helpers — used internally by model_client.py.
+# External code should read fields directly from the Config object.
+# ---------------------------------------------------------------------------
+
+
+def _get_llm_and_key(cfg: Config, model: str | None = None, api_key: str | None = None) -> tuple[str, str]:
+    return model or cfg.llm_model, api_key or cfg.llm_api_key
+
+
+def _get_llm_base_url(cfg: Config) -> str | None:
+    return cfg.llm_base_url
+
+
+def _get_vlm_and_key(cfg: Config, model: str | None = None, api_key: str | None = None) -> tuple[str, str]:
+    return model or cfg.vlm_model, api_key or cfg.vlm_api_key
+
+
+def _get_vlm_base_url(cfg: Config) -> str | None:
+    return cfg.vlm_base_url
+
+
+def _get_proxy(cfg: Config, default_value: str | None = None) -> str | None:
+    return default_value or cfg.proxy
+
+
+def _is_dev(cfg: Config) -> bool:
+    return cfg.dev

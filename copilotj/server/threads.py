@@ -16,7 +16,7 @@ import pydantic
 from langfuse import propagate_attributes
 
 from copilotj.core import UI, UIEvent, UIEventPost, UIEventState
-from copilotj.core.config import get_llm_and_key
+from copilotj.core.config import Config
 from copilotj.core.ui import UIEventContentMarkdown
 from copilotj.multiagent.leader_multiagent import LeaderDriven
 from copilotj.plugin.api import BridgePluginAPI, PluginAPI
@@ -64,9 +64,31 @@ class _OptimizePrompt(pydantic.BaseModel):
     prompt: str
 
 
+def _resolve_config(cfg: Config, config: _ConfigQuery | None) -> Config:
+    """Merge runtime overrides from the web UI into server-wide Config."""
+    if config is None or config.model is None:
+        return cfg
+
+    from dataclasses import replace
+
+    m = config.model
+    return replace(
+        cfg,
+        llm_model=m.name or cfg.llm_model,
+        llm_api_key=m.api_key if m.api_key is not None else cfg.llm_api_key,
+        llm_base_url=m.base_url if m.base_url is not None else cfg.llm_base_url,
+    )
+
+
 class _Thread(UI):
     def __init__(
-        self, thread_id: str, *, config: _ConfigQuery | None = None, trace_context: langfuse.Langfuse, bridge: "Bridge"
+        self,
+        thread_id: str,
+        cfg: Config,
+        *,
+        config: _ConfigQuery | None = None,
+        trace_context: langfuse.Langfuse,
+        bridge: "Bridge",
     ):
         self.thread_id = thread_id
         self._trace_ctx = trace_context
@@ -76,24 +98,20 @@ class _Thread(UI):
         self._apis: PluginAPI = BridgePluginAPI(bridge)
         client_apis = self._apis.attach_single_client()
 
-        config_model = config and config.model
+        # Merge runtime config override into server-wide Config
+        resolved = _resolve_config(cfg, config)
+
         self._agent = LeaderDriven(
             apis=client_apis,
             ui=self,
-            model=config_model.name if config_model else None,
-            api_key=config_model.api_key if config_model else None,
-            base_url=config_model.base_url if config_model else None,
+            cfg=resolved,
         )
         self._post_task: asyncio.Task[None] | None = None
         self._post_done: asyncio.Event | None = None
         self._task_future: Future[str | None] | None = None
         self._confirmation_future: Future[bool] | None = None
 
-        self._config = (
-            _Config(model=config_model or _ConfigModel(name=self._agent.model_client.get_model(), api_key=None))
-            if config
-            else _Config(model=_ConfigModel(name=self._agent.model_client.get_model(), api_key=None))
-        )
+        self._config = _Config(model=_ConfigModel(name=self._agent.model_client.get_model(), api_key=None))
 
     async def on_post(self, prompt: str | bool) -> AsyncGenerator[UIEvent, None]:
         """Handle incoming chat messages."""
@@ -251,8 +269,9 @@ class _Thread(UI):
 
 
 class Threads:
-    def __init__(self, bridge: "Bridge"):
+    def __init__(self, cfg: Config, *, bridge: "Bridge"):
         super().__init__()
+        self._cfg = cfg
         self._bridge = bridge
         self._threads: dict[str, tuple[_Thread, threading.Lock]] = {}
         self._threads_lock = threading.Lock()
@@ -273,15 +292,14 @@ class Threads:
         # If no model was explicitly provided, check that the server has one configured
         config_model = config.model if config else None
         if config_model is None:
-            resolved_model, _ = get_llm_and_key()
-            if not resolved_model:
+            if not self._cfg.llm_model:
                 return web.Response(
                     status=400,
                     text="No model configured. Please click the Settings gear icon in the sidebar to set up a model and API key.",
                 )
 
         thread_id = str(uuid.uuid4())
-        thread = _Thread(thread_id, config=config, trace_context=self._trace_ctx, bridge=self._bridge)
+        thread = _Thread(thread_id, self._cfg, config=config, trace_context=self._trace_ctx, bridge=self._bridge)
         thread_lock = threading.Lock()
         with self._threads_lock:
             self._threads[thread_id] = (thread, thread_lock)
@@ -442,7 +460,7 @@ class Threads:
             # Use default model from settings
             apis = HTTPPluginAPI("http://127.0.0.1:8786")  # FIXME: should not depend on this address
             client = apis.attach_single_client()  # TODO: should be removed or made configurable
-            temp_agent = LeaderDriven(apis=client)
+            temp_agent = LeaderDriven(apis=client, cfg=self._cfg)
             # Optimize the prompt (without chat history context)
             optimized = await temp_agent.optimize_prompt(prompt_data.prompt)
 

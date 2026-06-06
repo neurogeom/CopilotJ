@@ -9,6 +9,7 @@ import logging
 import aiohttp.web as web
 import aiohttp_cors
 
+from copilotj.core.config import Config
 from copilotj.server.bridge import Bridge
 from copilotj.server.threads import Threads
 
@@ -18,10 +19,11 @@ _log = logging.getLogger("copilotj.server")
 
 
 class Server:
-    def __init__(self):
+    def __init__(self, cfg: Config):
         super().__init__()
+        self._cfg = cfg
         self._bridge = Bridge()
-        self._threads = Threads(self._bridge)
+        self._threads = Threads(cfg, bridge=self._bridge)
         self._app = self._create_app()
 
     def add_background_task(self, task: asyncio.Task) -> None:
@@ -74,7 +76,7 @@ class Server:
 
         r = app.router
         r.add_get("/api/ping", _on_ping)
-        r.add_get("/api/config", _on_config)
+        r.add_get("/api/config", self._on_config)
         r.add_get("/api/plugins", self._bridge.on_plugin_connect)
         r.add_post("/api/plugins/events", self._bridge.on_forward_event)
         r.add_post("/api/threads", self._threads.new_thread)
@@ -113,18 +115,15 @@ class Server:
         app.cleanup_ctx.append(_ensure_kb)
         return app
 
+    async def _on_config(self, request: web.Request) -> web.Response:
+        """Return the server's default configuration so the frontend can show the
+        correct initial state (e.g. suppress the 'no model configured' warning when
+        a model is already set via environment variables / .env.local)."""
+        model_name = self._cfg.llm_model
+        if model_name:
+            return web.json_response({"model": {"name": model_name, "api_key": None, "base_url": None}})
+        return web.json_response({"model": None})
+
 
 async def _on_ping(request: web.Request) -> web.Response:
     return web.Response(text="pong")
-
-
-async def _on_config(request: web.Request) -> web.Response:
-    """Return the server's default configuration so the frontend can show the
-    correct initial state (e.g. suppress the 'no model configured' warning when
-    a model is already set via environment variables / .env.local)."""
-    from copilotj.core.config import get_llm_and_key
-
-    model_name, _ = get_llm_and_key()
-    if model_name:
-        return web.json_response({"model": {"name": model_name, "api_key": None, "base_url": None}})
-    return web.json_response({"model": None})

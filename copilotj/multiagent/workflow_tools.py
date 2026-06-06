@@ -6,7 +6,7 @@ import json
 from typing import Annotated, Any, Optional
 
 import copilotj.multiagent.leader_multiagent as leader_multiagent
-from copilotj.core import ModelClient, TextMessage, load_env
+from copilotj.core import ModelClient, TextMessage, load_config
 from copilotj.multiagent.leader_prompts import make_workflow_definition_prompt
 from copilotj.plugin.api import ClientPluginAPI
 from copilotj.workflow.converter import DialogToWorkflowConverter
@@ -275,8 +275,8 @@ async def execute_workflow(
 ) -> str:
     """Execute a workflow with the provided leader agent"""
     try:
-        load_env()  # FIXME: why we need to load env here? should we load it in the main entry point instead?
-        leader = leader_multiagent.LeaderDriven(apis=apis)
+        cfg = load_config()
+        leader = leader_multiagent.LeaderDriven(apis=apis, cfg=cfg)
         executor = WorkflowExecutor(leader.leader_agent)
         results = await executor.execute_workflow_by_id(workflow_id, stop_on_error, inputs)
 
