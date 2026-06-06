@@ -5,18 +5,18 @@
 import contextlib
 import os
 
-from copilotj.core import get_proxy
+from copilotj.core.config import Config
 
 __all__ = ["temporary_proxy"]
 
 
 @contextlib.contextmanager
-def temporary_proxy(default_value: str | None = None):
+def temporary_proxy(cfg: Config, default_value: str | None = None):
     """Set a temporary proxy for the duration of the context
 
     Notes: not thread-safe, use with caution in multi-threaded environments.
     """
-    proxy = get_proxy(default_value)
+    proxy = default_value or cfg.proxy
     keys = ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"]
 
     old_env = {k: os.environ.get(k) for k in keys + [k.lower() for k in keys]}

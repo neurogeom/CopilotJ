@@ -4,7 +4,6 @@
 
 import abc
 import logging
-import os
 from typing import Any, AsyncGenerator, Literal, Sequence, cast, overload, override
 
 import langfuse.openai
@@ -12,7 +11,14 @@ import openai.types.chat
 import openai.types.responses
 import pydantic
 
-from copilotj.core.config import get_llm_and_key, get_llm_base_url, get_proxy, get_vlm_and_key, get_vlm_base_url
+from copilotj.core.config import (
+    Config,
+    _get_llm_and_key,
+    _get_llm_base_url,
+    _get_proxy,
+    _get_vlm_and_key,
+    _get_vlm_base_url,
+)
 from copilotj.core.message import ImageMessage, TextMessage
 from copilotj.core.tool import Tool
 
@@ -128,21 +134,42 @@ class ModelClient(abc.ABC):
 
 
 def new_model_client(
-    model: str | None = None, api_key: str | None = None, *, proxy: str | None = None, base_url: str | None = None
+    model: str | None = None,
+    api_key: str | None = None,
+    *,
+    proxy: str | None = None,
+    base_url: str | None = None,
+    cfg: Config | None = None,
 ) -> ModelClient:
-    model, api_key = get_llm_and_key(model, api_key)
-    return _new_model_client(model, api_key, proxy=proxy, base_url=base_url or get_llm_base_url())
+    from copilotj.core.config import load_config
+
+    cfg = cfg or load_config()
+    model, api_key = _get_llm_and_key(cfg, model, api_key)
+    return _new_model_client(model, api_key, proxy=proxy, base_url=base_url or _get_llm_base_url(cfg), cfg=cfg)
 
 
 def new_vlm_model_client(
-    model: str | None = None, api_key: str | None = None, *, proxy: str | None = None
+    model: str | None = None,
+    api_key: str | None = None,
+    *,
+    proxy: str | None = None,
+    base_url: str | None = None,
+    cfg: Config | None = None,
 ) -> ModelClient:
-    model, api_key = get_vlm_and_key(model, api_key)
-    return _new_model_client(model, api_key, proxy=proxy, base_url=get_vlm_base_url())
+    from copilotj.core.config import load_config
+
+    cfg = cfg or load_config()
+    model, api_key = _get_vlm_and_key(cfg, model, api_key)
+    return _new_model_client(model, api_key, proxy=proxy, base_url=base_url or _get_vlm_base_url(cfg), cfg=cfg)
 
 
-def _new_model_client(model: str, api_key: str, *, proxy: str | None, base_url: str | None = None) -> ModelClient:
-    proxy = get_proxy(proxy)
+def _new_model_client(
+    model: str, api_key: str, *, proxy: str | None, base_url: str | None = None, cfg: Config | None = None
+) -> ModelClient:
+    from copilotj.core.config import load_config
+
+    cfg = cfg or load_config()
+    proxy = _get_proxy(cfg, proxy)
 
     if model.startswith("ollama/"):
         model_name = model.split("/", 1)[1]
@@ -181,7 +208,8 @@ def _new_model_client(model: str, api_key: str, *, proxy: str | None, base_url: 
 class OpenAIChatCompletionClient(ModelClient):
     def __init__(self, model: str, api_key: str, *, base_url: str | None = None, proxy: str | None = None):
         super().__init__()
-        self._model, self._api_key = get_llm_and_key(model, api_key)
+        self._model = model
+        self._api_key = api_key
         http_client = openai.DefaultAsyncHttpxClient(proxy=proxy) if proxy is not None else None
 
         # Langfuse support can be safely ignored if LANGFUSE_PUBLIC_KEY or LANGFUSE_SECRET_KEY is not set
@@ -391,7 +419,8 @@ class OpenAIChatCompletionClient(ModelClient):
 class OpenAIResponseClient(ModelClient):
     def __init__(self, model: str, api_key: str, *, base_url: str | None = None, proxy: str | None = None):
         super().__init__()
-        self._model, self._api_key = get_llm_and_key(model, api_key)
+        self._model = model
+        self._api_key = api_key
         http_client = openai.DefaultAsyncHttpxClient(proxy=proxy) if proxy is not None else None
         self._client = langfuse.openai.AsyncOpenAI(api_key=self._api_key, http_client=http_client, base_url=base_url)
 
@@ -750,7 +779,7 @@ class OllamaChatCompletionClient(ModelClient):
 
         super().__init__()
         # Base URL for Ollama server, e.g., http://localhost:11434
-        self._host = base_url or os.getenv("COPILOTJ_BASE_URL", "http://localhost:11434")
+        self._host = base_url or "http://localhost:11434"
         self._client = ollama.AsyncClient(host=self._host)
         self._model = model
 
@@ -852,13 +881,12 @@ class OllamaChatCompletionClient(ModelClient):
 if __name__ == "__main__":
     # python -m copilotj.core.model_client
     import asyncio
-    import os
 
     import click
     from rich.console import Console
     from rich.prompt import Prompt
 
-    from copilotj.core.config import load_env
+    from copilotj.core.config import Config, _get_llm_and_key, _get_proxy, load_config
     from copilotj.core.tool import FunctionTool
 
     @click.command()
@@ -867,9 +895,9 @@ if __name__ == "__main__":
     @click.option("--proxy", default=None, help="The proxy to use.")
     @click.option("--stream", is_flag=True, help="Whether to stream the response.")
     def cli(model, api_key, proxy, stream):
-        load_env()
-        model, api_key = get_llm_and_key(model, api_key)
-        proxy = get_proxy(proxy)
+        cfg: Config = load_config()
+        model, api_key = _get_llm_and_key(cfg, model, api_key)
+        proxy = _get_proxy(cfg, proxy)
 
         console = Console()
 

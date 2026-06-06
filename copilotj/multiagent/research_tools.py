@@ -21,8 +21,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from tavily import TavilyClient
 
-from copilotj.core import load_env
-from copilotj.core.config import get_home
+from copilotj.core.config import Config
 from copilotj.core.embedding import get_embeddings
 from copilotj.multiagent.py_tools import get_project_temp_dir
 from copilotj.multiagent.tools import execute_python_script
@@ -36,25 +35,20 @@ __all__ = [
     "imagesc_search",
     "biii_search",
     "ImageJRetriever",
-    "deep_research",
+    "make_deep_research",
     "download_resource",
     "bioimage_search_models",
     "bioimage_get_model_info",
     "bioimage_download_model",
     "init_knowledge_base",
+    "make_research_tools",
 ]
 
-# BioImage Model Zoo constants
-DEFAULT_COLLECTION_URL = os.getenv(
-    "BIOIMAGE_MODEL_ZOO_URL",
-    "https://bioimage-io.github.io/collection-bioimage-io/collection.json",
-)
+# Fallback BioImage Model Zoo URLs (no config needed)
 FALLBACK_COLLECTION_URLS = [
     "https://raw.githubusercontent.com/bioimage-io/collection-bioimage-io/main/collection.json",
     "https://bioimage.io/collection.json",
 ]
-DEFAULT_CACHE_DIR = Path(os.getenv("BIOIMAGE_MODEL_ZOO_CACHE", get_home() / "temp" / "bioimage_model_zoo")).resolve()
-DEFAULT_CACHE_TTL = int(os.getenv("BIOIMAGE_MODEL_ZOO_CACHE_TTL", "86400"))
 
 
 # BioImage Model Zoo helper functions
@@ -103,9 +97,9 @@ def _load_cached_collection(cache_file: Path, ttl_seconds: int) -> list[Mapping]
 
 def _fetch_collection(
     *,
-    base_url: str | Iterable[str] = DEFAULT_COLLECTION_URL,
-    cache_dir: Path = DEFAULT_CACHE_DIR,
-    ttl_seconds: int = DEFAULT_CACHE_TTL,
+    base_url: str | Iterable[str],
+    cache_dir: Path,
+    ttl_seconds: int,
     force_refresh: bool = False,
     session: requests.Session | None = None,
 ) -> list[Mapping]:
@@ -261,10 +255,9 @@ def tavily_search(
     max_results: Annotated[int, "Maximum number of search results to return"] = 5,
     include_answer: Annotated[bool, "Whether to include AI-generated summary"] = True,
     include_raw_content: Annotated[bool, "Whether to include raw content from sources"] = False,
+    tavily_api_key: str | None = None,
 ) -> str | list[dict[str, str]]:
     try:
-        load_env()
-        tavily_api_key = os.getenv("COPILOTJ_TAVILY_API_KEY")
         if not tavily_api_key:
             return "Tavily API key not found. Please set COPILOTJ_TAVILY_API_KEY environment variable."
 
@@ -589,41 +582,47 @@ async def imagej_retriever(query: Annotated[str, "Search query string describing
 
 
 # deep research tool
-async def deep_research(query: Annotated[str, "The research question to investigate thoroughly"]) -> str:
-    research_report = {
-        "query": query,
-        "sources_consulted": [],
-        "findings": {},
-        "cross_validation": {},
-        "synthesis": "",
-        "recommendations": [],
-    }
+def make_deep_research(cfg: Config):
+    """Factory: return a ``deep_research`` callable bound to *cfg*."""
+    _tavily_search = make_tavily_search(cfg)
 
-    try:
-        kb_results = await imagej_retriever(query)
-        research_report["sources_consulted"].append("ImageJ Knowledge Base")
-        research_report["findings"]["knowledge_base"] = kb_results
+    async def deep_research(query: Annotated[str, "The research question to investigate thoroughly"]) -> str:
+        research_report = {
+            "query": query,
+            "sources_consulted": [],
+            "findings": {},
+            "cross_validation": {},
+            "synthesis": "",
+            "recommendations": [],
+        }
 
-        tavily_results = tavily_search(query, max_results=5, include_answer=True)
-        research_report["sources_consulted"].append("Tavily AI Search")
-        research_report["findings"]["web_current"] = tavily_results
+        try:
+            kb_results = await imagej_retriever(query)
+            research_report["sources_consulted"].append("ImageJ Knowledge Base")
+            research_report["findings"]["knowledge_base"] = kb_results
 
-        imagesc_results = imagesc_search(query)
-        research_report["sources_consulted"].append("Image.sc Forum")
-        research_report["findings"]["community"] = imagesc_results
+            tavily_results = _tavily_search(query, max_results=5, include_answer=True)
+            research_report["sources_consulted"].append("Tavily AI Search")
+            research_report["findings"]["web_current"] = tavily_results
 
-        wiki_results = wikipedia_search(query)
-        research_report["sources_consulted"].append("Wikipedia")
-        research_report["findings"]["reference"] = wiki_results
+            imagesc_results = imagesc_search(query)
+            research_report["sources_consulted"].append("Image.sc Forum")
+            research_report["findings"]["community"] = imagesc_results
 
-        ddg_results = ddg_search(query, max_results=5)
-        research_report["sources_consulted"].append("DuckDuckGo Search")
-        research_report["findings"]["web_alternative"] = ddg_results
+            wiki_results = wikipedia_search(query)
+            research_report["sources_consulted"].append("Wikipedia")
+            research_report["findings"]["reference"] = wiki_results
 
-        return _format_research_with_prompt(research_report)
+            ddg_results = ddg_search(query, max_results=5)
+            research_report["sources_consulted"].append("DuckDuckGo Search")
+            research_report["findings"]["web_alternative"] = ddg_results
 
-    except Exception as e:
-        return f"❌ Deep research failed: {str(e)}, please skip this tool and continue with other tools."
+            return _format_research_with_prompt(research_report)
+
+        except Exception as e:
+            return f"❌ Deep research failed: {str(e)}, please skip this tool and continue with other tools."
+
+    return deep_research
 
 
 def _format_research_with_prompt(research_report: dict) -> str:
@@ -687,6 +686,8 @@ def bioimage_search_models(
     tags: Annotated[list[str] | None, "List of tags to filter by (e.g., ['denoising', 'segmentation'])"] = None,
     authors: Annotated[list[str] | None, "List of author names to filter by"] = None,
     limit: Annotated[int, "Maximum number of results to return"] = 10,
+    *,
+    cfg: Config | None = None,
 ) -> str:
     """Search BioImage Model Zoo for pre-trained models.
 
@@ -694,11 +695,14 @@ def bioimage_search_models(
     Use this to find models for specific tasks like denoising, segmentation, detection, etc.
     """
     try:
+        from copilotj.core.config import load_config
+
+        _cfg = cfg or load_config()
         # Fetch collection
         models = _fetch_collection(
-            base_url=DEFAULT_COLLECTION_URL,
-            cache_dir=DEFAULT_CACHE_DIR,
-            ttl_seconds=DEFAULT_CACHE_TTL,
+            base_url=_cfg.bioimage_model_zoo_url,
+            cache_dir=Path(_cfg.bioimage_model_zoo_cache).resolve(),
+            ttl_seconds=_cfg.bioimage_model_zoo_cache_ttl,
             force_refresh=False,
         )
 
@@ -761,9 +765,7 @@ def bioimage_search_models(
         return f"Error searching BioImage Model Zoo: {str(e)}"
 
 
-def bioimage_get_model_info(
-    model_id: Annotated[str, "Model ID or name to get detailed information for"],
-) -> str:
+def bioimage_get_model_info(model_id: Annotated[str, "Model ID or name to get detailed information for"]) -> str:
     """Get detailed metadata for a specific BioImage Model Zoo model.
 
     Returns comprehensive information including description, authors, tags, download URLs, etc.
@@ -808,6 +810,8 @@ def bioimage_download_model(
     dest_dir: Annotated[
         str | None, "Optional destination directory path (defaults to project assets/bioimage_models)"
     ] = None,
+    *,
+    cfg: Config,
 ) -> str:
     """Download a BioImage Model Zoo model archive.
 
@@ -822,9 +826,9 @@ def bioimage_download_model(
         dest_path.mkdir(parents=True, exist_ok=True)
 
         models = _fetch_collection(
-            base_url=DEFAULT_COLLECTION_URL,
-            cache_dir=DEFAULT_CACHE_DIR,
-            ttl_seconds=DEFAULT_CACHE_TTL,
+            base_url=cfg.bioimage_model_zoo_url,
+            cache_dir=Path(cfg.bioimage_model_zoo_cache).resolve(),
+            ttl_seconds=cfg.bioimage_model_zoo_cache_ttl,
             force_refresh=False,
         )
 
@@ -857,10 +861,69 @@ def bioimage_download_model(
 # Re-export init_knowledge_base for convenience
 from copilotj.core.kb import init_knowledge_base  # noqa: E402
 
-if __name__ == "__main__":
-    from copilotj.core import load_env
 
-    load_env()
+def make_research_tools(cfg: Config) -> dict:
+    """Factory: return research tool functions bound to the given Config.
+
+    Uses closures instead of functools.partial so that bound config
+    parameters are hidden from the function signature — FunctionTool
+    will only see the parameters the LLM should provide.
+
+    Usage::
+
+        tools = make_research_tools(cfg)
+        tools["tavily_search"]("query")
+        tools["bioimage_search_models"](query="...")
+    """
+
+    def _tavily_search(
+        query: Annotated[str, "Search query string describing what information you need"],
+        *,
+        max_results: Annotated[int, "Maximum number of search results to return"] = 5,
+        include_answer: Annotated[bool, "Whether to include AI-generated summary"] = True,
+        include_raw_content: Annotated[bool, "Whether to include raw content from sources"] = False,
+    ) -> str | list[dict[str, str]]:
+        return tavily_search(
+            query,
+            max_results=max_results,
+            include_answer=include_answer,
+            include_raw_content=include_raw_content,
+            tavily_api_key=cfg.tavily_api_key,
+        )
+
+    def _bioimage_search_models(
+        query: Annotated[str | None, "Free-text search query for model name, description, or keywords"] = None,
+        tags: Annotated[list[str] | None, "List of tags to filter by (e.g., ['denoising', 'segmentation'])"] = None,
+        authors: Annotated[list[str] | None, "List of author names to filter by"] = None,
+        limit: Annotated[int, "Maximum number of results to return"] = 10,
+    ) -> str:
+        return bioimage_search_models(query, tags=tags, authors=authors, limit=limit, cfg=cfg)
+
+    def _bioimage_get_model_info(
+        model_id: Annotated[str, "Model ID or name to get detailed information for"],
+    ) -> str:
+        return bioimage_get_model_info(model_id)
+
+    def _bioimage_download_model(
+        model_id: Annotated[str, "Model ID or name to download"],
+        dest_dir: Annotated[
+            str | None, "Optional destination directory path (defaults to project assets/bioimage_models)"
+        ] = None,
+    ) -> str:
+        return bioimage_download_model(model_id, dest_dir=dest_dir, cfg=cfg)
+
+    return {
+        "tavily_search": _tavily_search,
+        "bioimage_search_models": _bioimage_search_models,
+        "bioimage_get_model_info": _bioimage_get_model_info,
+        "bioimage_download_model": _bioimage_download_model,
+    }
+
+
+if __name__ == "__main__":
+    from copilotj.core import load_config
+
+    load_config()
 
     result = ddg_search("images of albert einstein", images=True)
     print(result)

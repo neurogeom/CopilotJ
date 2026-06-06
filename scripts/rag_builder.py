@@ -26,7 +26,6 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 PROJECT_ROOT = Path(__file__).parent.parent.resolve()
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from copilotj.core import load_env  # noqa: E402
 from copilotj.core.config import get_home  # noqa: E402
 from copilotj.core.embedding import get_embeddings  # noqa: E402
 from copilotj.core.kb import _file_hash, ensure_faiss_index, export_jsonl, save_rebuild_hash  # noqa: E402
@@ -248,7 +247,6 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
-    load_env()
 
     if args.build:
         build_rag(data_dir=args.data_dir, index_dir=args.index_dir)

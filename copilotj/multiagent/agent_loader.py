@@ -100,9 +100,9 @@ def _load_agent_configs(glob_pattern: str, *, model_client: ModelClient):
 
 
 if __name__ == "__main__":
-    from copilotj.core import load_env, new_model_client
+    from copilotj.core import load_config, new_model_client
 
-    load_env()
+    load_config()
 
     # Test: Load agent configurations and print each agent's tool list
     print("Loading agent configurations...")

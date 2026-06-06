@@ -38,7 +38,7 @@ import sys
 import threading
 from urllib.parse import urlparse
 
-from copilotj.core import load_env
+from copilotj.core import load_config
 from copilotj.core.config import bootstrap_assets, load_managed_config, save_managed_config
 from copilotj.server import Server
 
@@ -79,11 +79,11 @@ def start_server() -> None:
     global _server, _loop, _previous_port
 
     _ensure_utf8_stdout()
-    load_env()
     bootstrap_assets()
     saved_port = _extract_port(load_managed_config().get("server_url"))
 
-    _server = Server()
+    cfg = load_config()
+    _server = Server(cfg)
     _loop = asyncio.new_event_loop()
 
     async def _start():

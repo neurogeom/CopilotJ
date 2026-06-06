@@ -4,7 +4,7 @@
 
 import asyncio
 
-from copilotj.core import Pattern, load_env
+from copilotj.core import Pattern, load_config
 from copilotj.core.model_client import new_model_client
 from copilotj.multiagent.agent_loader import load_agent_configs
 
@@ -33,10 +33,10 @@ class LeaderDriven(Pattern):
 
 
 if __name__ == "__main__":
-    from copilotj.core import load_env
+    from copilotj.core import load_config
 
     async def main():
-        load_env()
+        load_config()
 
         group = LeaderDriven()
 

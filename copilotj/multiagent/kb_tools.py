@@ -12,7 +12,7 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-from copilotj.core.config import get_home, load_env
+from copilotj.core.config import get_home, load_config
 from copilotj.core.model_client import new_model_client
 
 _SOURCE_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -61,6 +61,7 @@ def _bootstrap_kb() -> None:
     source = _SOURCE_ROOT / "knowledge_bank"
     if source.exists():
         import shutil
+
         shutil.copytree(source, KB_ROOT, dirs_exist_ok=True)
 
 
@@ -1430,7 +1431,7 @@ async def _llm_extract_with_retry(
 
     for attempt in range(max_retries):
         try:
-            load_env()
+            load_config()
             model_client = new_model_client()
             llm_response = await model_client.create([TextMessage(role="user", text=prompt)])
 
