@@ -82,6 +82,10 @@ export interface ThreadConfig {
 
 export interface ThreadConfigQuery {
   model?: ThreadConfigModel | null;
+  vlm?: ThreadConfigModel | null;
+  proxy?: string | null;
+  tavily_api_key?: string | null;
+  kb_autosave?: boolean;
 }
 
 export interface OptimizePromptRequest {
@@ -93,7 +97,14 @@ export interface OptimizePromptResponse {
   optimized: string;
 }
 
-export async function getServerConfig(): Promise<{ model: ThreadConfigModel | null }> {
+export interface ServerConfig {
+  model: ThreadConfigModel | null;
+  vlm: ThreadConfigModel | null;
+  proxy: string | null;
+  kb_autosave: boolean;
+}
+
+export async function getServerConfig(): Promise<ServerConfig> {
   const url = `${getBaseUrl()}/config`;
   const response = await fetch(url, { method: "GET" });
   if (!response.ok) {

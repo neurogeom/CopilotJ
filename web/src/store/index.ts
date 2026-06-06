@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+export * from "./config";
 export * from "./settings";
 export * from "./state";
 export * from "./thread";
