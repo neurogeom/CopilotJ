@@ -4,6 +4,7 @@
 
 import glob
 import importlib
+import logging
 import os
 import tomllib
 
@@ -11,6 +12,8 @@ from copilotj.core import FunctionTool, ModelClient, Tool
 from copilotj.multiagent.Executor import Executor
 
 __all__ = ["load_agent_configs"]
+
+_log = logging.getLogger(__name__)
 
 GLOB_PATTERN = os.path.join(os.path.dirname(__file__), "agent_configs", "*_agent.toml")
 
@@ -22,28 +25,28 @@ def load_agent_configs(*, model_client: ModelClient):
 def _load_agent_configs(glob_pattern: str, *, model_client: ModelClient):
     agents = {}
     configs = glob.glob(glob_pattern)
-    print(f"Found {len(configs)} configs in {glob_pattern}.")
+    _log.info("Found %d configs in %s.", len(configs), glob_pattern)
     for file in configs:
         try:
             with open(file, "rb") as f:
                 config = tomllib.load(f)
 
         except Exception as e:
-            print(f"Failed to load {file}: {e}")
+            _log.error("Failed to load %s: %s", file, e)
             continue
 
         # Skip files that are commented out or empty
         if not config or config == "pass":
-            print(f"Skipping {file}: empty or commented out")
+            _log.info("Skipping %s: empty or commented out", file)
             continue
 
         if "name" not in config or "class" not in config:
-            print(f"Configuration file {file} is missing required 'name' or 'class' field")
+            _log.warning("Configuration file %s is missing required 'name' or 'class' field", file)
             continue
 
         module_class_str = config["class"]
         module_name, class_name = module_class_str.rsplit(".", 1)
-        print(f"Loading agent class {class_name} from module {module_name}...")
+        _log.info("Loading agent class %s from module %s...", class_name, module_name)
         try:
             module = importlib.import_module(module_name)
             agent_class = getattr(module, class_name)
@@ -80,21 +83,18 @@ def _load_agent_configs(glob_pattern: str, *, model_client: ModelClient):
                     agent_tools.append(tool_class())
 
                 else:
-                    print(f"Tool configuration for {tool_name} is missing 'function' or 'class' field")
+                    _log.warning("Tool configuration for %s is missing 'function' or 'class' field", tool_name)
 
-            print(f"Loaded tools for {name}: {list(agent_tools)}")
+            _log.info("Loaded tools for %s: %s", name, list(agent_tools))
 
             # Create agent instance with tool descriptions
             agents[name] = agent_class(
                 name=name, description=description, prompt=prompt, tools=agent_tools, model_client=model_client
             )
-            print(f"Successfully loaded agent: {name}")
+            _log.info("Successfully loaded agent: %s", name)
 
         except Exception as e:
-            print(f"Error loading agent from {file}: {e}")
-            import traceback
-
-            traceback.print_exc()
+            _log.error("Error loading agent from %s: %s", file, e, exc_info=True)
 
     return agents
 

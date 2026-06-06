@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import json
+import logging
 import os
 import time
 from pathlib import Path
@@ -25,6 +26,8 @@ from copilotj.core.config import get_home
 from copilotj.core.embedding import get_embeddings
 from copilotj.multiagent.py_tools import get_project_temp_dir
 from copilotj.multiagent.tools import execute_python_script
+
+_log = logging.getLogger(__name__)
 
 __all__ = [
     "ddg_search",
@@ -324,7 +327,7 @@ def imagesc_search(
         driver = webdriver.Chrome(options=options)
         driver.set_page_load_timeout(timeout)
 
-        print(f"🔍 Attempting direct crawl of Image.sc forum (timeout: {timeout}s)...")
+        _log.info("Attempting direct crawl of Image.sc forum (timeout: %ds)...", timeout)
         driver.get(search_url)
 
         time.sleep(2)
@@ -386,7 +389,7 @@ def biii_search(query: str, timeout: int = 10) -> str:
         driver = webdriver.Chrome(options=options)
         driver.set_page_load_timeout(timeout)
 
-        print(f"🔍 Attempting direct crawl of bio-image.io (timeout: {timeout}s)...")
+        _log.info("Attempting direct crawl of bio-image.io (timeout: %ds)...", timeout)
         driver.get(search_url)
         time.sleep(2)
 

@@ -4,6 +4,7 @@
 
 import asyncio
 import atexit
+import logging
 import platform
 import signal
 import sys
@@ -21,6 +22,8 @@ __all__ = [
     "PyimagejRunner",
     "execute_python_script",
 ]
+
+_log = logging.getLogger(__name__)
 
 
 class PluginTools:
@@ -358,7 +361,7 @@ class JupyterClient:
 
     def _signal_handler(self, signum, frame):
         """Handle system signals."""
-        print(f"Received signal {signum}, cleaning up Jupyter client...")
+        _log.warning("Received signal %d, cleaning up Jupyter client", signum)
         self.cleanup()
 
     def execute_code(self, code: str) -> str:
@@ -381,7 +384,7 @@ class JupyterClient:
                 if not ok:
                     # Check if it's a kernel issue
                     if "kernel" in result.lower() or "parent appears to have exited" in result.lower():
-                        print(f"Kernel issue detected on attempt {attempt + 1}, reinitializing...")
+                        _log.warning("Kernel issue detected on attempt %d, reinitializing", attempt + 1)
                         self._initialize_notebook()
                         if attempt < max_retries - 1:
                             continue
@@ -393,7 +396,7 @@ class JupyterClient:
                 if attempt < max_retries - 1 and (
                     "kernel" in error_msg.lower() or "parent appears to have exited" in error_msg.lower()
                 ):
-                    print(f"Connection issue on attempt {attempt + 1}, retrying...")
+                    _log.warning("Connection issue on attempt %d, retrying", attempt + 1)
                     self._initialize_notebook()
                     continue
                 return f"Error executing code: {error_msg}"
@@ -404,11 +407,11 @@ class JupyterClient:
         """Clean up Jupyter client resources."""
         if self._notebook:
             try:
-                print("Shutting down Jupyter kernel...")
+                _log.info("Shutting down Jupyter kernel...")
                 self._notebook.close()
-                print("Jupyter kernel shut down successfully")
+                _log.info("Jupyter kernel shut down successfully")
             except Exception as e:
-                print(f"Error shutting down Jupyter kernel: {e}")
+                _log.error("Error shutting down Jupyter kernel: %s", e)
             finally:
                 self._notebook = None
 
@@ -468,7 +471,7 @@ async def execute_python_script(script: Annotated[str, "Python script to execute
 
             # Check for kernel shutdown warning
             if "parent appears to have exited" in result.lower():
-                print("⚠️ Jupyter kernel shutdown detected, attempting recovery...")
+                _log.warning("Jupyter kernel shutdown detected, attempting recovery...")
                 # Try once more with a fresh client
                 cleanup_jupyter_client()
                 client = get_jupyter_client()
@@ -501,7 +504,7 @@ async def execute_python_script(script: Annotated[str, "Python script to execute
         except Exception as e:
             error_msg = str(e)
             if "kernel" in error_msg.lower() or "parent appears to have exited" in error_msg.lower():
-                print("🔄 Kernel issue detected, attempting recovery...")
+                _log.warning("Kernel issue detected, attempting recovery...")
                 cleanup_jupyter_client()
                 return "⚠️ Jupyter kernel restarted due to connection issue. Please try again."
 

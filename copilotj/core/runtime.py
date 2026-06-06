@@ -123,11 +123,11 @@ class Runtime(abc.ABC):
 
     def log_info(self, message: str) -> None:
         self._logger.info(message)
-        print(message)  # TODO: need remove, multiplex logging
+        # print(message)  # TODO: re-enable with UTF-8 stdout support
 
     def log_error(self, message: str) -> None:
         self._logger.error(message)
-        print(message)  # TODO: need remove, multiplex logging
+        # print(message)  # TODO: re-enable with UTF-8 stdout support
 
 
 def _setup_logger(name: str, *, log_folder: str = "logs") -> logging.Logger:

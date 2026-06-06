@@ -34,6 +34,7 @@ stdin (graceful shutdown), the worker exits and the daemon thread is killed.
 
 import asyncio
 import logging
+import sys
 import threading
 from urllib.parse import urlparse
 
@@ -77,6 +78,7 @@ def start_server() -> None:
     """
     global _server, _loop, _previous_port
 
+    _ensure_utf8_stdout()
     load_env()
     saved_port = _extract_port(load_managed_config().get("server_url"))
 
@@ -158,3 +160,21 @@ def stop_server() -> dict:
 
     _log.info("Managed server stopped")
     return {"stopped": True}
+
+
+def _ensure_utf8_stdout() -> None:
+    """Reconfigure stdout/stderr to UTF-8.
+
+    When running under Appose on Windows, stdout may be a pipe or socket
+    with GBK encoding (the system OEM code page).  Emoji and other
+    non-GBK characters in print() calls would raise UnicodeEncodeError.
+    Reconfigure to UTF-8 with replacement so the process never crashes.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        if stream is not None:
+            reconfigure = getattr(stream, "reconfigure")
+            if reconfigure is not None:
+                try:
+                    reconfigure(encoding="utf-8", errors="replace")
+                except (AttributeError, OSError):
+                    pass
