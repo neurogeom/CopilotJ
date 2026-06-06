@@ -7,15 +7,26 @@
 import { acceptHMRUpdate, defineStore } from "pinia";
 import { computed, ref } from "vue";
 import type { ThreadConfigModel, ThreadConfigQuery } from "../apis";
+import { useConfig } from "./config";
 
 export const useSettings = defineStore("settings", () => {
   const expandSidebar = ref(false);
   const autoScroll = ref(true);
 
   const model = ref<ThreadConfigModel | null>(null);
-  const value = computed<ThreadConfigQuery>(() => ({
-    model: model.value,
-  }));
+  const value = computed<ThreadConfigQuery>(() => {
+    const cfg = useConfig();
+    const vlm = cfg.data.vlm;
+    return {
+      model: model.value,
+      vlm: vlm.useMainModel
+        ? null
+        : { name: vlm.model!, api_key: vlm.api_key, base_url: vlm.base_url },
+      proxy: cfg.data.proxy,
+      tavily_api_key: cfg.data.tavilyApiKey,
+      kb_autosave: cfg.data.kbAutosave,
+    };
+  });
 
   function toggleExpandSidebar(enable?: boolean) {
     expandSidebar.value = enable ?? !expandSidebar.value;

@@ -10,7 +10,7 @@ import { ref } from "vue";
 import type { ThreadConfig, ThreadConfigModel } from "../apis";
 import { useThread } from "../store";
 import FloatIconButton from "./FloatIconButton.vue";
-import SettingModel from "./SettingModel.vue";
+import SettingLLM from "./SettingLLM.vue";
 
 const props = defineProps<{
   thread: ReturnType<typeof useThread>;
@@ -41,6 +41,6 @@ async function submitModel(newModel: ThreadConfigModel | null) {
   <FloatIconButton :icon="IconSettings" :disabled="thread.loading" @click="onClick" />
 
   <Dialog v-model:visible="showConfig" modal header="Thread Configuration">
-    <SettingModel v-if="config" :model="config?.model" @update:model="submitModel" />
+    <SettingLLM v-if="config" :model="config?.model" @update:model="submitModel" />
   </Dialog>
 </template>

@@ -118,11 +118,23 @@ class Server:
     async def _on_config(self, request: web.Request) -> web.Response:
         """Return the server's default configuration so the frontend can show the
         correct initial state (e.g. suppress the 'no model configured' warning when
-        a model is already set via environment variables / .env.local)."""
-        model_name = self._cfg.llm_model
-        if model_name:
-            return web.json_response({"model": {"name": model_name, "api_key": None, "base_url": None}})
-        return web.json_response({"model": None})
+        a model is already set via environment variables / .env.local).
+
+        IMPORTANT: API keys are never exposed to the frontend.
+        """
+        cfg = self._cfg
+        return web.json_response(
+            {
+                "model": {"name": cfg.llm_model, "api_key": None, "base_url": cfg.llm_base_url}
+                if cfg.llm_model
+                else None,
+                "vlm": {"name": cfg.vlm_model, "api_key": None, "base_url": cfg.vlm_base_url}
+                if cfg.vlm_model
+                else None,
+                "proxy": cfg.proxy,
+                "kb_autosave": cfg.kb_autosave,
+            }
+        )
 
 
 async def _on_ping(request: web.Request) -> web.Response:

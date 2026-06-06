@@ -8,6 +8,7 @@ import threading
 import uuid
 from asyncio import Future
 from contextlib import suppress
+from dataclasses import replace
 from typing import TYPE_CHECKING, AsyncGenerator, Literal, override
 
 import aiohttp.web as web
@@ -49,6 +50,10 @@ class _Config(pydantic.BaseModel):
 
 class _ConfigQuery(pydantic.BaseModel):
     model: _ConfigModel | None = None
+    vlm: _ConfigModel | None = None
+    proxy: str | None = None
+    tavily_api_key: str | None = None
+    kb_autosave: bool = False
 
 
 class _NewThread(pydantic.BaseModel):
@@ -66,18 +71,28 @@ class _OptimizePrompt(pydantic.BaseModel):
 
 def _resolve_config(cfg: Config, config: _ConfigQuery | None) -> Config:
     """Merge runtime overrides from the web UI into server-wide Config."""
-    if config is None or config.model is None:
+    if config is None:
         return cfg
 
-    from dataclasses import replace
+    overrides: dict = {}
+    if config.model is not None:
+        m = config.model
+        overrides["llm_model"] = m.name or cfg.llm_model
+        overrides["llm_api_key"] = m.api_key if m.api_key is not None else cfg.llm_api_key
+        overrides["llm_base_url"] = m.base_url if m.base_url is not None else cfg.llm_base_url
+    if config.vlm is not None:
+        v = config.vlm
+        overrides["vlm_model"] = v.name or cfg.vlm_model
+        overrides["vlm_api_key"] = v.api_key if v.api_key is not None else cfg.vlm_api_key
+        overrides["vlm_base_url"] = v.base_url if v.base_url is not None else cfg.vlm_base_url
+    if config.proxy is not None:
+        overrides["proxy"] = config.proxy
+    if config.tavily_api_key is not None:
+        overrides["tavily_api_key"] = config.tavily_api_key
+    if config.kb_autosave:
+        overrides["kb_autosave"] = config.kb_autosave
 
-    m = config.model
-    return replace(
-        cfg,
-        llm_model=m.name or cfg.llm_model,
-        llm_api_key=m.api_key if m.api_key is not None else cfg.llm_api_key,
-        llm_base_url=m.base_url if m.base_url is not None else cfg.llm_base_url,
-    )
+    return replace(cfg, **overrides) if overrides else cfg
 
 
 class _Thread(UI):

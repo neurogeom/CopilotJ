@@ -5,20 +5,19 @@ SPDX-License-Identifier: Apache-2.0
 -->
 
 <script setup lang="ts">
-import { IconRefresh, IconUpload } from "@tabler/icons-vue";
 import { ref } from "vue";
 import type { ThreadConfigModel, ThreadConfigQuery } from "../apis";
 import { getBaseUrl, isApiBaseConfigurable, setApiBaseUrl, testApiConnection } from "../apis/base";
-import { useSettings } from "../store";
-import SettingModel from "./SettingModel.vue";
+import { useConfig, useSettings } from "../store";
+import SettingLLM from "./SettingLLM.vue";
+import SettingVLM from "./SettingVLM.vue";
 
 const emit = defineEmits<{
   (e: "submit", model: ThreadConfigQuery | null): void;
 }>();
 
 const settings = useSettings();
-
-const fileInput = ref<HTMLInputElement | null>(null);
+const config = useConfig();
 
 // --- API Base URL config ---
 const apiBaseUrl = ref(getBaseUrl().replace(/\/api$/, ""));
@@ -35,16 +34,34 @@ function saveApiBaseUrl() {
   window.location.reload();
 }
 
-function handleFileUpload(event: Event) {
-  const input = event.target as HTMLInputElement;
-  if (input.files) {
-    console.log("Files selected:", input.files);
-  }
-}
-
 function sumbmitModel(model: ThreadConfigModel | null) {
   settings.setModel(model);
+  config.setDefaultModel(model);
   emit("submit", { model: settings.model });
+}
+
+// --- VLM config ---
+function submitVlm(vlm: {
+  model: string | null;
+  apiKey: string | null;
+  baseUrl: string | null;
+  useMainModel: boolean;
+}) {
+  config.setVlm({
+    model: vlm.model,
+    api_key: vlm.apiKey,
+    base_url: vlm.baseUrl,
+    useMainModel: vlm.useMainModel,
+  });
+}
+
+// --- Integrations ---
+const proxy = ref(config.data.proxy || "");
+const tavilyApiKey = ref(config.data.tavilyApiKey || "");
+
+function saveIntegrations() {
+  config.setProxy(proxy.value || null);
+  config.setTavilyApiKey(tavilyApiKey.value || null);
 }
 </script>
 
@@ -52,49 +69,52 @@ function sumbmitModel(model: ThreadConfigModel | null) {
   <Tabs value="model">
     <TabList>
       <Tab value="model">Model</Tab>
-      <Tab value="kb">Knowledge Base</Tab>
+      <Tab value="vision">Vision</Tab>
+      <Tab value="integrations">Integrations</Tab>
       <Tab value="pref">Preferences</Tab>
     </TabList>
 
     <TabPanels>
       <!-- Model Tab -->
       <TabPanel value="model">
-        <SettingModel :model="settings.model" @update:model="sumbmitModel" />
+        <SettingLLM :model="settings.model" @update:model="sumbmitModel" />
       </TabPanel>
 
-      <!-- Knowledge Base Tab -->
-      <TabPanel value="kb">
+      <!-- Vision Tab -->
+      <TabPanel value="vision">
+        <SettingVLM
+          :model="config.data.vlm.model"
+          :api-key="config.data.vlm.api_key"
+          :base-url="config.data.vlm.base_url"
+          :use-main-model="config.data.vlm.useMainModel"
+          @update="submitVlm"
+        />
+      </TabPanel>
+
+      <!-- Integrations Tab -->
+      <TabPanel value="integrations">
         <div class="space-y-4">
-          <FormItem for="knowledgeBaseEnabled" label="Knowledge Base">
-            <div
-              class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center"
-              @dragover.prevent
-              @drop.prevent="handleFileUpload"
-            >
-              <input type="file" ref="fileInput" class="hidden" multiple @change="handleFileUpload" />
-
-              <div class="flex flex-col items-center">
-                <IconUpload class="text-slate-400" size="42" />
-
-                <p class="mt-4 text-slate-600">Click to upload or drag files here</p>
-              </div>
-            </div>
+          <FormItem for="proxy" label="HTTP Proxy">
+            <InputText
+              type="text"
+              v-model="proxy"
+              inputId="proxy"
+              placeholder="http://127.0.0.1:8080 (optional)"
+              class="w-full"
+            />
           </FormItem>
 
-          <FormItem for="activeKnowledgeBase" label="Active Knowledge Base">
-            <Select class="w-full" label-id="activeKnowledgeBase" />
+          <FormItem for="tavilyApiKey" label="Tavily API Key">
+            <InputText
+              type="text"
+              v-model="tavilyApiKey"
+              inputId="tavilyApiKey"
+              placeholder="tvly-xxxxxxxx (optional, for web search)"
+              class="w-full"
+            />
           </FormItem>
 
-          <Button class="w-full">
-            <IconRefresh />
-            Reindex Knowledge Base
-          </Button>
-
-          <div class="flex items-center justify-between">
-            <span class="text-sm font-medium text-slate-700">Knowledge Base Status</span>
-
-            <span class="rounded-full px-2 py-1 bg-green-100 text-green-800 text-sm">ready</span>
-          </div>
+          <Button label="Save Integrations" @click="saveIntegrations" />
         </div>
       </TabPanel>
 
@@ -118,6 +138,10 @@ function sumbmitModel(model: ThreadConfigModel | null) {
             <p v-else class="text-sm text-slate-400 mt-1">
               Configure the API server URL if it's different from the web server
             </p>
+          </FormItem>
+
+          <FormItem for="kbAutosave" label="Auto-save to Knowledge Bank" layout="row">
+            <ToggleSwitch v-model="config.data.kbAutosave" inputId="kbAutosave" @change="config.persist()" />
           </FormItem>
 
           <FormItem for="autoScroll" label="Auto-scroll to Bottom" layout="row">
