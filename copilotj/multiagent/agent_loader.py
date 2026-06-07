@@ -9,6 +9,7 @@ import os
 import tomllib
 
 from copilotj.core import FunctionTool, ModelClient, Tool
+from copilotj.core.config import Config
 from copilotj.multiagent.Executor import Executor
 
 __all__ = ["load_agent_configs"]
@@ -18,11 +19,11 @@ _log = logging.getLogger(__name__)
 GLOB_PATTERN = os.path.join(os.path.dirname(__file__), "agent_configs", "*_agent.toml")
 
 
-def load_agent_configs(*, model_client: ModelClient):
-    return _load_agent_configs(GLOB_PATTERN, model_client=model_client)
+def load_agent_configs(*, model_client: ModelClient, cfg: Config):
+    return _load_agent_configs(GLOB_PATTERN, model_client=model_client, cfg=cfg)
 
 
-def _load_agent_configs(glob_pattern: str, *, model_client: ModelClient):
+def _load_agent_configs(glob_pattern: str, *, model_client: ModelClient, cfg: Config):
     agents = {}
     configs = glob.glob(glob_pattern)
     _log.info("Found %d configs in %s.", len(configs), glob_pattern)
@@ -74,6 +75,16 @@ def _load_agent_configs(glob_pattern: str, *, model_client: ModelClient):
                         FunctionTool(fn, tool_description, name=tool_name, display_name=tool_display_name)
                     )
 
+                elif "factory" in tool_conf:
+                    factory_full = tool_conf["factory"]
+                    mod_name, factory_name = factory_full.rsplit(".", 1)
+                    mod = importlib.import_module(mod_name)
+                    factory_fn = getattr(mod, factory_name)
+                    fn = factory_fn(cfg)
+                    agent_tools.append(
+                        FunctionTool(fn, tool_description, name=tool_name, display_name=tool_display_name)
+                    )
+
                 elif "class" in tool_conf:
                     class_full = tool_conf["class"]
                     mod_name, tool_class_name = class_full.rsplit(".", 1)
@@ -83,7 +94,9 @@ def _load_agent_configs(glob_pattern: str, *, model_client: ModelClient):
                     agent_tools.append(tool_class())
 
                 else:
-                    _log.warning("Tool configuration for %s is missing 'function' or 'class' field", tool_name)
+                    _log.warning(
+                        "Tool configuration for %s is missing 'function', 'factory', or 'class' field", tool_name
+                    )
 
             _log.info("Loaded tools for %s: %s", name, list(agent_tools))
 
@@ -102,12 +115,12 @@ def _load_agent_configs(glob_pattern: str, *, model_client: ModelClient):
 if __name__ == "__main__":
     from copilotj.core import load_config, new_model_client
 
-    load_config()
+    cfg = load_config()
 
     # Test: Load agent configurations and print each agent's tool list
     print("Loading agent configurations...")
     agent_configs = os.path.join(os.path.dirname(__file__), "agent_configs")
-    agents = load_agent_configs(model_client=new_model_client())
+    agents = load_agent_configs(model_client=new_model_client(cfg=cfg), cfg=cfg)
     for name, agent in agents.items():
         print(f"Loaded agent: {name}")
         print(

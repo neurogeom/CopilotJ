@@ -15,7 +15,8 @@ class LeaderDriven(Pattern):
         self.dialog_counter = 1
 
         # Load all agents from agent_configs and store in a dictionary
-        self.agents = load_agent_configs(model_client=new_model_client())
+        cfg = load_config()
+        self.agents = load_agent_configs(model_client=new_model_client(cfg=cfg), cfg=cfg)
         for agent in self.agents.values():
             self.register(agent)
 

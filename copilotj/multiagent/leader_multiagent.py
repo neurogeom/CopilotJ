@@ -412,7 +412,7 @@ class LeaderDriven(Pattern):
 
         # Load agents defined in configurations
         try:
-            self.specialized_agents = load_agent_configs(model_client=wrapped_model_client)
+            self.specialized_agents = load_agent_configs(model_client=wrapped_model_client, cfg=cfg)
             for agent in self.specialized_agents.values():
                 self.register(agent)
 

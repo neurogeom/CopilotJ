@@ -23,6 +23,7 @@ from tavily import TavilyClient
 
 from copilotj.core.config import Config
 from copilotj.core.embedding import get_embeddings
+from copilotj.core.kb import init_knowledge_base  # noqa: E402
 from copilotj.multiagent.py_tools import get_project_temp_dir
 from copilotj.multiagent.tools import execute_python_script
 
@@ -30,18 +31,17 @@ _log = logging.getLogger(__name__)
 
 __all__ = [
     "ddg_search",
-    "tavily_search",
     "wikipedia_search",
     "imagesc_search",
     "biii_search",
     "ImageJRetriever",
     "make_deep_research",
     "download_resource",
-    "bioimage_search_models",
     "bioimage_get_model_info",
-    "bioimage_download_model",
-    "init_knowledge_base",
-    "make_research_tools",
+    "init_knowledge_base",  # Re-export init_knowledge_base for convenience
+    "make_tavily_search",
+    "make_bioimage_search_models",
+    "make_bioimage_download_model",
 ]
 
 # Fallback BioImage Model Zoo URLs (no config needed)
@@ -249,49 +249,53 @@ def ddg_search(
             time.sleep(1 * attempt)
 
 
-def tavily_search(
-    query: Annotated[str, "Search query string describing what information you need"],
-    *,
-    max_results: Annotated[int, "Maximum number of search results to return"] = 5,
-    include_answer: Annotated[bool, "Whether to include AI-generated summary"] = True,
-    include_raw_content: Annotated[bool, "Whether to include raw content from sources"] = False,
-    tavily_api_key: str | None = None,
-) -> str | list[dict[str, str]]:
-    try:
-        if not tavily_api_key:
-            return "Tavily API key not found. Please set COPILOTJ_TAVILY_API_KEY environment variable."
+def make_tavily_search(cfg: Config):
+    """Factory: return a ``tavily_search`` callable bound to *cfg*."""
 
-        client = TavilyClient(api_key=tavily_api_key)
+    def tavily_search(
+        query: Annotated[str, "Search query string describing what information you need"],
+        *,
+        max_results: Annotated[int, "Maximum number of search results to return"] = 5,
+        include_answer: Annotated[bool, "Whether to include AI-generated summary"] = True,
+        include_raw_content: Annotated[bool, "Whether to include raw content from sources"] = False,
+    ) -> str | list[dict[str, str]]:
+        try:
+            if not cfg.tavily_api_key:
+                return "Tavily API key not found. Please set COPILOTJ_TAVILY_API_KEY environment variable."
 
-        response = client.search(
-            query=query,
-            max_results=max_results,
-            include_answer=include_answer,
-            include_raw_content=include_raw_content,
-            search_depth="advanced",
-        )
+            client = TavilyClient(api_key=cfg.tavily_api_key)
 
-        if include_answer and response.get("answer"):
-            result = f"**Summary:** {response['answer']}\n\n"
-        else:
-            result = ""
+            response = client.search(
+                query=query,
+                max_results=max_results,
+                include_answer=include_answer,
+                include_raw_content=include_raw_content,
+                search_depth="advanced",
+            )
 
-        if response.get("results"):
-            result += "**Sources:**\n"
-            for i, item in enumerate(response["results"], 1):
-                title = item.get("title", "No title")
-                url = item.get("url", "No URL")
-                content = (
-                    item.get("content", "No content")[:500] + "..."
-                    if len(item.get("content", "")) > 500
-                    else item.get("content", "")
-                )
-                result += f"{i}. **{title}**\n   {content}\n   Source: {url}\n\n"
+            if include_answer and response.get("answer"):
+                result = f"**Summary:** {response['answer']}\n\n"
+            else:
+                result = ""
 
-        return result or "No results found for the Tavily search query."
+            if response.get("results"):
+                result += "**Sources:**\n"
+                for i, item in enumerate(response["results"], 1):
+                    title = item.get("title", "No title")
+                    url = item.get("url", "No URL")
+                    content = (
+                        item.get("content", "No content")[:500] + "..."
+                        if len(item.get("content", "")) > 500
+                        else item.get("content", "")
+                    )
+                    result += f"{i}. **{title}**\n   {content}\n   Source: {url}\n\n"
 
-    except Exception as e:
-        return f"Tavily search failed: {str(e)}"
+            return result or "No results found for the Tavily search query."
+
+        except Exception as e:
+            return f"Tavily search failed: {str(e)}"
+
+    return tavily_search
 
 
 def wikipedia_search(query: Annotated[str, "Search query string describing what information you need"]):
@@ -681,88 +685,93 @@ async def download_resource(code: Annotated[str, "The code to download the resou
 
 
 # BioImage Model Zoo tools
-def bioimage_search_models(
-    query: Annotated[str | None, "Free-text search query for model name, description, or keywords"] = None,
-    tags: Annotated[list[str] | None, "List of tags to filter by (e.g., ['denoising', 'segmentation'])"] = None,
-    authors: Annotated[list[str] | None, "List of author names to filter by"] = None,
-    limit: Annotated[int, "Maximum number of results to return"] = 10,
-    *,
-    cfg: Config | None = None,
-) -> str:
-    """Search BioImage Model Zoo for pre-trained models.
 
-    Returns formatted list of models with name, ID, version, description, tags, and authors.
-    Use this to find models for specific tasks like denoising, segmentation, detection, etc.
-    """
-    try:
-        from copilotj.core.config import load_config
 
-        _cfg = cfg or load_config()
-        # Fetch collection
-        models = _fetch_collection(
-            base_url=_cfg.bioimage_model_zoo_url,
-            cache_dir=Path(_cfg.bioimage_model_zoo_cache).resolve(),
-            ttl_seconds=_cfg.bioimage_model_zoo_cache_ttl,
-            force_refresh=False,
-        )
+def make_bioimage_search_models(cfg: Config):
+    """Factory: return a ``bioimage_search_models`` callable bound to *cfg*."""
 
-        query_text = query.lower().strip() if query else None
-        tags_set = {t.lower() for t in _normalize_list(tags)}
-        author_set = {a.lower() for a in _normalize_list(authors)}
+    def bioimage_search_models(
+        query: Annotated[str | None, "Free-text search query for model name, description, or keywords"] = None,
+        tags: Annotated[list[str] | None, "List of tags to filter by (e.g., ['denoising', 'segmentation'])"] = None,
+        authors: Annotated[list[str] | None, "List of author names to filter by"] = None,
+        limit: Annotated[int, "Maximum number of results to return"] = 10,
+    ) -> str:
+        """Search BioImage Model Zoo for pre-trained models.
 
-        def matches(entry: Mapping) -> bool:
-            name = str(entry.get("name", ""))
-            description = str(entry.get("description", ""))
-            entry_tags = [str(t) for t in entry.get("tags", [])]
-            entry_authors = []
-            raw_authors = entry.get("authors") or entry.get("maintainers")
-            if isinstance(raw_authors, list):
-                for author in raw_authors:
-                    if isinstance(author, Mapping) and "name" in author:
-                        entry_authors.append(str(author.get("name")))
-                    else:
-                        entry_authors.append(str(author))
+        Returns formatted list of models with name, ID, version, description, tags, and authors.
+        Use this to find models for specific tasks like denoising, segmentation, detection, etc.
+        """
+        try:
+            from copilotj.core.config import load_config
 
-            if query_text and not _text_matches([name, description, " ".join(entry_tags)], query_text):
-                return False
-            if tags_set and not tags_set.issubset({t.lower() for t in entry_tags}):
-                return False
-            if author_set and not author_set.intersection({a.lower() for a in entry_authors}):
-                return False
-            return True
-
-        results: list[MutableMapping] = []
-        for entry in models:
-            if len(results) >= limit:
-                break
-            if not matches(entry):
-                continue
-            summary: MutableMapping[str, object] = {
-                "id": entry.get("id"),
-                "name": entry.get("name"),
-                "version": entry.get("version") or entry.get("latest_version"),
-                "description": (entry.get("description") or "").strip(),
-                "tags": entry.get("tags", []),
-                "authors": entry.get("authors") or entry.get("maintainers"),
-            }
-            results.append(summary)
-
-        if not results:
-            return "No models found matching the search criteria."
-
-        output = []
-        for idx, model in enumerate(results, 1):
-            output.append(
-                f"[{idx}] {model.get('name', 'Unknown')}\n"
-                f"    ID: {model.get('id', 'N/A')}\n"
-                f"    Version: {model.get('version', 'N/A')}\n"
-                f"    Description: {model.get('description', 'No description')}\n"
-                f"    Tags: {', '.join(str(t) for t in model.get('tags', []))}\n"
+            _cfg = cfg or load_config()
+            # Fetch collection
+            models = _fetch_collection(
+                base_url=_cfg.bioimage_model_zoo_url,
+                cache_dir=Path(_cfg.bioimage_model_zoo_cache).resolve(),
+                ttl_seconds=_cfg.bioimage_model_zoo_cache_ttl,
+                force_refresh=False,
             )
 
-        return "\n".join(output)
-    except Exception as e:
-        return f"Error searching BioImage Model Zoo: {str(e)}"
+            query_text = query.lower().strip() if query else None
+            tags_set = {t.lower() for t in _normalize_list(tags)}
+            author_set = {a.lower() for a in _normalize_list(authors)}
+
+            def matches(entry: Mapping) -> bool:
+                name = str(entry.get("name", ""))
+                description = str(entry.get("description", ""))
+                entry_tags = [str(t) for t in entry.get("tags", [])]
+                entry_authors = []
+                raw_authors = entry.get("authors") or entry.get("maintainers")
+                if isinstance(raw_authors, list):
+                    for author in raw_authors:
+                        if isinstance(author, Mapping) and "name" in author:
+                            entry_authors.append(str(author.get("name")))
+                        else:
+                            entry_authors.append(str(author))
+
+                if query_text and not _text_matches([name, description, " ".join(entry_tags)], query_text):
+                    return False
+                if tags_set and not tags_set.issubset({t.lower() for t in entry_tags}):
+                    return False
+                if author_set and not author_set.intersection({a.lower() for a in entry_authors}):
+                    return False
+                return True
+
+            results: list[MutableMapping] = []
+            for entry in models:
+                if len(results) >= limit:
+                    break
+                if not matches(entry):
+                    continue
+                summary: MutableMapping[str, object] = {
+                    "id": entry.get("id"),
+                    "name": entry.get("name"),
+                    "version": entry.get("version") or entry.get("latest_version"),
+                    "description": (entry.get("description") or "").strip(),
+                    "tags": entry.get("tags", []),
+                    "authors": entry.get("authors") or entry.get("maintainers"),
+                }
+                results.append(summary)
+
+            if not results:
+                return "No models found matching the search criteria."
+
+            output = []
+            for idx, model in enumerate(results, 1):
+                output.append(
+                    f"[{idx}] {model.get('name', 'Unknown')}\n"
+                    f"    ID: {model.get('id', 'N/A')}\n"
+                    f"    Version: {model.get('version', 'N/A')}\n"
+                    f"    Description: {model.get('description', 'No description')}\n"
+                    f"    Tags: {', '.join(str(t) for t in model.get('tags', []))}\n"
+                )
+
+            return "\n".join(output)
+        except Exception as e:
+            return f"Error searching BioImage Model Zoo: {str(e)}"
+
+    return bioimage_search_models
 
 
 def bioimage_get_model_info(model_id: Annotated[str, "Model ID or name to get detailed information for"]) -> str:
@@ -805,119 +814,60 @@ def bioimage_get_model_info(model_id: Annotated[str, "Model ID or name to get de
         return f"Error getting model info: {str(e)}"
 
 
-def bioimage_download_model(
-    model_id: Annotated[str, "Model ID or name to download"],
-    dest_dir: Annotated[
-        str | None, "Optional destination directory path (defaults to project assets/bioimage_models)"
-    ] = None,
-    *,
-    cfg: Config,
-) -> str:
-    """Download a BioImage Model Zoo model archive.
+def make_bioimage_download_model(cfg: Config):
+    """Factory: return a ``bioimage_download_model`` callable bound to *cfg*."""
 
-    Returns the local file path where the model was downloaded.
-    """
-    try:
-        if dest_dir:
-            dest_path = Path(dest_dir)
-        else:
-            dest_path = get_home() / "assets" / "bioimage_models"
-
-        dest_path.mkdir(parents=True, exist_ok=True)
-
-        models = _fetch_collection(
-            base_url=cfg.bioimage_model_zoo_url,
-            cache_dir=Path(cfg.bioimage_model_zoo_cache).resolve(),
-            ttl_seconds=cfg.bioimage_model_zoo_cache_ttl,
-            force_refresh=False,
-        )
-
-        entry = _get_model(models, model_id)
-        if entry is None:
-            raise ValueError(f"Model '{model_id}' not found in collection")
-
-        urls = _extract_download_urls(entry)
-        if not urls:
-            raise ValueError(f"Model '{model_id}' does not expose a download URL")
-
-        chosen = urls[0]
-        filename_guess = Path(chosen.split("?")[0]).name or f"{entry.get('id', 'model')}.zip"
-        result_path = dest_path / filename_guess
-
-        sess = requests.Session()
-        with sess.get(chosen, stream=True, timeout=60) as resp:
-            resp.raise_for_status()
-            with result_path.open("wb") as handle:
-                for chunk in resp.iter_content(chunk_size=8192):
-                    if not chunk:
-                        continue
-                    handle.write(chunk)
-
-        return f"✅ Model downloaded successfully to: {result_path}"
-    except Exception as e:
-        return f"❌ Error downloading model: {str(e)}"
-
-
-# Re-export init_knowledge_base for convenience
-from copilotj.core.kb import init_knowledge_base  # noqa: E402
-
-
-def make_research_tools(cfg: Config) -> dict:
-    """Factory: return research tool functions bound to the given Config.
-
-    Uses closures instead of functools.partial so that bound config
-    parameters are hidden from the function signature — FunctionTool
-    will only see the parameters the LLM should provide.
-
-    Usage::
-
-        tools = make_research_tools(cfg)
-        tools["tavily_search"]("query")
-        tools["bioimage_search_models"](query="...")
-    """
-
-    def _tavily_search(
-        query: Annotated[str, "Search query string describing what information you need"],
-        *,
-        max_results: Annotated[int, "Maximum number of search results to return"] = 5,
-        include_answer: Annotated[bool, "Whether to include AI-generated summary"] = True,
-        include_raw_content: Annotated[bool, "Whether to include raw content from sources"] = False,
-    ) -> str | list[dict[str, str]]:
-        return tavily_search(
-            query,
-            max_results=max_results,
-            include_answer=include_answer,
-            include_raw_content=include_raw_content,
-            tavily_api_key=cfg.tavily_api_key,
-        )
-
-    def _bioimage_search_models(
-        query: Annotated[str | None, "Free-text search query for model name, description, or keywords"] = None,
-        tags: Annotated[list[str] | None, "List of tags to filter by (e.g., ['denoising', 'segmentation'])"] = None,
-        authors: Annotated[list[str] | None, "List of author names to filter by"] = None,
-        limit: Annotated[int, "Maximum number of results to return"] = 10,
-    ) -> str:
-        return bioimage_search_models(query, tags=tags, authors=authors, limit=limit, cfg=cfg)
-
-    def _bioimage_get_model_info(
-        model_id: Annotated[str, "Model ID or name to get detailed information for"],
-    ) -> str:
-        return bioimage_get_model_info(model_id)
-
-    def _bioimage_download_model(
+    def bioimage_download_model(
         model_id: Annotated[str, "Model ID or name to download"],
         dest_dir: Annotated[
             str | None, "Optional destination directory path (defaults to project assets/bioimage_models)"
         ] = None,
     ) -> str:
-        return bioimage_download_model(model_id, dest_dir=dest_dir, cfg=cfg)
+        """Download a BioImage Model Zoo model archive.
 
-    return {
-        "tavily_search": _tavily_search,
-        "bioimage_search_models": _bioimage_search_models,
-        "bioimage_get_model_info": _bioimage_get_model_info,
-        "bioimage_download_model": _bioimage_download_model,
-    }
+        Returns the local file path where the model was downloaded.
+        """
+        try:
+            if dest_dir:
+                dest_path = Path(dest_dir)
+            else:
+                dest_path = Path(__file__).resolve().parent.parent.parent / "assets" / "bioimage_models"
+
+            dest_path.mkdir(parents=True, exist_ok=True)
+
+            models = _fetch_collection(
+                base_url=cfg.bioimage_model_zoo_url,
+                cache_dir=Path(cfg.bioimage_model_zoo_cache).resolve(),
+                ttl_seconds=cfg.bioimage_model_zoo_cache_ttl,
+                force_refresh=False,
+            )
+
+            entry = _get_model(models, model_id)
+            if entry is None:
+                raise ValueError(f"Model '{model_id}' not found in collection")
+
+            urls = _extract_download_urls(entry)
+            if not urls:
+                raise ValueError(f"Model '{model_id}' does not expose a download URL")
+
+            chosen = urls[0]
+            filename_guess = Path(chosen.split("?")[0]).name or f"{entry.get('id', 'model')}.zip"
+            result_path = dest_path / filename_guess
+
+            sess = requests.Session()
+            with sess.get(chosen, stream=True, timeout=60) as resp:
+                resp.raise_for_status()
+                with result_path.open("wb") as handle:
+                    for chunk in resp.iter_content(chunk_size=8192):
+                        if not chunk:
+                            continue
+                        handle.write(chunk)
+
+            return f"✅ Model downloaded successfully to: {result_path}"
+        except Exception as e:
+            return f"❌ Error downloading model: {str(e)}"
+
+    return bioimage_download_model
 
 
 if __name__ == "__main__":
