@@ -5,9 +5,10 @@ SPDX-License-Identifier: Apache-2.0
 -->
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import Chatbox from "../components/Chatbox.vue";
 import Settings from "../components/Settings.vue";
+import Setup from "./Setup.vue";
 import Sidebar from "../components/Sidebar.vue";
 import { getServerConfig } from "../apis";
 import { useConfig, useSettings, useSystemState } from "../store";
@@ -16,7 +17,15 @@ const settings = useSettings();
 const state = useSystemState();
 const config = useConfig();
 
+const isFirstRun = computed(() => !localStorage.getItem("copilotj_config"));
+
 onMounted(async () => {
+  // First-time users: open the setup wizard
+  if (isFirstRun.value) {
+    state.wizardMode = true;
+    return;
+  }
+
   state.testBackendConnection();
 
   // 1. If config store has a default model, apply it
@@ -58,8 +67,12 @@ onMounted(async () => {
 });
 
 const chatbox = ref<InstanceType<typeof Chatbox> | null>(null);
-
 const settingsRef = ref<InstanceType<typeof Settings> | null>(null);
+
+function onSetupComplete() {
+  state.wizardMode = false;
+  state.testBackendConnection();
+}
 
 function startNewThread() {
   chatbox.value?.reset();
@@ -78,9 +91,20 @@ function clickPost(postId: string) {
     <!-- Chatbox -->
     <Chatbox ref="chatbox" :expandSidebar="settings.expandSidebar" @toggleSidebar="settings.toggleAutoScroll" />
 
-    <!-- Settings Modal -->
+    <!-- Settings Dialog (Tabs) -->
     <Dialog v-model:visible="state.showSettings" modal header="Settings" class="min-h-1/2 min-w-2xl">
       <Settings ref="settingsRef" @submit="state.showSettings = false" />
+    </Dialog>
+
+    <!-- Setup Wizard Dialog (Stepper) -->
+    <Dialog
+      v-model:visible="state.wizardMode"
+      modal
+      header="Welcome to CopilotJ"
+      :closable="false"
+      class="min-h-3/4 min-w-3xl"
+    >
+      <Setup @complete="onSetupComplete" />
     </Dialog>
 
     <ConfirmPopup />

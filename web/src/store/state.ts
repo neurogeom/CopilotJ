@@ -11,6 +11,7 @@ import { getBaseUrl, testApiConnection } from "../apis/base";
 export const useSystemState = defineStore("state", () => {
   const showSettings = ref(false);
   const showManageAgents = ref(false);
+  const wizardMode = ref(false);
 
   const backendReachable = ref<boolean | null>(null);
   const connectionWarningDismissed = ref(false);
@@ -20,7 +21,14 @@ export const useSystemState = defineStore("state", () => {
     backendReachable.value = await testApiConnection(rawUrl);
   }
 
-  return { showManageAgents, showSettings, backendReachable, connectionWarningDismissed, testBackendConnection };
+  return {
+    showManageAgents,
+    showSettings,
+    wizardMode,
+    backendReachable,
+    connectionWarningDismissed,
+    testBackendConnection,
+  };
 });
 
 if (import.meta.hot) {
