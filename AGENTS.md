@@ -96,6 +96,10 @@ uv run --with ruff ruff format copilotj/
 
 Ruff config is in `pyproject.toml`: line-length 120, target Python 3.12, Google docstring convention.
 
+### Coding Conventions
+
+- Prefer module-level imports over local imports inside functions. Avoid `import` inside function bodies unless there is a proven circular dependency that cannot be resolved otherwise.
+
 ### Testing
 
 Tests live in `copilotj/test/`. The test runner is pytest with `--doctest-modules` enabled. Tests cover `core/` (model client) and `util/` (base64, JSON, markdown, ReAct parser, trie).
