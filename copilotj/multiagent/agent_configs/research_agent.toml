@@ -114,7 +114,7 @@ Format citations professionally:
 """
 
 [[tools]]
-function = "copilotj.multiagent.research_tools.tavily_search"
+factory = "copilotj.multiagent.research_tools.make_tavily_search"
 description = """
 Use this tool to search for comprehensive, current information using Tavily AI.
 
@@ -250,7 +250,7 @@ Features:
 
 [[tools]]
 display_name = "BioImage Model Zoo Search"
-function = "copilotj.multiagent.research_tools.bioimage_search_models"
+factory = "copilotj.multiagent.research_tools.make_bioimage_search_models"
 description = """
 Use this tool to search the BioImage Model Zoo for pre-trained deep learning models.
 
@@ -296,7 +296,7 @@ Parameter:
 
 [[tools]]
 display_name = "BioImage Model Download"
-function = "copilotj.multiagent.research_tools.bioimage_download_model"
+factory = "copilotj.multiagent.research_tools.make_bioimage_download_model"
 description = """
 Use this tool to download a BioImage Model Zoo model archive locally.
 

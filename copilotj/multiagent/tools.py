@@ -590,51 +590,50 @@ def label_macro():
         print("Exporting " + n + " ROI masks → " + outDir);
 
         selectWindow(title);
-		for (i=0; i<n; i++) {
-		    roiManager("Select", i);
-		
-		    // ---- filename: ROI name if available, else roi_XXX ----
-		    idxName = "roi_" + zeroPad3(i+1);
-		    rname   = Roi.getName();
-		    if (useRoiName && rname != "") {
-		        safe = sanitize(rname);
-		        if (safe != "") idxName = safe;
-		    }
-		
-		    if (fullSize) {
-		        // --- Full-size mask (Edit>Fill on blank canvas) ---
-		        newImage("__tmp__", "8-bit black", W, H, 1);
-		        tmpID = getImageID();              // lock the new window
-		        selectImage(tmpID);
-		        run("Restore Selection");
-		        setForegroundColor(255,255,255);
-		        run("Fill", "slice");
-		
-		        // enforce strict binary + fill interior on this exact window
-		        enforce_binary_and_fill_windowID(tmpID);
-		
-		        // save & close
-		        selectImage(tmpID);
-		        saveAs("Tiff", outDir + idxName + ".tif");
-		        close();
-		    } else {
-		        // --- Cropped mask (Create Mask) ---
-		        run("Restore Selection");
-		        run("Create Mask");                // opens a new small window and activates it
-		        maskID = getImageID();             // lock the mask window by ID
-		        selectImage(maskID);
-		        rename("__roi_mask__" + zeroPad3(i+1));  // optional: stable name
-		
-		        // enforce strict binary + fill interior on this exact window
-		        enforce_binary_and_fill_windowID(maskID);
-		
-		        // save & close
-		        selectImage(maskID);
-		        saveAs("Tiff", outDir + idxName + ".tif");
-		        close();
-		    }
-		}
+        for (i=0; i<n; i++) {
+            roiManager("Select", i);
 
+            // ---- filename: ROI name if available, else roi_XXX ----
+            idxName = "roi_" + zeroPad3(i+1);
+            rname   = Roi.getName();
+            if (useRoiName && rname != "") {
+                safe = sanitize(rname);
+                if (safe != "") idxName = safe;
+            }
+
+            if (fullSize) {
+                // --- Full-size mask (Edit>Fill on blank canvas) ---
+                newImage("__tmp__", "8-bit black", W, H, 1);
+                tmpID = getImageID();              // lock the new window
+                selectImage(tmpID);
+                run("Restore Selection");
+                setForegroundColor(255,255,255);
+                run("Fill", "slice");
+
+                // enforce strict binary + fill interior on this exact window
+                enforce_binary_and_fill_windowID(tmpID);
+
+                // save & close
+                selectImage(tmpID);
+                saveAs("Tiff", outDir + idxName + ".tif");
+                close();
+            } else {
+                // --- Cropped mask (Create Mask) ---
+                run("Restore Selection");
+                run("Create Mask");                // opens a new small window and activates it
+                maskID = getImageID();             // lock the mask window by ID
+                selectImage(maskID);
+                rename("__roi_mask__" + zeroPad3(i+1));  // optional: stable name
+
+                // enforce strict binary + fill interior on this exact window
+                enforce_binary_and_fill_windowID(maskID);
+
+                // save & close
+                selectImage(maskID);
+                saveAs("Tiff", outDir + idxName + ".tif");
+                close();
+            }
+        }
 
         close(); // close original image
         print("✅ Saved ROI masks to: " + outDir);
@@ -679,8 +678,6 @@ function enforce_binary_and_fill_windowID(winID) {
     run("Fill Holes");         // solid white inside
     run("Grays");
 }
-
-
 """)
     return macro_script
 
