@@ -111,7 +111,7 @@ class _Thread(UI):
         self._mailbox = asyncio.Queue[UIEvent | _Signal]()
 
         self._apis: PluginAPI = BridgePluginAPI(bridge)
-        client_apis = self._apis.attach_single_client()
+        client_apis = self._apis.attach_single_client()  # TODO: should from frontend
 
         # Merge runtime config override into server-wide Config
         resolved = _resolve_config(cfg, config)
@@ -469,19 +469,19 @@ class Threads:
 
             # Import here to avoid circular dependency
             from copilotj.multiagent.leader_multiagent import LeaderDriven
-            from copilotj.plugin.api import HTTPPluginAPI
 
             # Create a temporary agent instance for optimization
             # Use default model from settings
-            apis = HTTPPluginAPI("http://127.0.0.1:8786")  # FIXME: should not depend on this address
-            client = apis.attach_single_client()  # TODO: should be removed or made configurable
-            temp_agent = LeaderDriven(apis=client, cfg=self._cfg)
+
+            plugin_apis: PluginAPI = BridgePluginAPI(self._bridge)
+            apis = plugin_apis.attach_single_client()  # TODO: should from frontend
+            temp_agent = LeaderDriven(apis=apis, cfg=self._cfg)
             # Optimize the prompt (without chat history context)
             optimized = await temp_agent.optimize_prompt(prompt_data.prompt)
 
             # Clean up temporary agent
             temp_agent.abort()
-            await apis.close()
+            await plugin_apis.close()
 
             return web.json_response({"original": prompt_data.prompt, "optimized": optimized})
         except pydantic.ValidationError as e:
