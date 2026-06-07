@@ -41,6 +41,7 @@ export const router = createRouter({
   history: createWebHashHistory(),
   routes,
 });
+
 app.use(router);
 
 const CopilotjPreset = definePreset(Aura, {

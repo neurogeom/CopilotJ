@@ -34,7 +34,7 @@ function saveApiBaseUrl() {
   window.location.reload();
 }
 
-function sumbmitModel(model: ThreadConfigModel | null) {
+function submitModel(model: ThreadConfigModel | null) {
   settings.setModel(model);
   config.setDefaultModel(model);
   emit("submit", { model: settings.model });
@@ -77,7 +77,7 @@ function saveIntegrations() {
     <TabPanels>
       <!-- Model Tab -->
       <TabPanel value="model">
-        <SettingLLM :model="settings.model" @update:model="sumbmitModel" />
+        <SettingLLM :model="settings.model" @update:model="submitModel" />
       </TabPanel>
 
       <!-- Vision Tab -->
@@ -106,7 +106,7 @@ function saveIntegrations() {
 
           <FormItem for="tavilyApiKey" label="Tavily API Key">
             <InputText
-              type="text"
+              type="password"
               v-model="tavilyApiKey"
               inputId="tavilyApiKey"
               placeholder="tvly-xxxxxxxx (optional, for web search)"
