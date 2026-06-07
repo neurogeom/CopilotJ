@@ -23,11 +23,13 @@ from tavily import TavilyClient
 
 from copilotj.core.config import Config
 from copilotj.core.embedding import get_embeddings
-from copilotj.core.kb import init_knowledge_base  # noqa: E402
+from copilotj.core.kb import (
+    DEFAULT_INDEX_DIR,
+    ensure_faiss_index,
+    init_knowledge_base,  # noqa: E402
+)
 from copilotj.multiagent.py_tools import get_project_temp_dir
 from copilotj.multiagent.tools import execute_python_script
-
-_log = logging.getLogger(__name__)
 
 __all__ = [
     "ddg_search",
@@ -49,6 +51,9 @@ FALLBACK_COLLECTION_URLS = [
     "https://raw.githubusercontent.com/bioimage-io/collection-bioimage-io/main/collection.json",
     "https://bioimage.io/collection.json",
 ]
+
+
+_log = logging.getLogger(__name__)
 
 
 # BioImage Model Zoo helper functions
@@ -512,8 +517,6 @@ class ImageJRetriever:
 
 def _load_kb_retriever(*, max_results: int = 10) -> VectorStoreRetriever:
     try:
-        from copilotj.core.kb import DEFAULT_INDEX_DIR, ensure_faiss_index
-
         ensure_faiss_index(DEFAULT_INDEX_DIR)
 
         jsonl_files = []

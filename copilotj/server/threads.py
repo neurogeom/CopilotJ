@@ -5,6 +5,7 @@
 import asyncio
 import logging
 import threading
+import traceback
 import uuid
 from asyncio import Future
 from contextlib import suppress
@@ -230,8 +231,6 @@ class _Thread(UI):
                     await self._agent.run(prompt, trace_ctx=self._trace_ctx)
 
         except Exception:
-            import traceback
-
             _log.exception("Agent run failed for thread %s", self.thread_id)
             self._agent.log_error(f"Agent run failed for thread {self.thread_id}:\n{traceback.format_exc()}")
         finally:
@@ -473,9 +472,6 @@ class Threads:
         try:
             data = await request.json()
             prompt_data = _OptimizePrompt.model_validate(data)
-
-            # Import here to avoid circular dependency
-            from copilotj.multiagent.leader_multiagent import LeaderDriven
 
             # Create a temporary agent instance for optimization
             # Use default model from settings

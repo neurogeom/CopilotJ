@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import json
+import time
 from typing import Annotated, Any, Optional
 
 import copilotj.multiagent.leader_multiagent as leader_multiagent
@@ -149,8 +150,6 @@ async def list_workflows(dummy: Annotated[Optional[str], "dummy"] = None) -> str
                 result.append(f"   Tags: {wf['tags']}")
 
             # Format timestamps for better readability
-            import time
-
             created_at = wf.get("created_at")
             updated_at = wf.get("updated_at")
 

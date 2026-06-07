@@ -10,6 +10,7 @@ import aiohttp.web as web
 import aiohttp_cors
 
 from copilotj.core.config import Config
+from copilotj.core.kb import ensure_faiss_index_async
 from copilotj.server.bridge import Bridge
 from copilotj.server.threads import Threads
 
@@ -108,8 +109,6 @@ class Server:
         app.on_shutdown.append(on_shutdown)
 
         async def _ensure_kb(app: web.Application):
-            from copilotj.core.kb import ensure_faiss_index_async
-
             asyncio.ensure_future(ensure_faiss_index_async())
             yield
 
