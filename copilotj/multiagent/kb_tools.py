@@ -4,15 +4,18 @@
 
 import json
 import re
+import shutil
 import tomllib
 from pathlib import Path
 from typing import Annotated, Any
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 from copilotj.core.config import get_home, load_config
+from copilotj.core.message import TextMessage
 from copilotj.core.model_client import new_model_client
 
 _SOURCE_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -60,8 +63,6 @@ def _bootstrap_kb() -> None:
         return
     source = _SOURCE_ROOT / "knowledge_bank"
     if source.exists():
-        import shutil
-
         shutil.copytree(source, KB_ROOT, dirs_exist_ok=True)
 
 
@@ -766,8 +767,6 @@ def _canonicalize_code(code: str) -> str:
 
 def _normalize_url(u: str) -> str:
     try:
-        from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
-
         p = urlparse(u.strip())
         # lower scheme and netloc
         scheme = (p.scheme or "http").lower()
@@ -1425,7 +1424,6 @@ async def _llm_extract_with_retry(
     max_retries: int = 3,
 ) -> dict[str, Any]:
     """Extract knowledge using LLM with retry mechanism."""
-    from copilotj.core.message import TextMessage
 
     last_error = None
 

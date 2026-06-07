@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import shutil
 import uuid
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -240,8 +241,6 @@ def bootstrap_assets() -> None:
         return
     if target_assets.exists() and any(target_assets.iterdir()):
         return
-
-    import shutil
 
     shutil.copytree(source_assets, target_assets, dirs_exist_ok=True)
 

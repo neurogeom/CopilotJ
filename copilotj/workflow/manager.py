@@ -4,6 +4,7 @@
 
 import json
 import re
+import shutil
 import time
 import zipfile
 from dataclasses import asdict, dataclass
@@ -189,9 +190,6 @@ class WorkflowManager:
     @staticmethod
     def delete_workflow(wf_id: str) -> str:
         """Delete Workflow and its folder"""
-        import shutil
-        from pathlib import Path
-
         d = Path(BASE_DIR) / wf_id
         if d.exists() and d.is_dir():
             try:
