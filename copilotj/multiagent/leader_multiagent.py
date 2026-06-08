@@ -14,7 +14,7 @@ from langfuse import Langfuse
 
 import copilotj.multiagent.py_tools as py_tools
 import copilotj.multiagent.tools as tools
-import copilotj.multiagent.batch_qc as batch_qc
+import copilotj.workflow.batch_qc as batch_qc
 import copilotj.multiagent.workflow_tools as workflow_tools
 from copilotj.core import (
     UI,
@@ -111,6 +111,7 @@ class LeaderAgent(ChatAgent):
         self._dialog_messages: list[TextMessage] = []
 
         self._apis = apis
+        self._cfg = cfg
         self.plugin_tools = tools.PluginTools(apis, cfg=cfg)
 
         # Store the combined tools and agents
@@ -133,7 +134,12 @@ class LeaderAgent(ChatAgent):
             FunctionTool(workflow_tools.delete_workflow, PROMPT_TOOL_DELETE_WORKFLOW),
             FunctionTool(workflow_tools.export_workflow, PROMPT_TOOL_EXPORT_WORKFLOW),
             FunctionTool(self.execute_workflow, PROMPT_TOOL_EXECUTE_WORKFLOW),
-            FunctionTool(batch_qc.batch_precheck, PROMPT_TOOL_BATCH_PRECHECK, display_name="Batch Pre-check QC"),
+            FunctionTool(
+                batch_qc.bind_batch_precheck(lambda: self._cfg),
+                PROMPT_TOOL_BATCH_PRECHECK,
+                name="batch_precheck",
+                display_name="Batch Pre-check QC",
+            ),
         ]
         self.agents = agents if agents else {}
 
