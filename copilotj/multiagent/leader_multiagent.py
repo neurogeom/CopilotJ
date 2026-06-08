@@ -360,9 +360,15 @@ User prompt to optimize:
     async def execute_workflow(
         self,
         workflow_id: Annotated[str, "The ID of the workflow to execute"],
+        inputs: Annotated[dict[str, Any] | None, "Runtime inputs declared by workflow.interface.inputs"] = None,
         stop_on_error: Annotated[bool, "Whether to stop execution on first error"] = True,
     ) -> str:
-        return await workflow_tools.execute_workflow(self._apis, workflow_id, stop_on_error)
+        return await workflow_tools.execute_workflow(
+            self._apis,
+            workflow_id=workflow_id,
+            inputs=inputs,
+            stop_on_error=stop_on_error,
+        )
 
 
 class LeaderDriven(Pattern):

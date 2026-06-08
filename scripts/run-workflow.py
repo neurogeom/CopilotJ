@@ -145,7 +145,7 @@ async def execute_workflow(workflow: Workflow, inputs: dict[str, Any], server: s
     load_env()
     api = HTTPPluginAPI(server)
     try:
-        executor = WorkflowExecutor(ScriptWorkflowAgent(api.attach_dev_client()))
+        executor = WorkflowExecutor(ScriptWorkflowAgent(api.attach_single_client()))
         return await executor.execute_workflow(workflow, stop_on_error=True, inputs=inputs)
     finally:
         await api.close()

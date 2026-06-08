@@ -317,7 +317,7 @@ CopilotJ treats each analysis session as a structured workflow that can be execu
    - ImageJ state, including open images, ROIs, and errors, is continuously monitored.
    - If a failure occurs, CopilotJ may automatically revise parameters or execution order and retry the workflow.
 
-   Saved workflows can also be run from Terminal with an interactive script. Start the CopilotJ bridge server and ImageJ/Fiji plugin first, then run either:
+   Saved workflows can also be run from terminal using an interactive script. First, start the CopilotJ bridge server and ImageJ/Fiji plugin, then run either of the following:
 
    ```bash
    sh scripts/run-workflow.sh
