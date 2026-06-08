@@ -18,6 +18,7 @@ declare module 'vue' {
     ChatboxMarkdownContent: typeof import('./src/components/ChatboxMarkdownContent.vue')['default']
     ChatboxReactPosts: typeof import('./src/components/ChatboxReactPosts.vue')['default']
     ChatInput: typeof import('./src/components/ChatInput.vue')['default']
+    Checkbox: typeof import('primevue/checkbox')['default']
     ConfirmPopup: typeof import('primevue/confirmpopup')['default']
     Demos: typeof import('./src/components/Demos.vue')['default']
     Dialog: typeof import('primevue/dialog')['default']
