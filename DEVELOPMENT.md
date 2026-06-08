@@ -126,6 +126,148 @@ uv run python -m copilotj.server --host 127.0.0.1 --port 8786
 
 In debug mode (`just dev-plugin`), the plugin auto-connects to `http://127.0.0.1:8786`.
 
+## Environment Configuration
+
+CopilotJ supports direct configuration through the frontend, as well as server-side configuration via .env.local environment variables. The .env.local approach is mainly intended for developer convenience: it allows you to configure model credentials and other options once, so you don’t need to reconfigure them every time the server starts.
+
+It can also serve as a server-level default when CopilotJ is hosted for other users. If the server provides a model and API key, end users can simply connect through the web interface without configuring anything themselves.
+
+CopilotJ loads configuration from `.env` and `.env.local` files. In managed mode,
+these files are located in the CopilotJ home directory:
+
+- **macOS / Linux:** `~/.local/state/copilotj/.env.local`
+- **Windows:** `%LOCALAPPDATA%\copilotj\.env.local`
+
+For external server mode, place `.env.local` in the repository root. Sensitive information such as API keys must be
+stored locally and should never be committed to version control.
+
+### Background: models, providers, and API keys
+
+CopilotJ requires at least one **language model** (LLM) to function. A language model is a remote AI service that
+understands and generates text; CopilotJ sends your instructions to the model, which reasons about what to do and
+orchestrates CopilotJ's tools accordingly.
+
+Models are provided by **AI providers** — companies that operate the model servers. Each provider requires you to create
+an account and authenticate with an **API key**: a secret credential you include in your `.env.local`. Every request your
+session sends to a model runs on that provider's remote servers and is billed to your account in units called **tokens**
+(roughly corresponding to words). Most providers require you to add a payment method and purchase credits before API
+requests will succeed; a free or evaluation-tier account will typically return an error on the first request.
+
+CopilotJ uses **two separate model slots**:
+
+- **`COPILOTJ_MODEL`**: the main reasoning model, used for planning, tool orchestration, and conversation. This is the
+  most important setting and must always be configured.
+- **`COPILOTJ_VLM_MODEL`**: an optional vision-language model (VLM) used when CopilotJ needs to interpret image content
+  directly. All current models from the three recommended providers (OpenAI, Anthropic, Google) support image input. If
+  omitted, image understanding is disabled.
+
+### Provider quick reference
+
+| Provider  | API endpoint                                               | Buy credits                                                                          | Manage API keys                                                               | Available models                                                                  |
+| --------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| OpenAI    | `https://api.openai.com/v1`                                | [OpenAI Billing](https://platform.openai.com/settings/organization/billing/overview) | [OpenAI API keys](https://platform.openai.com/settings/organization/api-keys) | [OpenAI models](https://developers.openai.com/api/docs/models)                    |
+| Anthropic | `https://api.anthropic.com/v1`                             | [Anthropic Billing](https://platform.claude.com/settings/billing)                    | [Anthropic API keys](https://platform.claude.com/settings/keys)               | [Claude models](https://platform.claude.com/docs/en/about-claude/models/overview) |
+| Google    | `https://generativelanguage.googleapis.com/v1beta/openai/` | [Google AI Billing](https://aistudio.google.com/billing)                             | [Google API keys](https://aistudio.google.com/api-keys)                       | [Gemini models](https://ai.google.dev/gemini-api/docs/models)                     |
+| Ollama    | `http://localhost:11434`                                   | free (local)                                                                         | n/a                                                                           | [Ollama model library](https://ollama.com/library)                                |
+
+### OpenAI
+
+```env
+COPILOTJ_MODEL=gpt-5.4
+COPILOTJ_API_KEY=sk-proj-xxxxxxxx
+
+# Optional: vision model (can reuse the same key)
+COPILOTJ_VLM_MODEL=gpt-5.4
+COPILOTJ_VLM_API_KEY=sk-proj-xxxxxxxx
+```
+
+### Anthropic (Claude)
+
+```env
+COPILOTJ_MODEL=claude-sonnet-4-6
+COPILOTJ_API_KEY=sk-ant-api03-xxxxxxxx
+
+# Optional: vision model (can reuse the same key)
+COPILOTJ_VLM_MODEL=claude-sonnet-4-6
+COPILOTJ_VLM_API_KEY=sk-ant-api03-xxxxxxxx
+```
+
+### Google Gemini
+
+```env
+COPILOTJ_MODEL=gemini-2.5-flash
+COPILOTJ_API_KEY=AIza-xxxxxxxx
+
+# Optional: vision model (can reuse the same key)
+COPILOTJ_VLM_MODEL=gemini-2.5-flash
+COPILOTJ_VLM_API_KEY=AIza-xxxxxxxx
+```
+
+### Ollama (local, offline)
+
+```env
+COPILOTJ_MODEL=ollama/qwen3:30b
+COPILOTJ_BASE_URL=http://localhost:11434
+```
+
+Note: Ollama models generally do not support image input. If image understanding is needed, configure
+`COPILOTJ_VLM_MODEL` separately using a cloud provider.
+
+### All configuration variables
+
+| Variable                  | Description                                                           |
+| ------------------------- | --------------------------------------------------------------------- |
+| `COPILOTJ_MODEL`          | Main LLM model name (required)                                        |
+| `COPILOTJ_API_KEY`        | API key for the main model (required)                                 |
+| `COPILOTJ_BASE_URL`       | Override API endpoint for the main model                              |
+| `COPILOTJ_VLM_MODEL`      | Vision-language model name (optional)                                 |
+| `COPILOTJ_VLM_API_KEY`    | API key for the VLM (falls back to `COPILOTJ_API_KEY`)                |
+| `COPILOTJ_VLM_BASE_URL`   | Override API endpoint for the VLM (falls back to `COPILOTJ_BASE_URL`) |
+| `COPILOTJ_PROXY`          | HTTP/HTTPS proxy for all outbound API requests                        |
+| `COPILOTJ_TAVILY_API_KEY` | Tavily API key for live web search                                    |
+| `COPILOTJ_KB_AUTOSAVE`    | Set `1` to auto-ingest dialog summaries into the knowledge bank       |
+| `COPILOTJ_DEV`            | Development mode (presence-based flag)                                |
+| `LANGFUSE_SECRET_KEY`     | Langfuse secret key for observability                                 |
+| `LANGFUSE_PUBLIC_KEY`     | Langfuse public key for observability                                 |
+| `LANGFUSE_HOST`           | Langfuse host URL (e.g. `https://us.cloud.langfuse.com`)              |
+
+A complete `.env.local` template:
+
+```env
+# LLM configuration (text-based reasoning) — choose one provider
+COPILOTJ_MODEL=gpt-4.1
+COPILOTJ_API_KEY=sk-xxxxxxxx
+#COPILOTJ_BASE_URL=http://localhost:11434
+#COPILOTJ_PROXY=http://PATH_TO_YOUR_PROXY
+
+# Vision-language model (image understanding) — optional, choose one provider
+#COPILOTJ_VLM_MODEL=gemini-2.5-flash
+#COPILOTJ_VLM_API_KEY=AI-xxxxxxxx
+
+# External search tool (web search)
+#COPILOTJ_TAVILY_API_KEY=tvly-xxxxxxxxx
+
+# Knowledge bank settings (1 to enable, 0 to disable)
+COPILOTJ_KB_AUTOSAVE=0
+
+## [Optional] Observability and tracing (Langfuse)
+#LANGFUSE_SECRET_KEY=<secret key>
+#LANGFUSE_PUBLIC_KEY=<public key>
+#LANGFUSE_HOST="https://us.cloud.langfuse.com"
+```
+
+### Agent configuration (advanced)
+
+CopilotJ uses a configurable multi-agent architecture. Agent configuration files are located in
+`copilotj/multiagent/agent_configs/`. Each configuration file defines an agent's system prompt, role description,
+and optional constraints.
+
+**Customizing existing agents:** Modify prompt files in `agent_configs/` to adjust reasoning style, constrain
+responsibilities, or tune domain-specific behavior. Changes take effect after restarting the server.
+
+**Adding new agents:** Copy an existing configuration file, define a unique agent name and role, write a system prompt,
+and register any custom tools.
+
 ## Testing
 
 ```bash
