@@ -76,7 +76,28 @@ export function useModelGroups(currentModel: Ref<string>) {
     return groups;
   });
 
+  const suggestions = ref<typeof staticGroups>([]);
+
+  function search(event: { query: string }) {
+    const query = event.query.trim().toLowerCase();
+    const source = modelGroups.value;
+    if (!query) {
+      suggestions.value = [...source];
+      return;
+    }
+    const filtered: typeof staticGroups = [];
+    for (const group of source) {
+      const matchingItems = group.items.filter(
+        (i) => i.label.toLowerCase().includes(query) || i.value.toLowerCase().includes(query),
+      );
+      if (matchingItems && matchingItems.length > 0) {
+        filtered.push({ label: group.label, items: matchingItems });
+      }
+    }
+    suggestions.value = filtered;
+  }
+
   const isOllamaModel = computed(() => currentModel.value.startsWith("ollama/"));
 
-  return { modelGroups, isOllamaModel };
+  return { modelGroups, suggestions, search, isOllamaModel };
 }

@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import type { ThreadConfigModel } from "../apis";
-import { useModelGroups } from "../composables";
 
 const props = defineProps<{
   model: ThreadConfigModel | null;
@@ -22,7 +21,7 @@ const model = ref("");
 const apiKey = ref("");
 const baseUrl = ref("");
 
-const { modelGroups, isOllamaModel } = useModelGroups(model);
+const isOllamaModel = computed(() => model.value.startsWith("ollama/"));
 
 // --- Sync from props ---
 watch(
@@ -67,18 +66,7 @@ function submit() {
     </p>
 
     <FormItem for="model" label="Model">
-      <Select
-        v-model="model"
-        inputId="model"
-        :options="modelGroups"
-        optionGroupLabel="label"
-        optionGroupChildren="items"
-        optionLabel="label"
-        optionValue="value"
-        :disabled="useDefaultModel"
-        placeholder="Select a model"
-        class="w-full"
-      />
+      <ModelAutoComplete v-model="model" inputId="model" :disabled="useDefaultModel" />
     </FormItem>
 
     <FormItem v-if="!isOllamaModel" for="apiKey" label="API Key">
