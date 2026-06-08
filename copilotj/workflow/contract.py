@@ -166,12 +166,12 @@ def _bind_inputs(specs: dict[str, Any], provided: dict[str, Any], run_dir: str) 
 
 def _resolve_input(name: str, spec: Any, provided: dict[str, Any], bound: dict[str, Any], run_dir: str) -> Any:
     if name in provided:
-        return provided[name]
+        return _normalize_input_value(spec, provided[name])
     if not isinstance(spec, dict):
         raise WorkflowContractError(f"Workflow input '{name}' spec must be an object")
     if "default" in spec:
         scope = {"inputs": bound, "run_dir": run_dir}
-        return render_templates(spec["default"], scope)
+        return _normalize_input_value(spec, render_templates(spec["default"], scope))
     if spec.get("required", False):
         raise WorkflowContractError(f"Missing required workflow input: {name}")
     return None
@@ -263,3 +263,11 @@ def _output_path(spec: Any) -> str | None:
     if "://" in path:
         return None
     return path
+
+
+def _normalize_input_value(spec: Any, value: Any) -> Any:
+    if not isinstance(spec, dict) or spec.get("type") not in {"file", "directory"}:
+        return value
+    if not isinstance(value, str):
+        return value
+    return value.replace("\\", "/")

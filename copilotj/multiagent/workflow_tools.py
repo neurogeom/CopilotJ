@@ -7,7 +7,8 @@ from typing import Annotated, Any, Optional
 
 import copilotj.multiagent.leader_multiagent as leader_multiagent
 from copilotj.core import ModelClient, TextMessage, load_env
-from copilotj.multiagent.leader_prompts import make_workflow_save_prompt
+from copilotj.multiagent.leader_prompts import make_workflow_definition_prompt
+from copilotj.plugin.api import ClientPluginAPI
 from copilotj.workflow.converter import DialogToWorkflowConverter
 from copilotj.workflow.executor import WorkflowExecutor
 from copilotj.workflow.manager import WorkflowManager
@@ -96,7 +97,7 @@ class WorkflowSaveService:
 
     async def _generate_workflow_steps(self, dialog_context: dict, summary: object | None = None) -> str | None:
         steps_text = json.dumps(dialog_context["steps"], indent=2, ensure_ascii=False)
-        steps_prompt = make_workflow_save_prompt(dialog_context["task"], steps_text, summary)
+        steps_prompt = make_workflow_definition_prompt(dialog_context["task"], steps_text, summary)
         response = await self.model_client.create([TextMessage(role="user", text=steps_prompt)])
         return response.content.strip() if response.content is not None else None
 

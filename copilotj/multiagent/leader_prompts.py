@@ -21,7 +21,7 @@ __all__ = [
     "build_initial_user_message",
     "build_observation_message",
     "make_summary_prompt",
-    "make_workflow_save_prompt",
+    "make_workflow_definition_prompt",
     "build_tool_prompt",
     "build_available_specialized_agents_prompt",
 ]
@@ -433,24 +433,14 @@ question parameter must same as user main question
 
 # <Workflow Management Prompts>
 PROMPT_TOOL_SAVE_WORKFLOW = """\
-Save a successful dialog as a reusable workflow. This tool converts the summarized steps and dialog context into a standardized workflow format that can be executed later.
+Save a successful dialog as a reusable workflow.
 Only call this tool when the user explicitly asks to save, export, or store a reusable workflow. Never call it automatically just because an analysis finished successfully. If the user did not ask to save a workflow, return a Final Answer instead.
 You can call this tool like this: Action: {"name": "save_workflow", "args": {"workflow_name": "My-Workflow", "tags": "cell-analysis, image-processing, segmentation", "dialog_id": 2}}
 For workflows that span multiple successful dialogs or where later dialogs fix/refine earlier steps, call it with dialog_ids:
 Action: {"name": "save_workflow", "args": {"workflow_name": "My-Workflow", "tags": "cell-analysis, image-processing, segmentation", "dialog_ids": [2, 3, 4]}}
 Use `dialog_id` for one dialog, `dialog_ids` for several dialogs, or omit both to save the latest dialog. Do not pass both `dialog_id` and `dialog_ids`.
 When the user asks to save a workflow and the successful process was distributed across multiple dialogs, choose the relevant dialog ids yourself from chat history instead of saving only the latest dialog.
-The tool will save the selected dialog context as a reusable workflow, and return the save status, you must summarize it.
-
-The saved workflow JSON must be reusable, not a replay of one user's exact files:
-- Save as `schema_version: "2.0"` with an `interface` object.
-- `interface.inputs` must include all run-specific values: source file paths, output_dir, thresholds, radii, channel indices, timepoints, and model choices.
-- Use one `type: "file"` input for single-image workflows. Use separate named file inputs for role-specific multi-image workflows, such as `t0_image` and `t24_image`.
-- `interface.outputs` must include every produced artifact: masks, CSV tables, plots, reports, logs, and summary files.
-- Step arguments must not contain hardcoded absolute paths from the completed run. Replace input paths, output paths, and reusable parameters with template variables.
-- Allowed template variables are only `{{inputs.<name>}}`, `{{outputs.<name>.path}}`, and `{{run_dir}}`.
-- If the candidate workflow still contains absolute paths in step args, it is not reusable yet; regenerate the workflow definition before saving.
-- Do not invent fallback behavior, mock outputs, compatibility branches, or silent error handling.
+The tool converts the selected raw dialog context into a reusable workflow internally and returns the save status; summarize that status to the user.
 """
 
 PROMPT_TOOL_LIST_WORKFLOWS = """\
@@ -478,9 +468,22 @@ You can call this tool like this: Action: {"name": "export_workflow", "args": {"
 """
 
 PROMPT_TOOL_EXECUTE_WORKFLOW = """\
-Execute a saved workflow by its ID, This will take some time depending on the workflow complexity.
-You can call this tool like this: Action: {"name": "execute_workflow", "args": {"workflow_id": "myworkflow", "inputs": {"image": "/absolute/input.tif", "output_dir": "/absolute/output"}, "stop_on_error": true}}
-When the user asks to run an existing workflow, call this tool directly with any available inputs. Do not call get_workflow first and do not re-plan the workflow. A type `file` input may be a single file or a folder; folder inputs are executed as a batch over matching files. If the workflow requires inputs that the user has not provided, ask only for those missing values. The workflow will bind inputs, render template variables, run all steps in sequence, verify declared outputs, and return execution results for summarization.
+Execute a saved workflow by its ID. Execution time depends on workflow complexity.
+
+Call this tool directly when the user asks to run an existing workflow.
+Do not call get_workflow first and do not re-plan the workflow.
+
+Examples:
+Action: {"name": "execute_workflow", "args": {"workflow_id": "classic-nuclei-segmentation", "inputs": {"image": "/absolute/input.tif", "output_dir": "/absolute/output"}, "stop_on_error": true}}
+
+Action: {"name": "execute_workflow", "args": {"workflow_id": "batch-cell-count", "inputs": {"image": "/absolute/input-folder", "output_dir": "/absolute/output-folder"}, "stop_on_error": true}}
+
+Rules:
+- `inputs` must be an object, never true/false.
+- A `file` input may be either a single file or a folder.
+- Folder inputs are executed as a batch over matching files.
+- If required inputs are missing, ask only for those missing values.
+- The workflow binds inputs, renders template variables, runs steps in sequence, verifies declared outputs, and returns execution results for summarization.
 """
 # </Workflow Management Prompts>
 
@@ -543,7 +546,7 @@ def build_tool_prompt(tools: list[Tool]) -> str:
     return prompt
 
 
-WORKFLOW_SAVE_PROMPT = """
+WORKFLOW_DEFINITION_PROMPT = """
 You are an expert workflow author. Your job is to convert an execution trace into a reusable Workflow JSON definition.
 Now the task is finished. According to the Original Task and Execution History, create a minimal, correct, reproducible workflow.
 
@@ -644,9 +647,9 @@ Rules:
 """
 
 
-def make_workflow_save_prompt(task: str, steps_text: str, summary: object | None = None) -> str:
+def make_workflow_definition_prompt(task: str, steps_text: str, summary: object | None = None) -> str:
     return (
-        WORKFLOW_SAVE_PROMPT.replace("{{TASK}}", task)
+        WORKFLOW_DEFINITION_PROMPT.replace("{{TASK}}", task)
         .replace("{{STEPS}}", steps_text)
         .replace("{{SUMMARY}}", "" if summary is None else str(summary))
     )
