@@ -700,14 +700,13 @@ User prompt to optimize:
                 dialog_context["status"] = "completed"
                 dialog_context["steps"].append(
                     {
-                        # Include thought if present "final_answer": final_answer,
+                        "final_answer": final_answer,
                         "thought": agent_resp.reasoning_content or "N/A",
                     }
                 )
                 self.log_info(f"[FINAL RESULT] Dialog {self.dialog_counter} Finished!\n{final_answer}")
                 await self.dialog_changed(self.dialog_counter, "completed")
 
-                dialog_context["status"] = "completed"
                 break
 
             if not agent_resp.tool_calls:
