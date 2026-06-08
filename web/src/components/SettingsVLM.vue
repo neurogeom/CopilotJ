@@ -6,7 +6,6 @@ SPDX-License-Identifier: Apache-2.0
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { useModelGroups } from "../composables";
 
 const props = defineProps<{
   useMainModel: boolean;
@@ -27,7 +26,7 @@ const model = ref(props.model || "");
 const apiKey = ref(props.apiKey || "");
 const baseUrl = ref(props.baseUrl || "");
 
-const { modelGroups, isOllamaModel } = useModelGroups(model);
+const isOllamaModel = computed(() => model.value.startsWith("ollama/"));
 
 const isValid = computed(() => useMainModel.value || !!model.value);
 
@@ -57,17 +56,7 @@ defineExpose({ isValid, getVlmValue });
 
     <template v-if="!useMainModel">
       <FormItem for="vlmModel" label="Model" required>
-        <Select
-          v-model="model"
-          inputId="vlmModel"
-          :options="modelGroups"
-          optionGroupLabel="label"
-          optionGroupChildren="items"
-          optionLabel="label"
-          optionValue="value"
-          placeholder="Select a model"
-          class="w-full"
-        />
+        <ModelAutoComplete v-model="model" inputId="vlmModel" />
       </FormItem>
 
       <FormItem v-if="!isOllamaModel" for="vlmApiKey" label="API Key">

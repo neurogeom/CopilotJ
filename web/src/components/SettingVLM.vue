@@ -6,7 +6,6 @@ SPDX-License-Identifier: Apache-2.0
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { useModelGroups } from "../composables";
 
 const props = defineProps<{
   model: string | null;
@@ -27,7 +26,7 @@ const model = ref("");
 const apiKey = ref("");
 const baseUrl = ref("");
 
-const { modelGroups, isOllamaModel } = useModelGroups(model);
+const isOllamaModel = computed(() => model.value.startsWith("ollama/"));
 
 watch(
   props,
@@ -61,18 +60,7 @@ function submit() {
     </p>
 
     <FormItem for="vlmModel" label="Model">
-      <Select
-        v-model="model"
-        inputId="vlmModel"
-        :options="modelGroups"
-        optionGroupLabel="label"
-        optionGroupChildren="items"
-        optionLabel="label"
-        optionValue="value"
-        :disabled="useMainModel"
-        placeholder="Select a model"
-        class="w-full"
-      />
+      <ModelAutoComplete v-model="model" inputId="vlmModel" :disabled="useMainModel" />
     </FormItem>
 
     <FormItem v-if="!isOllamaModel" for="vlmApiKey" label="API Key">

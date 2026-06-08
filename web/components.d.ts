@@ -28,6 +28,7 @@ declare module 'vue' {
     HeroPattern: typeof import('./src/components/HeroPattern.vue')['default']
     InputText: typeof import('primevue/inputtext')['default']
     Logo: typeof import('./src/components/Logo.vue')['default']
+    ModelAutoComplete: typeof import('./src/components/ModelAutoComplete.vue')['default']
     Navbar: typeof import('./src/components/Navbar.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
