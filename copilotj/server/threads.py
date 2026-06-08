@@ -18,7 +18,7 @@ import pydantic
 from langfuse import propagate_attributes
 
 from copilotj.core import UI, UIEvent, UIEventPost, UIEventState
-from copilotj.core.config import Config
+from copilotj.core.config import Config, resolve_vision_config
 from copilotj.core.ui import UIEventContentMarkdown
 from copilotj.multiagent.leader_multiagent import LeaderDriven
 from copilotj.plugin.api import BridgePluginAPI, PluginAPI
@@ -140,7 +140,7 @@ def _resolve_config(cfg: Config, config: _ConfigQuery | None) -> Config:
     if config.vision_enabled is not None:
         overrides["vision_enabled"] = config.vision_enabled
 
-    return replace(cfg, **overrides) if overrides else cfg
+    return resolve_vision_config(replace(cfg, **overrides)) if overrides else cfg
 
 
 class _Thread(UI):

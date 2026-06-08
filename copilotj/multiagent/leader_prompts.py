@@ -199,12 +199,7 @@ ROI, and advise on correct parameters. Then, call user_manipulate with clear ins
 - If specialized agents fail, use Python scripts to implement alternative approaches
 - If a required ImageJ plugin is missing or any macro call fails several times (e.g. Unrecognized command: "XX"), \
 stop using macro for this task, immediately use Python scripts or delegate to appropriate agents.
-- Before Batch Processing, **ALWAYS run `batch_precheck`** first to check for dataset heterogeneity.
-  - Review the QC report for any detected issues (background variations, image quality, content consistency)
-  - If the report says manual review is required, wait for the user's yes/no decision
-  - If VLM reports a warning, surface it to the user; it is not a hard stop
-  - Always confirm the input output paths and parameters with the user, and you must \
-notify the user that batch processing may take a long time and ask user_manipulate to proceed.
+- Before Batch Processing, **ALWAYS run `batch_precheck`** first. If VLM is unavailable or manual review is required, open the montage(s) in ImageJ and ask the user to inspect yes/no. VLM warnings are not a hard stop. Always confirm paths and parameters, and notify the user that batch processing may take a long time.
 - Before Training models, always confirm before starting, and you must notify the user that training may take a long time and ask user_manipulate to proceed.
 
 ### Data & Results Handling
@@ -499,40 +494,16 @@ Rules:
 
 PROMPT_TOOL_BATCH_PRECHECK = """\
 Perform pre-batch quality control check on an image dataset BEFORE starting batch processing.
+Samples images from a folder, creates overview montage(s), and runs VLM visual inspection when available.
+If VLM is unavailable, returns a manual-review warning instead.
 
-This tool samples images from a folder, creates an overview montage, and uses VLM-assisted visual inspection when VLM QC is configured.
-If VLM QC is unavailable, it returns a manual-review warning and asks the user to inspect the montage before batch execution.
+**When to use:** Before ANY batch operation on a new or unfamiliar dataset — segmentation, analysis, conversion, etc.
 
-**When to use this tool:**
-- Before starting any batch processing operation (segmentation, analysis, conversion, etc.)
-- When processing a new or unfamiliar dataset
-- When you need to verify dataset consistency before automated processing
-- To identify potential issues early and avoid wasted computation time
+**What it checks:** background/exposure variations, image quality (artifacts, blur), content consistency (object density, morphology), technical consistency (channels, resolution, bit depth), structural patterns (edge effects, tiling).
 
-**What it checks for:**
-1. Background & Exposure Issues: intensity variations, over/underexposure, uneven illumination
-2. Image Quality Issues: artifacts, blur, noise variations, compression artifacts
-3. Content Consistency: object density variations, clustering patterns, size/morphology differences
-4. Technical Consistency: channel/color variations, resolution differences, bit depth issues
-5. Structural Patterns: edge effects, tiling artifacts, position-dependent variations
+**montage_count guidance:** 1 for small/familiar datasets (default); 2 for medium or multi-subfolder datasets; 3 for large/unfamiliar/heterogeneous datasets. Do not exceed 3 unless the user asks.
 
-**Call syntax:**
-Action: {"name": "batch_precheck", "args": {"folder_path": "/path/to/images", "sample_size": 9}}
-
-**Parameters:**
-- folder_path: Path to the image folder to check (REQUIRED)
-- sample_size: Number of images to sample (default: 9, creates 3x3 montage)
-- analysis_focus: Optional specific focus areas (e.g., "background consistency", "cell density variations")
-- output_dir: Optional output directory for montage and report
-- skip_analysis: Set to true to skip VLM analysis and only generate montage
-
-**Output:**
-- Structured QC report with heterogeneity assessment
-- Recommendations for handling detected issues
-- Manual yes/no gate instructions when VLM QC is unavailable
-- Montage image saved to temp directory for visual inspection
-
-**IMPORTANT:** Always run this tool BEFORE batch operations on new datasets. If the output says manual review is required, wait for the user's yes/no decision: yes continues workflow execution, no stops.
+**IMPORTANT:** Always run this BEFORE batch operations on new datasets. If the output says manual review is required or VLM is unavailable, open every saved montage in ImageJ via `run_macro` (split into multiple actions if more than three), then ask the user to inspect and reply yes/no: yes continues, no stops.
 """
 
 
