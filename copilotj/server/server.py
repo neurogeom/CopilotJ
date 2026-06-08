@@ -123,16 +123,21 @@ class Server:
         IMPORTANT: API keys are never exposed to the frontend.
         """
         cfg = self._cfg
+
+        model = {"name": cfg.llm_model, "api_key": None, "base_url": cfg.llm_base_url} if cfg.llm_model else None
+        vlm = (
+            {"name": cfg.vlm_model, "api_key": None, "base_url": cfg.vlm_base_url}
+            if cfg.vision_enabled and cfg.vlm_model
+            else None
+        )
+
         return web.json_response(
             {
-                "model": {"name": cfg.llm_model, "api_key": None, "base_url": cfg.llm_base_url}
-                if cfg.llm_model
-                else None,
-                "vlm": {"name": cfg.vlm_model, "api_key": None, "base_url": cfg.vlm_base_url}
-                if cfg.vlm_model
-                else None,
+                "model": model,
+                "vlm": vlm,
                 "proxy": cfg.proxy,
                 "kb_autosave": cfg.kb_autosave,
+                "vision_enabled": cfg.vision_enabled,
             }
         )
 

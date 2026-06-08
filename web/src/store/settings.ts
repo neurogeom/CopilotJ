@@ -17,11 +17,24 @@ export const useSettings = defineStore("settings", () => {
   const value = computed<ThreadConfigQuery>(() => {
     const cfg = useConfig();
     const vlm = cfg.data.vlm;
+    let resolvedVlm: ThreadConfigModel | null = null;
+
+    if (cfg.data.visionEnabled) {
+      if (vlm.useMainModel) {
+        // Resolve main model details as the VLM so the backend
+        // uses the correct model without needing a "useMainModel" concept
+        resolvedVlm = model.value
+          ? { name: model.value.name, api_key: model.value.api_key, base_url: model.value.base_url }
+          : null;
+      } else {
+        resolvedVlm = { name: vlm.model!, api_key: vlm.api_key, base_url: vlm.base_url };
+      }
+    }
+
     return {
       model: model.value,
-      vlm: vlm.useMainModel
-        ? null
-        : { name: vlm.model!, api_key: vlm.api_key, base_url: vlm.base_url },
+      vlm: resolvedVlm,
+      vision_enabled: cfg.data.visionEnabled,
       proxy: cfg.data.proxy,
       tavily_api_key: cfg.data.tavilyApiKey,
       kb_autosave: cfg.data.kbAutosave,

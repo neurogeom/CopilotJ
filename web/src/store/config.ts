@@ -21,6 +21,7 @@ export interface ConfigData {
   proxy: string | null;
   tavilyApiKey: string | null;
   kbAutosave: boolean;
+  visionEnabled: boolean;
 }
 
 function defaultConfig(): ConfigData {
@@ -30,6 +31,7 @@ function defaultConfig(): ConfigData {
     proxy: null,
     tavilyApiKey: null,
     kbAutosave: false,
+    visionEnabled: false,
   };
 }
 
@@ -81,6 +83,11 @@ export const useConfig = defineStore("config", () => {
     persist();
   }
 
+  function setVisionEnabled(enabled: boolean) {
+    data.value.visionEnabled = enabled;
+    persist();
+  }
+
   function reset() {
     data.value = defaultConfig();
     localStorage.removeItem(STORAGE_KEY);
@@ -93,6 +100,7 @@ export const useConfig = defineStore("config", () => {
     setProxy,
     setTavilyApiKey,
     setKbAutosave,
+    setVisionEnabled,
     reset,
     persist,
   };

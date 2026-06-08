@@ -61,6 +61,11 @@ onMounted(async () => {
     if (!config.data.kbAutosave && serverConfig.kb_autosave) {
       config.setKbAutosave(serverConfig.kb_autosave);
     }
+
+    // Vision enabled
+    if (serverConfig.vision_enabled !== undefined) {
+      config.setVisionEnabled(serverConfig.vision_enabled);
+    }
   } catch {
     // Server may not be reachable yet; warning will show and resolve on retry.
   }

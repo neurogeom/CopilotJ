@@ -51,6 +51,7 @@ class _Config(pydantic.BaseModel):
 class _ConfigQuery(pydantic.BaseModel):
     model: _ConfigModel | None = None
     vlm: _ConfigModel | None = None
+    vision_enabled: bool | None = None
     proxy: str | None = None
     tavily_api_key: str | None = None
     kb_autosave: bool = False
@@ -91,6 +92,8 @@ def _resolve_config(cfg: Config, config: _ConfigQuery | None) -> Config:
         overrides["tavily_api_key"] = config.tavily_api_key
     if config.kb_autosave:
         overrides["kb_autosave"] = config.kb_autosave
+    if config.vision_enabled is not None:
+        overrides["vision_enabled"] = config.vision_enabled
 
     return replace(cfg, **overrides) if overrides else cfg
 

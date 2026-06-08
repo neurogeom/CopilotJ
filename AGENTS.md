@@ -47,7 +47,8 @@ The core agent framework follows a layered architecture:
 
 - `COPILOTJ_API_KEY`: API key for the primary model
 - `COPILOTJ_BASE_URL`: Override API endpoint
-- `COPILOTJ_VLM_MODEL`: Vision model for image analysis
+- `COPILOTJ_VISION_ENABLED`: Set `1` to enable vision features (disabled by default for privacy)
+- `COPILOTJ_VLM_MODEL`: Vision model for image analysis (requires `COPILOTJ_VISION_ENABLED=1`)
 - `COPILOTJ_VLM_API_KEY`: API key for the vision model
 - `COPILOTJ_PROXY`: HTTP proxy
 - `COPILOTJ_KB_AUTOSAVE`: Set `1` to auto-ingest dialog summaries into knowledge bank

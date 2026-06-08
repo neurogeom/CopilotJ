@@ -69,7 +69,7 @@ class PluginTools:
         result = f"{script} has executed successfully.\n"
 
         # Perform result verification if requested
-        if verify_result and operation_intent:
+        if verify_result and operation_intent and self._cfg.vision_enabled:
             verification = await self.simple_result_verification(operation_intent)
             result += f"\nOperation verification: {verification}"
 
@@ -87,6 +87,10 @@ class PluginTools:
 
     async def capture_screen(self, query: str | None = None) -> str:
         """Capture ImageJ Screen."""
+        if not self._cfg.vision_enabled:
+            window_info = await self.imagej_windowInfo()
+            return f"[Vision disabled] Basic ImageJ window info:\n{window_info}"
+
         vlm = new_vlm_model_client(
             model=self._cfg.vlm_model or None,
             api_key=self._cfg.vlm_api_key or None,
@@ -169,6 +173,9 @@ Provide any additional warnings or clarifications:
         """ImageJ Perception Tool."""
         perception = await self.imagej_windowInfo()
 
+        if not self._cfg.vision_enabled:
+            return f"[Vision disabled] ImageJ Window Information:\n{perception}"
+
         PROMPT_TEMPLATE = """
 
 This is the leader agent's request: {{QUERY}}
@@ -201,6 +208,9 @@ imagejOperation is the monitor event history of ImageJ.
 
     async def simple_result_verification(self, operation_intent: str, expected_outcome: str = None) -> str:
         """Simple perception-based result verification."""
+        if not self._cfg.vision_enabled:
+            return "[Vision disabled] Visual verification skipped. Operation assumed successful."
+
         vlm = new_vlm_model_client(
             model=self._cfg.vlm_model or None,
             api_key=self._cfg.vlm_api_key or None,

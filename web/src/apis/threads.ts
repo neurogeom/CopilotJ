@@ -83,6 +83,7 @@ export interface ThreadConfig {
 export interface ThreadConfigQuery {
   model?: ThreadConfigModel | null;
   vlm?: ThreadConfigModel | null;
+  vision_enabled?: boolean;
   proxy?: string | null;
   tavily_api_key?: string | null;
   kb_autosave?: boolean;
@@ -102,6 +103,7 @@ export interface ServerConfig {
   vlm: ThreadConfigModel | null;
   proxy: string | null;
   kb_autosave: boolean;
+  vision_enabled: boolean;
 }
 
 export async function getServerConfig(): Promise<ServerConfig> {

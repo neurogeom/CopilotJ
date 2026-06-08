@@ -74,6 +74,7 @@ class Config:
     # Feature flags
     kb_autosave: bool = False
     dev: bool = False
+    vision_enabled: bool = False
 
     # BioImage Model Zoo
     bioimage_model_zoo_url: str = "https://bioimage-io.github.io/collection-bioimage-io/collection.json"
@@ -102,6 +103,7 @@ def load_config() -> Config:
         tavily_api_key=os.getenv("COPILOTJ_TAVILY_API_KEY", None),
         kb_autosave=os.getenv("COPILOTJ_KB_AUTOSAVE", "0") == "1",
         dev=os.getenv("COPILOTJ_DEV") is not None,
+        vision_enabled=os.getenv("COPILOTJ_VISION_ENABLED", "0") == "1",
         bioimage_model_zoo_url=os.getenv(
             "BIOIMAGE_MODEL_ZOO_URL",
             "https://bioimage-io.github.io/collection-bioimage-io/collection.json",
