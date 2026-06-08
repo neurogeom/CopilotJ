@@ -16,7 +16,7 @@ def temporary_proxy(cfg: Config, default_value: str | None = None):
 
     Notes: not thread-safe, use with caution in multi-threaded environments.
     """
-    proxy = default_value or cfg.proxy
+    proxy = default_value or cfg.llm_proxy
     keys = ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"]
 
     old_env = {k: os.environ.get(k) for k in keys + [k.lower() for k in keys]}

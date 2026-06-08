@@ -155,7 +155,7 @@ requests will succeed; a free or evaluation-tier account will typically return a
 
 CopilotJ uses **two separate model slots**:
 
-- **`COPILOTJ_MODEL`**: the main reasoning model, used for planning, tool orchestration, and conversation. This is the
+- **`COPILOTJ_LLM_MODEL`**: the main reasoning model, used for planning, tool orchestration, and conversation. This is the
   most important setting and must always be configured.
 - **`COPILOTJ_VLM_MODEL`**: an optional vision-language model (VLM) used when CopilotJ needs to interpret image content
   directly. All current models from the three recommended providers (OpenAI, Anthropic, Google) support image input. If
@@ -173,8 +173,8 @@ CopilotJ uses **two separate model slots**:
 ### OpenAI
 
 ```env
-COPILOTJ_MODEL=gpt-5.4
-COPILOTJ_API_KEY=sk-proj-xxxxxxxx
+COPILOTJ_LLM_MODEL=gpt-5.4
+COPILOTJ_LLM_API_KEY=sk-proj-xxxxxxxx
 
 # Optional: vision model (can reuse the same key)
 COPILOTJ_VLM_MODEL=gpt-5.4
@@ -184,8 +184,8 @@ COPILOTJ_VLM_API_KEY=sk-proj-xxxxxxxx
 ### Anthropic (Claude)
 
 ```env
-COPILOTJ_MODEL=claude-sonnet-4-6
-COPILOTJ_API_KEY=sk-ant-api03-xxxxxxxx
+COPILOTJ_LLM_MODEL=claude-sonnet-4-6
+COPILOTJ_LLM_API_KEY=sk-ant-api03-xxxxxxxx
 
 # Optional: vision model (can reuse the same key)
 COPILOTJ_VLM_MODEL=claude-sonnet-4-6
@@ -195,8 +195,8 @@ COPILOTJ_VLM_API_KEY=sk-ant-api03-xxxxxxxx
 ### Google Gemini
 
 ```env
-COPILOTJ_MODEL=gemini-2.5-flash
-COPILOTJ_API_KEY=AIza-xxxxxxxx
+COPILOTJ_LLM_MODEL=gemini-2.5-flash
+COPILOTJ_LLM_API_KEY=AIza-xxxxxxxx
 
 # Optional: vision model (can reuse the same key)
 COPILOTJ_VLM_MODEL=gemini-2.5-flash
@@ -206,8 +206,8 @@ COPILOTJ_VLM_API_KEY=AIza-xxxxxxxx
 ### Ollama (local, offline)
 
 ```env
-COPILOTJ_MODEL=ollama/qwen3:30b
-COPILOTJ_BASE_URL=http://localhost:11434
+COPILOTJ_LLM_MODEL=ollama/qwen3:30b
+COPILOTJ_LLM_BASE_URL=http://localhost:11434
 ```
 
 Note: Ollama models generally do not support image input. If image understanding is needed, configure
@@ -215,30 +215,31 @@ Note: Ollama models generally do not support image input. If image understanding
 
 ### All configuration variables
 
-| Variable                  | Description                                                           |
-| ------------------------- | --------------------------------------------------------------------- |
-| `COPILOTJ_MODEL`          | Main LLM model name (required)                                        |
-| `COPILOTJ_API_KEY`        | API key for the main model (required)                                 |
-| `COPILOTJ_BASE_URL`       | Override API endpoint for the main model                              |
-| `COPILOTJ_VLM_MODEL`      | Vision-language model name (optional)                                 |
-| `COPILOTJ_VLM_API_KEY`    | API key for the VLM (falls back to `COPILOTJ_API_KEY`)                |
-| `COPILOTJ_VLM_BASE_URL`   | Override API endpoint for the VLM (falls back to `COPILOTJ_BASE_URL`) |
-| `COPILOTJ_PROXY`          | HTTP/HTTPS proxy for all outbound API requests                        |
-| `COPILOTJ_TAVILY_API_KEY` | Tavily API key for live web search                                    |
-| `COPILOTJ_KB_AUTOSAVE`    | Set `1` to auto-ingest dialog summaries into the knowledge bank       |
-| `COPILOTJ_DEV`            | Development mode (presence-based flag)                                |
-| `LANGFUSE_SECRET_KEY`     | Langfuse secret key for observability                                 |
-| `LANGFUSE_PUBLIC_KEY`     | Langfuse public key for observability                                 |
-| `LANGFUSE_HOST`           | Langfuse host URL (e.g. `https://us.cloud.langfuse.com`)              |
+| Variable                  | Description                                                                     |
+| ------------------------- | ------------------------------------------------------------------------------- |
+| `COPILOTJ_LLM_MODEL`      | Main LLM model name (required)                                                  |
+| `COPILOTJ_LLM_API_KEY`    | API key for the main model (required)                                           |
+| `COPILOTJ_LLM_BASE_URL`   | Override API endpoint for the main model                                        |
+| `COPILOTJ_VLM_MODEL`      | Vision-language model name (optional)                                           |
+| `COPILOTJ_VLM_API_KEY`    | API key for the VLM (falls back to `COPILOTJ_LLM_API_KEY`)                      |
+| `COPILOTJ_VLM_BASE_URL`   | Override API endpoint for the VLM (falls back to `COPILOTJ_LLM_BASE_URL`)       |
+| `COPILOTJ_LLM_PROXY`      | HTTP/HTTPS proxy for LLM outbound API requests                                  |
+| `COPILOTJ_VLM_PROXY`      | HTTP/HTTPS proxy for VLM outbound requests (falls back to `COPILOTJ_LLM_PROXY`) |
+| `COPILOTJ_TAVILY_API_KEY` | Tavily API key for live web search                                              |
+| `COPILOTJ_KB_AUTOSAVE`    | Set `1` to auto-ingest dialog summaries into the knowledge bank                 |
+| `COPILOTJ_DEV`            | Development mode (presence-based flag)                                          |
+| `LANGFUSE_SECRET_KEY`     | Langfuse secret key for observability                                           |
+| `LANGFUSE_PUBLIC_KEY`     | Langfuse public key for observability                                           |
+| `LANGFUSE_HOST`           | Langfuse host URL (e.g. `https://us.cloud.langfuse.com`)                        |
 
 A complete `.env.local` template:
 
 ```env
 # LLM configuration (text-based reasoning) — choose one provider
-COPILOTJ_MODEL=gpt-4.1
-COPILOTJ_API_KEY=sk-xxxxxxxx
-#COPILOTJ_BASE_URL=http://localhost:11434
-#COPILOTJ_PROXY=http://PATH_TO_YOUR_PROXY
+COPILOTJ_LLM_MODEL=gpt-4.1
+COPILOTJ_LLM_API_KEY=sk-xxxxxxxx
+#COPILOTJ_LLM_BASE_URL=http://localhost:11434
+#COPILOTJ_LLM_PROXY=http://PATH_TO_YOUR_PROXY
 
 # Vision-language model (image understanding) — optional, choose one provider
 #COPILOTJ_VLM_MODEL=gemini-2.5-flash

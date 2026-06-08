@@ -14,6 +14,8 @@ from pathlib import Path
 
 import dotenv
 
+_logger = logging.getLogger(__name__)
+
 __all__ = [
     "Config",
     "load_config",
@@ -26,8 +28,10 @@ __all__ = [
     "save_managed_config",
     "get_llm_and_key",
     "get_llm_base_url",
+    "get_llm_proxy",
     "get_vlm_and_key",
     "get_vlm_base_url",
+    "get_vlm_proxy",
     "get_proxy",
     "bootstrap_assets",
     "resolve_vision_config",
@@ -62,14 +66,13 @@ class Config:
     llm_model: str = ""
     llm_api_key: str = ""
     llm_base_url: str | None = None
+    llm_proxy: str | None = None
 
-    # VLM (already resolved: VLM_* falls back to generic *)
+    # VLM (falls back to LLM fields)
     vlm_model: str = ""
     vlm_api_key: str = ""
     vlm_base_url: str | None = None
-
-    # Network
-    proxy: str | None = None
+    vlm_proxy: str | None = None
 
     # Tool keys
     tavily_api_key: str | None = None
@@ -104,14 +107,44 @@ def load_config() -> Config:
     dotenv.load_dotenv(home / ".env", override=False)
     dotenv.load_dotenv(home / ".env.local", override=False)
 
+    # LLM env vars — new names with deprecated fallback
+    llm_model_raw = os.getenv("COPILOTJ_LLM_MODEL", "")
+    if not llm_model_raw:
+        old = os.getenv("COPILOTJ_MODEL")
+        if old:
+            _logger.warning("COPILOTJ_MODEL is deprecated, use COPILOTJ_LLM_MODEL instead")
+            llm_model_raw = old
+
+    llm_api_key_raw = os.getenv("COPILOTJ_LLM_API_KEY", "") or ""
+    if not llm_api_key_raw:
+        old = os.getenv("COPILOTJ_API_KEY")
+        if old:
+            _logger.warning("COPILOTJ_API_KEY is deprecated, use COPILOTJ_LLM_API_KEY instead")
+            llm_api_key_raw = old
+
+    llm_base_url_raw = os.getenv("COPILOTJ_LLM_BASE_URL")
+    if llm_base_url_raw is None:
+        old = os.getenv("COPILOTJ_BASE_URL")
+        if old:
+            _logger.warning("COPILOTJ_BASE_URL is deprecated, use COPILOTJ_LLM_BASE_URL instead")
+            llm_base_url_raw = old
+
+    llm_proxy_raw = os.getenv("COPILOTJ_LLM_PROXY")
+    if llm_proxy_raw is None:
+        old = os.getenv("COPILOTJ_PROXY")
+        if old:
+            _logger.warning("COPILOTJ_PROXY is deprecated, use COPILOTJ_LLM_PROXY instead")
+            llm_proxy_raw = old
+
     return Config(
-        llm_model=os.getenv("COPILOTJ_MODEL", ""),
-        llm_api_key=os.getenv("COPILOTJ_API_KEY", "") or "",
-        llm_base_url=os.getenv("COPILOTJ_BASE_URL", None),
-        vlm_model=os.getenv("COPILOTJ_VLM_MODEL") or os.getenv("COPILOTJ_MODEL", ""),
-        vlm_api_key=os.getenv("COPILOTJ_VLM_API_KEY", os.getenv("COPILOTJ_API_KEY", "")) or "",
-        vlm_base_url=os.getenv("COPILOTJ_VLM_BASE_URL", None) or os.getenv("COPILOTJ_BASE_URL", None),
-        proxy=os.getenv("COPILOTJ_PROXY", None),
+        llm_model=llm_model_raw,
+        llm_api_key=llm_api_key_raw,
+        llm_base_url=llm_base_url_raw,
+        vlm_model=os.getenv("COPILOTJ_VLM_MODEL") or llm_model_raw,
+        vlm_api_key=os.getenv("COPILOTJ_VLM_API_KEY", llm_api_key_raw) or "",
+        vlm_base_url=os.getenv("COPILOTJ_VLM_BASE_URL", None) or llm_base_url_raw,
+        llm_proxy=llm_proxy_raw,
+        vlm_proxy=os.getenv("COPILOTJ_VLM_PROXY", None),
         tavily_api_key=os.getenv("COPILOTJ_TAVILY_API_KEY", None),
         kb_autosave=os.getenv("COPILOTJ_KB_AUTOSAVE", "0") == "1",
         dev=os.getenv("COPILOTJ_DEV") is not None,
@@ -207,27 +240,62 @@ def save_managed_config(data: dict) -> None:
 
 
 def get_llm_and_key(model: str | None = None, api_key: str | None = None) -> tuple[str, str]:
-    model = model or os.getenv("COPILOTJ_MODEL", "")
-    api_key = api_key or os.getenv("COPILOTJ_API_KEY", "") or ""
+    if model is None:
+        model = os.getenv("COPILOTJ_LLM_MODEL", "")
+        if not model:
+            old = os.getenv("COPILOTJ_MODEL")
+            if old:
+                _logger.warning("COPILOTJ_MODEL is deprecated, use COPILOTJ_LLM_MODEL instead")
+                model = old
+    if api_key is None:
+        api_key = os.getenv("COPILOTJ_LLM_API_KEY", "") or ""
+        if not api_key:
+            old = os.getenv("COPILOTJ_API_KEY")
+            if old:
+                _logger.warning("COPILOTJ_API_KEY is deprecated, use COPILOTJ_LLM_API_KEY instead")
+                api_key = old
     return model, api_key
 
 
 def get_llm_base_url() -> str | None:
-    return os.getenv("COPILOTJ_BASE_URL", None)
+    value = os.getenv("COPILOTJ_LLM_BASE_URL")
+    if value is None:
+        old = os.getenv("COPILOTJ_BASE_URL")
+        if old:
+            _logger.warning("COPILOTJ_BASE_URL is deprecated, use COPILOTJ_LLM_BASE_URL instead")
+            return old
+    return value
+
+
+def get_llm_proxy(default_value: str | None = None) -> str | None:
+    if default_value:
+        return default_value
+    value = os.getenv("COPILOTJ_LLM_PROXY")
+    if value is None:
+        old = os.getenv("COPILOTJ_PROXY")
+        if old:
+            _logger.warning("COPILOTJ_PROXY is deprecated, use COPILOTJ_LLM_PROXY instead")
+            return old
+    return value
 
 
 def get_vlm_and_key(model: str | None = None, api_key: str | None = None) -> tuple[str, str]:
-    model = model or os.getenv("COPILOTJ_VLM_MODEL") or os.getenv("COPILOTJ_MODEL", "")
-    api_key = api_key or os.getenv("COPILOTJ_VLM_API_KEY", os.getenv("COPILOTJ_API_KEY", "")) or ""
+    model = model or os.getenv("COPILOTJ_VLM_MODEL") or os.getenv("COPILOTJ_LLM_MODEL", "")
+    api_key = api_key or os.getenv("COPILOTJ_VLM_API_KEY", os.getenv("COPILOTJ_LLM_API_KEY", "")) or ""
     return model, api_key
 
 
 def get_vlm_base_url() -> str | None:
-    return os.getenv("COPILOTJ_VLM_BASE_URL", None) or os.getenv("COPILOTJ_BASE_URL", None)
+    return os.getenv("COPILOTJ_VLM_BASE_URL", None) or os.getenv("COPILOTJ_LLM_BASE_URL", None)
+
+
+def get_vlm_proxy(default_value: str | None = None) -> str | None:
+    return default_value or os.getenv("COPILOTJ_VLM_PROXY", None) or os.getenv("COPILOTJ_LLM_PROXY", None)
 
 
 def get_proxy(default_value: str | None = None) -> str | None:
-    return default_value or os.getenv("COPILOTJ_PROXY", None)
+    """Deprecated: use get_llm_proxy instead."""
+    return get_llm_proxy(default_value)
 
 
 def bootstrap_assets() -> None:
@@ -268,7 +336,7 @@ def _get_vlm_base_url(cfg: Config) -> str | None:
 
 
 def _get_proxy(cfg: Config, default_value: str | None = None) -> str | None:
-    return default_value or cfg.proxy
+    return default_value or cfg.llm_proxy
 
 
 def _is_dev(cfg: Config) -> bool:
