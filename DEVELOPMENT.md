@@ -220,9 +220,11 @@ Note: Ollama models generally do not support image input. If image understanding
 | `COPILOTJ_LLM_MODEL`      | Main LLM model name (required)                                                  |
 | `COPILOTJ_LLM_API_KEY`    | API key for the main model (required)                                           |
 | `COPILOTJ_LLM_BASE_URL`   | Override API endpoint for the main model                                        |
+| `COPILOTJ_LLM_PROVIDER`   | Explicit LLM provider selection (optional; auto-detected if not set)            |
 | `COPILOTJ_VLM_MODEL`      | Vision-language model name (optional)                                           |
 | `COPILOTJ_VLM_API_KEY`    | API key for the VLM (falls back to `COPILOTJ_LLM_API_KEY`)                      |
 | `COPILOTJ_VLM_BASE_URL`   | Override API endpoint for the VLM (falls back to `COPILOTJ_LLM_BASE_URL`)       |
+| `COPILOTJ_VLM_PROVIDER`   | Explicit VLM provider (optional; falls back to `COPILOTJ_LLM_PROVIDER`)         |
 | `COPILOTJ_LLM_PROXY`      | HTTP/HTTPS proxy for LLM outbound API requests                                  |
 | `COPILOTJ_VLM_PROXY`      | HTTP/HTTPS proxy for VLM outbound requests (falls back to `COPILOTJ_LLM_PROXY`) |
 | `COPILOTJ_TAVILY_API_KEY` | Tavily API key for live web search                                              |
@@ -240,10 +242,12 @@ COPILOTJ_LLM_MODEL=gpt-4.1
 COPILOTJ_LLM_API_KEY=sk-xxxxxxxx
 #COPILOTJ_LLM_BASE_URL=http://localhost:11434
 #COPILOTJ_LLM_PROXY=http://PATH_TO_YOUR_PROXY
+#COPILOTJ_LLM_PROVIDER=openai
 
 # Vision-language model (image understanding) — optional, choose one provider
 #COPILOTJ_VLM_MODEL=gemini-2.5-flash
 #COPILOTJ_VLM_API_KEY=AI-xxxxxxxx
+#COPILOTJ_VLM_PROVIDER=openai
 
 # External search tool (web search)
 #COPILOTJ_TAVILY_API_KEY=tvly-xxxxxxxxx

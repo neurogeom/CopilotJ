@@ -24,10 +24,15 @@ export const useSettings = defineStore("settings", () => {
       const activeModel = model.value ?? cfg.serverModel;
       if (vlm.useMainModel) {
         resolvedVlm = activeModel
-          ? { name: activeModel.name, api_key: activeModel.api_key, base_url: activeModel.base_url }
+          ? {
+              name: activeModel.name,
+              api_key: activeModel.api_key,
+              base_url: activeModel.base_url,
+              provider: activeModel.provider,
+            }
           : null;
       } else if (vlm.model) {
-        resolvedVlm = { name: vlm.model, api_key: vlm.api_key, base_url: vlm.base_url };
+        resolvedVlm = { name: vlm.model, api_key: vlm.api_key, base_url: vlm.base_url, provider: vlm.provider };
       }
     }
 

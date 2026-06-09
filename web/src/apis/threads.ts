@@ -74,6 +74,7 @@ export interface ThreadConfigModel {
   name: string;
   api_key: string | null;
   base_url: string | null;
+  provider: string | null;
 }
 
 export interface ThreadConfig {

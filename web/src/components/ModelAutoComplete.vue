@@ -11,6 +11,7 @@ import { useModelGroups } from "../composables";
 const props = withDefaults(
   defineProps<{
     modelValue: string;
+    provider: string;
     disabled?: boolean;
     inputId?: string;
     placeholder?: string;
@@ -34,11 +35,14 @@ const internalValue = ref<string | { label: string; value: string }>(props.model
 // stays stable during active typing and only updates on blur / selection.
 const committedModel = ref(props.modelValue);
 
+const providerRef = computed(() => props.provider);
+
 const { suggestions, search, isOllamaModel } = useModelGroups(
   computed(() => {
     const v = internalValue.value;
     return typeof v === "string" ? v : (v?.value ?? "");
   }),
+  providerRef,
 );
 
 // Sync incoming prop changes.

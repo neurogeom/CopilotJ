@@ -34,6 +34,7 @@ declare module 'vue' {
     ProgressSpinner: typeof import('primevue/progressspinner')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    Select: typeof import('primevue/select')['default']
     SettingLLM: typeof import('./src/components/SettingLLM.vue')['default']
     Settings: typeof import('./src/components/Settings.vue')['default']
     SettingsAdvanced: typeof import('./src/components/SettingsAdvanced.vue')['default']

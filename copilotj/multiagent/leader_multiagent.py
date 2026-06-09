@@ -446,12 +446,19 @@ class LeaderDriven(Pattern):
         self.log_info("Leader Agent initialized.")
 
     def update_config(
-        self, *, model: str | None = None, api_key: str | None = None, base_url: str | None = None
+        self,
+        *,
+        model: str | None = None,
+        api_key: str | None = None,
+        base_url: str | None = None,
+        provider: str | None = None,
     ) -> None:
-        if model is not None or api_key is not None or base_url is not None:
+        if model is not None or api_key is not None or base_url is not None or provider is not None:
             model = model or self.model_client.get_model()
             api_key = api_key or self.model_client.get_api_key()
-            self.model_client = new_model_client(model=model, api_key=api_key, base_url=base_url, cfg=self._cfg)
+            self.model_client = new_model_client(
+                model=model, api_key=api_key, base_url=base_url, cfg=self._cfg, provider=provider
+            )
             self.workflow_saver.model_client = self.model_client
             self.leader_agent.set_model_client(self.model_client)
             for agent in self.specialized_agents.values():

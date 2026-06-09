@@ -15,6 +15,7 @@ interface WizardData {
     model: string | null;
     apiKey: string | null;
     baseUrl: string | null;
+    provider: string | null;
   };
   proxy: string | null;
   tavilyApiKey: string | null;
@@ -68,6 +69,13 @@ function maskKey(key: string | null): string {
         <span class="text-slate-500 dark:text-slate-400">Base URL</span>
         <span class="font-mono">{{ wizardData.model.base_url }}</span>
       </div>
+      <div
+        v-if="wizardData.model?.provider"
+        class="flex justify-between border-b border-gray-200 dark:border-gray-700 pb-2"
+      >
+        <span class="text-slate-500 dark:text-slate-400">Provider</span>
+        <span class="font-mono">{{ wizardData.model.provider }}</span>
+      </div>
 
       <!-- VLM -->
       <div class="flex justify-between border-b border-gray-200 dark:border-gray-700 pb-2">
@@ -81,6 +89,13 @@ function maskKey(key: string | null): string {
       >
         <span class="text-slate-500 dark:text-slate-400">VLM API Key</span>
         <span class="font-mono">{{ maskKey(wizardData.vlm.apiKey) }}</span>
+      </div>
+      <div
+        v-if="!wizardData.vlm.useMainModel && wizardData.vlm.provider"
+        class="flex justify-between border-b border-gray-200 dark:border-gray-700 pb-2"
+      >
+        <span class="text-slate-500 dark:text-slate-400">VLM Provider</span>
+        <span class="font-mono">{{ wizardData.vlm.provider }}</span>
       </div>
 
       <!-- Advanced -->

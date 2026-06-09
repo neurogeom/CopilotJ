@@ -51,6 +51,7 @@ onMounted(async () => {
         model: serverConfig.vlm.name,
         api_key: null,
         base_url: serverConfig.vlm.base_url,
+        provider: serverConfig.vlm.provider,
         useMainModel: false,
       });
     }

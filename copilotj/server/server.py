@@ -142,9 +142,18 @@ class Server:
         """
         cfg = self._cfg
 
-        model = {"name": cfg.llm_model, "api_key": None, "base_url": cfg.llm_base_url} if cfg.llm_model else None
+        model = (
+            {"name": cfg.llm_model, "api_key": None, "base_url": cfg.llm_base_url, "provider": cfg.llm_provider}
+            if cfg.llm_model
+            else None
+        )
         vlm = (
-            {"name": cfg.vlm_model, "api_key": None, "base_url": cfg.vlm_base_url}
+            {
+                "name": cfg.vlm_model,
+                "api_key": None,
+                "base_url": cfg.vlm_base_url,
+                "provider": cfg.vlm_provider or cfg.llm_provider,
+            }
             if cfg.vision_enabled and cfg.vlm_model
             else None
         )
@@ -153,7 +162,7 @@ class Server:
             {
                 "model": model,
                 "vlm": vlm,
-                "proxy": cfg.proxy,
+                "proxy": cfg.llm_proxy,
                 "kb_autosave": cfg.kb_autosave,
                 "vision_enabled": cfg.vision_enabled,
                 "llm_supports_vision": cfg.llm_supports_vision,

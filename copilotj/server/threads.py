@@ -43,6 +43,7 @@ class _ConfigModel(pydantic.BaseModel):
     name: str
     api_key: str | None
     base_url: str | None = None
+    provider: str | None = None
 
 
 class _Config(pydantic.BaseModel):
@@ -82,13 +83,17 @@ def _resolve_config(cfg: Config, config: _ConfigQuery | None) -> Config:
         overrides["llm_model"] = m.name or cfg.llm_model
         overrides["llm_api_key"] = m.api_key if m.api_key is not None else cfg.llm_api_key
         overrides["llm_base_url"] = m.base_url if m.base_url is not None else cfg.llm_base_url
+        if m.provider is not None:
+            overrides["llm_provider"] = m.provider
     if config.vlm is not None:
         v = config.vlm
         overrides["vlm_model"] = v.name or cfg.vlm_model
         overrides["vlm_api_key"] = v.api_key if v.api_key is not None else cfg.vlm_api_key
         overrides["vlm_base_url"] = v.base_url if v.base_url is not None else cfg.vlm_base_url
+        if v.provider is not None:
+            overrides["vlm_provider"] = v.provider
     if config.proxy is not None:
-        overrides["proxy"] = config.proxy
+        overrides["llm_proxy"] = config.proxy
     if config.tavily_api_key is not None:
         overrides["tavily_api_key"] = config.tavily_api_key
     if config.kb_autosave:
@@ -211,13 +216,16 @@ class _Thread(UI):
     def get_config(self) -> _Config:
         return self._config
 
-    def update_config(self, *, model: str | None, api_key: str | None, base_url: str | None = None) -> None:
-        self._agent.update_config(model=model, api_key=api_key, base_url=base_url)
+    def update_config(
+        self, *, model: str | None, api_key: str | None, base_url: str | None = None, provider: str | None = None
+    ) -> None:
+        self._agent.update_config(model=model, api_key=api_key, base_url=base_url, provider=provider)
         self._config = _Config(
             model=_ConfigModel(
                 name=self._agent.model_client.get_model(),
                 api_key=self._agent.model_client.get_api_key(),
                 base_url=base_url,
+                provider=provider,
             )
         )
 
@@ -397,7 +405,9 @@ class Threads:
 
             config = _Config.model_validate(data)
             if (model := config.model) is not None:
-                thread.update_config(model=model.name, api_key=model.api_key, base_url=model.base_url)
+                thread.update_config(
+                    model=model.name, api_key=model.api_key, base_url=model.base_url, provider=model.provider
+                )
 
             return web.Response(status=200, text=thread.get_config().model_dump_json())
 
