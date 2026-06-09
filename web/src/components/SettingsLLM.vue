@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import type { ServerConfig, ThreadConfigModel } from "../apis";
+import { PROVIDER_OPTIONS, inferProvider } from "../composables";
 
 const props = defineProps<{
   model: ThreadConfigModel | null;
@@ -20,6 +21,7 @@ const emit = defineEmits<{
 const model = ref("");
 const apiKey = ref("");
 const baseUrl = ref("");
+const provider = ref(PROVIDER_OPTIONS[0].value);
 
 const isOllamaModel = computed(() => model.value.startsWith("ollama/"));
 
@@ -32,10 +34,12 @@ watch(
     if (cfg?.model) {
       model.value = cfg.model.name || "";
       baseUrl.value = cfg.model.base_url || "";
+      provider.value = cfg.model.provider || inferProvider(cfg.model.name || "");
     } else if (existingModel) {
       model.value = existingModel.name || "";
       apiKey.value = existingModel.api_key || "";
       baseUrl.value = existingModel.base_url || "";
+      provider.value = existingModel.provider || inferProvider(existingModel.name || "");
     }
   },
   { immediate: true },
@@ -46,6 +50,7 @@ function getModelValue(): ThreadConfigModel {
     name: model.value,
     api_key: isOllamaModel.value ? null : apiKey.value || null,
     base_url: baseUrl.value || null,
+    provider: provider.value,
   };
 }
 
@@ -56,8 +61,20 @@ defineExpose({ isValid, getModelValue });
   <div class="flex flex-col gap-6">
     <p class="text-sm text-slate-500 dark:text-slate-400">Choose the primary language model for your conversations.</p>
 
+    <FormItem for="provider" label="Provider" required>
+      <Select
+        v-model="provider"
+        :options="PROVIDER_OPTIONS"
+        optionLabel="label"
+        optionValue="value"
+        inputId="provider"
+        placeholder="Select a provider"
+        class="w-full"
+      />
+    </FormItem>
+
     <FormItem for="model" label="Model" required>
-      <ModelAutoComplete v-model="model" inputId="model" />
+      <ModelAutoComplete v-model="model" inputId="model" :provider="provider" />
     </FormItem>
 
     <FormItem v-if="!isOllamaModel" for="apiKey" label="API Key">

@@ -29,9 +29,11 @@ __all__ = [
     "get_llm_and_key",
     "get_llm_base_url",
     "get_llm_proxy",
+    "get_llm_provider",
     "get_vlm_and_key",
     "get_vlm_base_url",
     "get_vlm_proxy",
+    "get_vlm_provider",
     "get_proxy",
     "bootstrap_assets",
     "resolve_vision_config",
@@ -67,12 +69,14 @@ class Config:
     llm_api_key: str = ""
     llm_base_url: str | None = None
     llm_proxy: str | None = None
+    llm_provider: str | None = None
 
     # VLM (falls back to LLM fields)
     vlm_model: str = ""
     vlm_api_key: str = ""
     vlm_base_url: str | None = None
     vlm_proxy: str | None = None
+    vlm_provider: str | None = None
 
     # Tool keys
     tavily_api_key: str | None = None
@@ -144,7 +148,9 @@ def load_config() -> Config:
         vlm_api_key=os.getenv("COPILOTJ_VLM_API_KEY", llm_api_key_raw) or "",
         vlm_base_url=os.getenv("COPILOTJ_VLM_BASE_URL", None) or llm_base_url_raw,
         llm_proxy=llm_proxy_raw,
+        llm_provider=os.getenv("COPILOTJ_LLM_PROVIDER", None),
         vlm_proxy=os.getenv("COPILOTJ_VLM_PROXY", None),
+        vlm_provider=os.getenv("COPILOTJ_VLM_PROVIDER", None),
         tavily_api_key=os.getenv("COPILOTJ_TAVILY_API_KEY", None),
         kb_autosave=os.getenv("COPILOTJ_KB_AUTOSAVE", "0") == "1",
         dev=os.getenv("COPILOTJ_DEV") is not None,
@@ -239,6 +245,11 @@ def save_managed_config(data: dict) -> None:
     path.write_text(json.dumps(data, indent=2), "utf-8")
 
 
+def get_llm_provider() -> str | None:
+    """Return the explicitly-configured LLM provider, or None to auto-detect from model name."""
+    return os.getenv("COPILOTJ_LLM_PROVIDER", None)
+
+
 def get_llm_and_key(model: str | None = None, api_key: str | None = None) -> tuple[str, str]:
     if model is None:
         model = os.getenv("COPILOTJ_LLM_MODEL", "")
@@ -277,6 +288,11 @@ def get_llm_proxy(default_value: str | None = None) -> str | None:
             _logger.warning("COPILOTJ_PROXY is deprecated, use COPILOTJ_LLM_PROXY instead")
             return old
     return value
+
+
+def get_vlm_provider() -> str | None:
+    """Return the explicitly-configured VLM provider, falling back to LLM provider."""
+    return os.getenv("COPILOTJ_VLM_PROVIDER", None) or os.getenv("COPILOTJ_LLM_PROVIDER", None)
 
 
 def get_vlm_and_key(model: str | None = None, api_key: str | None = None) -> tuple[str, str]:
@@ -337,6 +353,14 @@ def _get_vlm_base_url(cfg: Config) -> str | None:
 
 def _get_proxy(cfg: Config, default_value: str | None = None) -> str | None:
     return default_value or cfg.llm_proxy
+
+
+def _get_llm_provider(cfg: Config) -> str | None:
+    return cfg.llm_provider
+
+
+def _get_vlm_provider(cfg: Config) -> str | None:
+    return cfg.vlm_provider or cfg.llm_provider
 
 
 def _is_dev(cfg: Config) -> bool:

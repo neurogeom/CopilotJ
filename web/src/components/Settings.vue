@@ -52,6 +52,7 @@ function submitVlm(vlm: {
   model: string | null;
   apiKey: string | null;
   baseUrl: string | null;
+  provider: string | null;
   useMainModel: boolean;
   visionEnabled: boolean;
 }) {
@@ -59,6 +60,7 @@ function submitVlm(vlm: {
     model: vlm.model,
     api_key: vlm.apiKey,
     base_url: vlm.baseUrl,
+    provider: vlm.provider,
     useMainModel: vlm.useMainModel,
   });
   config.setVisionEnabled(vlm.visionEnabled);
@@ -99,6 +101,7 @@ function saveIntegrations() {
           :model="config.data.vlm.model"
           :api-key="config.data.vlm.api_key"
           :base-url="config.data.vlm.base_url"
+          :provider="config.data.vlm.provider"
           :use-main-model="config.data.vlm.useMainModel"
           :main-model-name="settings.model?.name ?? null"
           :vision-enabled="config.data.visionEnabled"

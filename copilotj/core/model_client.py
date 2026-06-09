@@ -15,9 +15,11 @@ from copilotj.core.config import (
     Config,
     _get_llm_and_key,
     _get_llm_base_url,
+    _get_llm_provider,
     _get_proxy,
     _get_vlm_and_key,
     _get_vlm_base_url,
+    _get_vlm_provider,
 )
 from copilotj.core.message import ImageMessage, TextMessage
 from copilotj.core.tool import Tool
@@ -41,6 +43,28 @@ __all__ = [
 
 
 type FinishReasons = Literal["stop", "tool_calls", "unknown"]
+
+type LLMProvider = Literal[
+    "openai",
+    "openai-responses",
+    "anthropic",
+    "gemini",
+    "ollama",
+    "deepseek",
+    "siliconflow",
+    "openai-compatible",
+]
+
+_VALID_PROVIDERS = (
+    "openai",
+    "openai-responses",
+    "anthropic",
+    "gemini",
+    "ollama",
+    "deepseek",
+    "siliconflow",
+    "openai-compatible",
+)
 
 
 class ToolCall(pydantic.BaseModel):
@@ -140,12 +164,16 @@ def new_model_client(
     proxy: str | None = None,
     base_url: str | None = None,
     cfg: Config | None = None,
+    provider: str | None = None,
 ) -> ModelClient:
     from copilotj.core.config import load_config
 
     cfg = cfg or load_config()
     model, api_key = _get_llm_and_key(cfg, model, api_key)
-    return _new_model_client(model, api_key, proxy=proxy, base_url=base_url or _get_llm_base_url(cfg), cfg=cfg)
+    provider = provider or _get_llm_provider(cfg)
+    return _new_model_client(
+        model, api_key, proxy=proxy, base_url=base_url or _get_llm_base_url(cfg), cfg=cfg, provider=provider
+    )
 
 
 def new_vlm_model_client(
@@ -155,22 +183,91 @@ def new_vlm_model_client(
     proxy: str | None = None,
     base_url: str | None = None,
     cfg: Config | None = None,
+    provider: str | None = None,
 ) -> ModelClient:
     from copilotj.core.config import load_config
 
     cfg = cfg or load_config()
     model, api_key = _get_vlm_and_key(cfg, model, api_key)
-    return _new_model_client(model, api_key, proxy=proxy, base_url=base_url or _get_vlm_base_url(cfg), cfg=cfg)
+    provider = provider or _get_vlm_provider(cfg)
+    return _new_model_client(
+        model, api_key, proxy=proxy, base_url=base_url or _get_vlm_base_url(cfg), cfg=cfg, provider=provider
+    )
+
+
+def _strip_provider_prefix(model: str) -> tuple[str | None, str]:
+    """Strip known provider prefixes from model name.
+
+    Returns (provider_hint, stripped_model_name).
+    """
+    for prefix, provider in (("ollama/", "ollama"), ("deepseek/", "deepseek")):
+        if model.startswith(prefix):
+            return provider, model.split("/", 1)[1]
+    return None, model
+
+
+def _resolve_client(
+    provider: str,
+    model: str,
+    api_key: str,
+    *,
+    proxy: str | None,
+    base_url: str | None,
+) -> ModelClient:
+    """Create a ModelClient for a known provider string."""
+    if provider not in _VALID_PROVIDERS:
+        raise ValueError(f"Unknown provider '{provider}'. Valid providers: {', '.join(_VALID_PROVIDERS)}")
+
+    match provider:
+        case "openai":
+            return OpenAIChatCompletionClient(model, api_key, base_url=base_url, proxy=proxy)
+        case "openai-responses":
+            return OpenAIResponseClient(model, api_key, base_url=base_url, proxy=proxy)
+        case "anthropic":
+            url = base_url or "https://api.anthropic.com/v1"
+            return OpenAIChatCompletionClient(model, api_key, base_url=url, proxy=proxy)
+        case "gemini":
+            return GeminiChatCompletionClient(model, api_key, proxy=proxy)
+        case "ollama":
+            return OllamaChatCompletionClient(model=model, base_url=base_url)
+        case "deepseek":
+            url = base_url or "https://api.deepseek.com"
+            return OpenAIChatCompletionClient(model=model, api_key=api_key, base_url=url, proxy=proxy)
+        case "siliconflow":
+            url = base_url or "https://api.siliconflow.cn/v1"
+            return OpenAIChatCompletionClient(model, api_key, base_url=url, proxy=proxy)
+        case "openai-compatible":
+            return OpenAIChatCompletionClient(model, api_key, base_url=base_url, proxy=proxy)
 
 
 def _new_model_client(
-    model: str, api_key: str, *, proxy: str | None, base_url: str | None = None, cfg: Config | None = None
+    model: str,
+    api_key: str,
+    *,
+    proxy: str | None,
+    base_url: str | None = None,
+    cfg: Config | None = None,
+    provider: str | None = None,
 ) -> ModelClient:
     from copilotj.core.config import load_config
 
     cfg = cfg or load_config()
     proxy = _get_proxy(cfg, proxy)
 
+    # If provider is explicitly given, use it directly.
+    if provider is not None:
+        # Strip any known prefix from model name (e.g. "ollama/llama3" -> "llama3")
+        _, model = _strip_provider_prefix(model)
+        return _resolve_client(provider, model, api_key, proxy=proxy, base_url=base_url)
+
+    # Backward-compatible prefix-based detection
+    logger.warning(
+        "Auto-detecting provider from model name '%s'. "
+        "Set COPILOTJ_LLM_PROVIDER explicitly to remove this warning. "
+        "Valid values: %s",
+        model,
+        ", ".join(_VALID_PROVIDERS),
+    )
     if model.startswith("ollama/"):
         model_name = model.split("/", 1)[1]
         return OllamaChatCompletionClient(model=model_name)

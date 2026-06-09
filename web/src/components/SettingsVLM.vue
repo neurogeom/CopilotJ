@@ -7,12 +7,14 @@ SPDX-License-Identifier: Apache-2.0
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { getModelCapabilities } from "../apis";
+import { PROVIDER_OPTIONS, inferProvider } from "../composables";
 
 const props = defineProps<{
   useMainModel: boolean;
   model: string | null;
   apiKey: string | null;
   baseUrl: string | null;
+  provider: string | null;
   mainModelName: string | null;
   visionEnabled?: boolean;
   showSubmitButton?: boolean;
@@ -26,6 +28,7 @@ const emit = defineEmits<{
       model: string | null;
       apiKey: string | null;
       baseUrl: string | null;
+      provider: string | null;
       visionEnabled: boolean;
     },
   ): void;
@@ -39,6 +42,7 @@ const useMainModel = ref(props.useMainModel);
 const model = ref(props.model || "");
 const apiKey = ref(props.apiKey || "");
 const baseUrl = ref(props.baseUrl || "");
+const provider = ref(props.provider || inferProvider(props.model || ""));
 
 const isOllamaModel = computed(() => model.value.startsWith("ollama/"));
 
@@ -70,6 +74,7 @@ function getVlmValue() {
     model: useMainModel.value ? null : model.value,
     apiKey: useMainModel.value ? null : isOllamaModel.value ? null : apiKey.value || null,
     baseUrl: useMainModel.value ? null : baseUrl.value || null,
+    provider: useMainModel.value ? null : provider.value,
     visionEnabled: agreed.value,
   };
 }
@@ -153,8 +158,20 @@ defineExpose({ isValid, getVlmValue });
       </p>
 
       <template v-if="!useMainModel">
+        <FormItem for="vlmProvider" label="Provider" required>
+          <Select
+            v-model="provider"
+            :options="PROVIDER_OPTIONS"
+            optionLabel="label"
+            optionValue="value"
+            inputId="vlmProvider"
+            placeholder="Select a provider"
+            class="w-full"
+          />
+        </FormItem>
+
         <FormItem for="vlmModel" label="Model" required>
-          <ModelAutoComplete v-model="model" inputId="vlmModel" />
+          <ModelAutoComplete v-model="model" inputId="vlmModel" :provider="provider" />
         </FormItem>
 
         <FormItem v-if="!isOllamaModel" for="vlmApiKey" label="API Key">

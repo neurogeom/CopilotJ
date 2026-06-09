@@ -7,6 +7,7 @@
 import { acceptHMRUpdate, defineStore } from "pinia";
 import { ref } from "vue";
 import type { ThreadConfigModel } from "../apis";
+import { inferProvider } from "../composables";
 
 const STORAGE_KEY = "copilotj_config";
 
@@ -16,6 +17,7 @@ export interface ConfigData {
     model: string | null;
     api_key: string | null;
     base_url: string | null;
+    provider: string | null;
     useMainModel: boolean;
   };
   proxy: string | null;
@@ -27,7 +29,7 @@ export interface ConfigData {
 function defaultConfig(): ConfigData {
   return {
     defaultModel: null,
-    vlm: { model: null, api_key: null, base_url: null, useMainModel: true },
+    vlm: { model: null, api_key: null, base_url: null, provider: null, useMainModel: true },
     proxy: null,
     tavilyApiKey: null,
     kbAutosave: false,
@@ -39,12 +41,34 @@ function loadFromStorage(): ConfigData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      return { ...defaultConfig(), ...JSON.parse(raw) };
+      const config = { ...defaultConfig(), ...JSON.parse(raw) };
+      return migrateConfig(config);
     }
   } catch {
     // ignore parse errors
   }
   return defaultConfig();
+}
+
+/** Migrate legacy provider values and infer missing providers from model names. */
+function migrateConfig(config: ConfigData): ConfigData {
+  if (config.defaultModel) {
+    if (config.defaultModel.provider === "google") {
+      config.defaultModel.provider = "gemini";
+    }
+    if (!config.defaultModel.provider && config.defaultModel.name) {
+      config.defaultModel.provider = inferProvider(config.defaultModel.name);
+    }
+  }
+  if (config.vlm) {
+    if (config.vlm.provider === "google") {
+      config.vlm.provider = "gemini";
+    }
+    if (!config.vlm.provider && config.vlm.model) {
+      config.vlm.provider = inferProvider(config.vlm.model);
+    }
+  }
+  return config;
 }
 
 function saveToStorage(config: ConfigData) {

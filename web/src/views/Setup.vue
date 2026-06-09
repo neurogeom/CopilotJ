@@ -32,6 +32,7 @@ const wizard = reactive({
     model: null as string | null,
     apiKey: null as string | null,
     baseUrl: null as string | null,
+    provider: null as string | null,
     visionEnabled: false,
   },
   proxy: null as string | null,
@@ -53,6 +54,7 @@ function completeSetup() {
     model: wizard.vlm.model,
     api_key: wizard.vlm.apiKey,
     base_url: wizard.vlm.baseUrl,
+    provider: wizard.vlm.provider,
     useMainModel: wizard.vlm.useMainModel,
   });
   config.setVisionEnabled(wizard.vlm.visionEnabled ?? false);
@@ -120,6 +122,7 @@ function completeSetup() {
           :model="wizard.vlm.model"
           :api-key="wizard.vlm.apiKey"
           :base-url="wizard.vlm.baseUrl"
+          :provider="wizard.vlm.provider"
           :main-model-name="wizard.model?.name ?? null"
           :vision-enabled="wizard.vlm.visionEnabled"
           @update="wizard.vlm = { ...wizard.vlm, ...$event }"

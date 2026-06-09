@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import type { ThreadConfigModel } from "../apis";
+import { PROVIDER_OPTIONS, inferProvider } from "../composables";
 
 const props = defineProps<{
   model: ThreadConfigModel | null;
@@ -21,6 +22,7 @@ const useDefaultModel = ref(props.model?.api_key == null);
 const model = ref("");
 const apiKey = ref("");
 const baseUrl = ref("");
+const provider = ref(PROVIDER_OPTIONS[0].value);
 
 const isOllamaModel = computed(() => model.value.startsWith("ollama/"));
 
@@ -32,10 +34,12 @@ watch(
       model.value = newModel.name || "";
       apiKey.value = newModel.api_key || "";
       baseUrl.value = newModel.base_url || "";
+      provider.value = newModel.provider || inferProvider(newModel.name || "");
     } else {
       model.value = "";
       apiKey.value = "";
       baseUrl.value = "";
+      provider.value = PROVIDER_OPTIONS[0].value;
     }
   },
   { immediate: true },
@@ -51,6 +55,7 @@ function submit() {
       name: model.value,
       api_key: isOllamaModel.value ? null : apiKey.value || null,
       base_url: baseUrl.value || null,
+      provider: provider.value,
     });
   }
 }
@@ -66,8 +71,21 @@ function submit() {
       Active model: <span class="font-mono">{{ serverModelName }}</span>
     </p>
 
+    <FormItem for="provider" label="Provider">
+      <Select
+        v-model="provider"
+        :options="PROVIDER_OPTIONS"
+        optionLabel="label"
+        optionValue="value"
+        inputId="provider"
+        placeholder="Select a provider"
+        :disabled="useDefaultModel"
+        class="w-full"
+      />
+    </FormItem>
+
     <FormItem for="model" label="Model">
-      <ModelAutoComplete v-model="model" inputId="model" :disabled="useDefaultModel" />
+      <ModelAutoComplete v-model="model" inputId="model" :disabled="useDefaultModel" :provider="provider" />
     </FormItem>
 
     <FormItem v-if="!isOllamaModel" for="apiKey" label="API Key">
