@@ -145,18 +145,21 @@ function completeSetup() {
           :tavily-api-key="wizard.tavilyApiKey"
           :kb-autosave="wizard.kbAutosave"
           :auto-scroll="wizard.autoScroll"
-          @update="
-            wizard.proxy = $event.proxy;
-            wizard.tavilyApiKey = $event.tavilyApiKey;
-            wizard.kbAutosave = $event.kbAutosave;
-            wizard.autoScroll = $event.autoScroll;
-          "
         />
         <div class="flex pt-4 justify-between mt-auto">
           <Button label="Back" severity="secondary" @click="activateCallback('3')" />
           <div class="flex gap-2">
             <Button label="Skip" severity="secondary" outlined @click="activateCallback('5')" />
-            <Button label="Next" @click="activateCallback('5')" />
+            <Button
+              label="Next"
+              @click="
+                wizard.proxy = advancedRef?.getValue().proxy ?? null;
+                wizard.tavilyApiKey = advancedRef?.getValue().tavilyApiKey ?? null;
+                wizard.kbAutosave = advancedRef?.getValue().kbAutosave ?? false;
+                wizard.autoScroll = advancedRef?.getValue().autoScroll ?? true;
+                activateCallback('5');
+              "
+            />
           </div>
         </div>
       </StepPanel>
