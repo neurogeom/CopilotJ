@@ -32,7 +32,6 @@ declare module 'vue' {
     Navbar: typeof import('./src/components/Navbar.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
-    Select: typeof import('primevue/select')['default']
     SettingLLM: typeof import('./src/components/SettingLLM.vue')['default']
     Settings: typeof import('./src/components/Settings.vue')['default']
     SettingsAdvanced: typeof import('./src/components/SettingsAdvanced.vue')['default']

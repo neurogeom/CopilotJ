@@ -103,7 +103,7 @@ function maskKey(key: string | null): string {
     </div>
 
     <div class="flex pt-4 justify-between mt-auto">
-      <Button label="Back" severity="secondary" @click="back" />
+      <Button label="Back" severity="secondary" @click="emit('back')" />
       <Button label="Start Using CopilotJ" @click="emit('complete')" />
     </div>
   </div>
