@@ -10,7 +10,7 @@ import type { ThreadConfigModel, ThreadConfigQuery } from "../apis";
 import { getBaseUrl, isApiBaseConfigurable, setApiBaseUrl, testApiConnection } from "../apis/base";
 import { useConfig, useSettings } from "../store";
 import SettingLLM from "./SettingLLM.vue";
-import SettingVLM from "./SettingVLM.vue";
+import SettingsVLM from "./SettingsVLM.vue";
 
 const emit = defineEmits<{
   (e: "submit", model: ThreadConfigQuery | null): void;
@@ -35,8 +35,15 @@ function saveApiBaseUrl() {
 }
 
 function submitModel(model: ThreadConfigModel | null) {
-  settings.setModel(model);
-  config.setDefaultModel(model);
+  if (model === null) {
+    // useDefaultModel = true: don't persist, use server model for this session
+    config.setDefaultModel(null);
+    settings.setModel(config.serverModel);
+  } else {
+    // User-configured model: persist to localStorage
+    config.setDefaultModel(model);
+    settings.setModel(model);
+  }
   emit("submit", { model: settings.model });
 }
 
@@ -46,6 +53,7 @@ function submitVlm(vlm: {
   apiKey: string | null;
   baseUrl: string | null;
   useMainModel: boolean;
+  visionEnabled: boolean;
 }) {
   config.setVlm({
     model: vlm.model,
@@ -53,6 +61,7 @@ function submitVlm(vlm: {
     base_url: vlm.baseUrl,
     useMainModel: vlm.useMainModel,
   });
+  config.setVisionEnabled(vlm.visionEnabled);
 }
 
 // --- Integrations ---
@@ -77,16 +86,23 @@ function saveIntegrations() {
     <TabPanels>
       <!-- Model Tab -->
       <TabPanel value="model">
-        <SettingLLM :model="settings.model" @update:model="submitModel" />
+        <SettingLLM
+          :model="settings.model"
+          :server-model-name="config.serverModel?.name ?? null"
+          @update:model="submitModel"
+        />
       </TabPanel>
 
       <!-- Vision Tab -->
       <TabPanel value="vision">
-        <SettingVLM
+        <SettingsVLM
           :model="config.data.vlm.model"
           :api-key="config.data.vlm.api_key"
           :base-url="config.data.vlm.base_url"
           :use-main-model="config.data.vlm.useMainModel"
+          :main-model-name="settings.model?.name"
+          :vision-enabled="config.data.visionEnabled"
+          :show-submit-button="true"
           @update="submitVlm"
         />
       </TabPanel>

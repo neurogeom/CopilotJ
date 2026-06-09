@@ -295,6 +295,10 @@ class Threads:
         self._threads_lock = threading.Lock()
         self._trace_ctx = langfuse.Langfuse()
 
+    def update_cfg(self, cfg: Config) -> None:
+        """Update the stored config (e.g. after async vision resolution)."""
+        self._cfg = cfg
+
     async def new_thread(self, request: web.Request) -> web.Response:
         try:
             data = await request.json()

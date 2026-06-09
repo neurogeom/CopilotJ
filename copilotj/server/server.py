@@ -77,6 +77,7 @@ class Server:
         r = app.router
         r.add_get("/api/ping", _on_ping)
         r.add_get("/api/config", self._on_config)
+        r.add_get("/api/model/capabilities", self._on_model_capabilities)
         r.add_get("/api/plugins", self._bridge.on_plugin_connect)
         r.add_post("/api/plugins/events", self._bridge.on_forward_event)
         r.add_post("/api/threads", self._threads.new_thread)
@@ -113,6 +114,21 @@ class Server:
             yield
 
         app.cleanup_ctx.append(_ensure_kb)
+
+        async def _prepare_model_db(app: web.Application):
+            from copilotj.core.config import resolve_vision_config
+            from copilotj.core.model_info import ensure_model_db_async
+
+            async def _download_and_resolve():
+                await ensure_model_db_async()
+                new_cfg = resolve_vision_config(self._cfg)
+                self._cfg = new_cfg
+                self._threads.update_cfg(new_cfg)
+
+            asyncio.ensure_future(_download_and_resolve())
+            yield
+
+        app.cleanup_ctx.append(_prepare_model_db)
         return app
 
     async def _on_config(self, request: web.Request) -> web.Response:
@@ -138,6 +154,60 @@ class Server:
                 "proxy": cfg.proxy,
                 "kb_autosave": cfg.kb_autosave,
                 "vision_enabled": cfg.vision_enabled,
+                "llm_supports_vision": cfg.llm_supports_vision,
+                "vlm_configured": cfg.vlm_configured,
+            }
+        )
+
+    async def _on_model_capabilities(self, request: web.Request) -> web.Response:
+        """Return capability information for a model.
+
+        Uses the LiteLLM model database to check features like vision support.
+        Accepts an optional ``?model=`` query parameter to check an arbitrary
+        model name.  Without the parameter, returns info for the server's
+        configured LLM and VLM.
+        """
+        from copilotj.core.model_info import get_model_capabilities
+
+        # Check arbitrary model via query parameter
+        model_param = request.query.get("model")
+        if model_param:
+            caps = await asyncio.to_thread(get_model_capabilities, model_param)
+            return web.json_response(
+                {
+                    "model": model_param,
+                    "supports_vision": caps.supports_vision,
+                    "supports_function_calling": caps.supports_function_calling,
+                    "source": caps.source,
+                }
+            )
+
+        cfg = self._cfg
+
+        def _caps_dict(model: str) -> dict | None:
+            if not model:
+                return None
+            caps = get_model_capabilities(model)
+            return {
+                "supports_vision": caps.supports_vision,
+                "supports_function_calling": caps.supports_function_calling,
+                "context_window": caps.context_window,
+                "max_output_tokens": caps.max_output_tokens,
+                "source": caps.source,
+            }
+
+        llm_caps, vlm_caps = await asyncio.gather(
+            asyncio.to_thread(_caps_dict, cfg.llm_model),
+            asyncio.to_thread(_caps_dict, cfg.vlm_model),
+        )
+
+        return web.json_response(
+            {
+                "llm": {"model": cfg.llm_model, "capabilities": llm_caps} if cfg.llm_model else None,
+                "vlm": {"model": cfg.vlm_model, "capabilities": vlm_caps} if cfg.vlm_model else None,
+                "vision_enabled": cfg.vision_enabled,
+                "llm_supports_vision": cfg.llm_supports_vision,
+                "vlm_configured": cfg.vlm_configured,
             }
         )
 

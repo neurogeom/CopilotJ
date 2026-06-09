@@ -104,10 +104,27 @@ export interface ServerConfig {
   proxy: string | null;
   kb_autosave: boolean;
   vision_enabled: boolean;
+  llm_supports_vision: boolean;
 }
 
 export async function getServerConfig(): Promise<ServerConfig> {
   const url = `${getBaseUrl()}/config`;
+  const response = await fetch(url, { method: "GET" });
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}, message: ${await response.text()}`);
+  }
+  return response.json();
+}
+
+export interface ModelCapabilities {
+  model: string;
+  supports_vision: boolean;
+  supports_function_calling: boolean;
+  source: string;
+}
+
+export async function getModelCapabilities(model: string): Promise<ModelCapabilities> {
+  const url = `${getBaseUrl()}/model/capabilities?model=${encodeURIComponent(model)}`;
   const response = await fetch(url, { method: "GET" });
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}, message: ${await response.text()}`);

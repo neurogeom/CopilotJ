@@ -28,7 +28,7 @@ onMounted(async () => {
 
   state.testBackendConnection();
 
-  // 1. If config store has a default model, apply it
+  // 1. If config store has a user-configured model, apply it
   if (settings.model === null && config.data.defaultModel) {
     settings.setModel(config.data.defaultModel);
   }
@@ -37,7 +37,10 @@ onMounted(async () => {
   try {
     const serverConfig = await getServerConfig();
 
-    // Model
+    // Store server model for runtime use (not persisted to localStorage)
+    config.setServerModel(serverConfig.model);
+
+    // Model — use server config when no user-configured model
     if (settings.model === null && serverConfig.model !== null) {
       settings.setModel(serverConfig.model);
     }

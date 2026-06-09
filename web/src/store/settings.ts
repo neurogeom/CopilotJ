@@ -20,14 +20,14 @@ export const useSettings = defineStore("settings", () => {
     let resolvedVlm: ThreadConfigModel | null = null;
 
     if (cfg.data.visionEnabled) {
+      // When useMainModel, resolve the active model (user's or server's) as VLM
+      const activeModel = model.value ?? cfg.serverModel;
       if (vlm.useMainModel) {
-        // Resolve main model details as the VLM so the backend
-        // uses the correct model without needing a "useMainModel" concept
-        resolvedVlm = model.value
-          ? { name: model.value.name, api_key: model.value.api_key, base_url: model.value.base_url }
+        resolvedVlm = activeModel
+          ? { name: activeModel.name, api_key: activeModel.api_key, base_url: activeModel.base_url }
           : null;
-      } else {
-        resolvedVlm = { name: vlm.model!, api_key: vlm.api_key, base_url: vlm.base_url };
+      } else if (vlm.model) {
+        resolvedVlm = { name: vlm.model, api_key: vlm.api_key, base_url: vlm.base_url };
       }
     }
 

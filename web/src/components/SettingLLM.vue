@@ -10,33 +10,32 @@ import type { ThreadConfigModel } from "../apis";
 
 const props = defineProps<{
   model: ThreadConfigModel | null;
+  serverModelName: string | null;
 }>();
 
 const emit = defineEmits<{
   (e: "update:model", value: ThreadConfigModel | null): void;
 }>();
 
-const useDefaultModel = ref(true);
+const useDefaultModel = ref(props.model?.api_key == null);
 const model = ref("");
 const apiKey = ref("");
 const baseUrl = ref("");
 
 const isOllamaModel = computed(() => model.value.startsWith("ollama/"));
 
-// --- Sync from props ---
+// --- Sync form fields from props (but not the useDefaultModel toggle) ---
 watch(
-  props,
-  (newProps) => {
-    if (newProps.model) {
-      model.value = newProps.model.name || "";
-      apiKey.value = newProps.model.api_key || "";
-      baseUrl.value = newProps.model.base_url || "";
-      useDefaultModel.value = false;
+  () => props.model,
+  (newModel) => {
+    if (newModel) {
+      model.value = newModel.name || "";
+      apiKey.value = newModel.api_key || "";
+      baseUrl.value = newModel.base_url || "";
     } else {
       model.value = "";
       apiKey.value = "";
       baseUrl.value = "";
-      useDefaultModel.value = true;
     }
   },
   { immediate: true },
@@ -44,6 +43,8 @@ watch(
 
 function submit() {
   if (useDefaultModel.value) {
+    // Emit null so the parent clears the persisted defaultModel.
+    // The parent sets settings.model to the server model instead.
     emit("update:model", null);
   } else {
     emit("update:model", {
@@ -61,8 +62,8 @@ function submit() {
       <ToggleSwitch v-model="useDefaultModel" inputId="defaultModel" />
     </FormItem>
 
-    <p v-if="useDefaultModel && props.model?.name" class="text-sm text-slate-500 dark:text-slate-400 -mt-4">
-      Active model: <span class="font-mono">{{ props.model.name }}</span>
+    <p v-if="useDefaultModel && serverModelName" class="text-sm text-slate-500 dark:text-slate-400 -mt-4">
+      Active model: <span class="font-mono">{{ serverModelName }}</span>
     </p>
 
     <FormItem for="model" label="Model">

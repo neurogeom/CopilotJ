@@ -24,6 +24,7 @@ from copilotj.server import Server
 def cli(host: str, port: int, log_level: str):
     """Start the CopilotJ server."""
     cfg = load_config()
+    # resolve_vision_config deferred to async startup (avoids blocking sync download)
     logging.basicConfig(level=getattr(logging, log_level.upper()))
 
     server = Server(cfg)

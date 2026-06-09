@@ -91,6 +91,15 @@ class PluginTools:
             window_info = await self.imagej_windowInfo()
             return f"[Vision disabled] Basic ImageJ window info:\n{window_info}"
 
+        if not self._cfg.vision_available:
+            window_info = await self.imagej_windowInfo()
+            return (
+                "[Vision not available] The configured model does not support image input. "
+                "Please configure a vision-capable model (COPILOTJ_VLM_MODEL) "
+                "or use a model with vision support.\n"
+                f"Basic ImageJ window info:\n{window_info}"
+            )
+
         vlm = new_vlm_model_client(
             model=self._cfg.vlm_model or None,
             api_key=self._cfg.vlm_api_key or None,
@@ -176,6 +185,14 @@ Provide any additional warnings or clarifications:
         if not self._cfg.vision_enabled:
             return f"[Vision disabled] ImageJ Window Information:\n{perception}"
 
+        if not self._cfg.vision_available:
+            return (
+                "[Vision not available] The configured model does not support image input. "
+                "Please configure a vision-capable model (COPILOTJ_VLM_MODEL) "
+                "or use a model with vision support.\n"
+                f"ImageJ Window Information:\n{perception}"
+            )
+
         PROMPT_TEMPLATE = """
 
 This is the leader agent's request: {{QUERY}}
@@ -210,6 +227,13 @@ imagejOperation is the monitor event history of ImageJ.
         """Simple perception-based result verification."""
         if not self._cfg.vision_enabled:
             return "[Vision disabled] Visual verification skipped. Operation assumed successful."
+
+        if not self._cfg.vision_available:
+            return (
+                "[Vision not available] Visual verification skipped — "
+                "the configured model does not support image input. "
+                "Operation assumed successful."
+            )
 
         vlm = new_vlm_model_client(
             model=self._cfg.vlm_model or None,

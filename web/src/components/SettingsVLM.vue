@@ -5,24 +5,35 @@ SPDX-License-Identifier: Apache-2.0
 -->
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
+import { getModelCapabilities } from "../apis";
 
 const props = defineProps<{
   useMainModel: boolean;
   model: string | null;
   apiKey: string | null;
   baseUrl: string | null;
+  mainModelName: string | null;
+  visionEnabled?: boolean;
+  showSubmitButton?: boolean;
 }>();
 
 const emit = defineEmits<{
   (
     e: "update",
-    value: { useMainModel: boolean; model: string | null; apiKey: string | null; baseUrl: string | null },
+    value: {
+      useMainModel: boolean;
+      model: string | null;
+      apiKey: string | null;
+      baseUrl: string | null;
+      visionEnabled: boolean;
+    },
   ): void;
 }>();
 
-const agreed = ref(false);
-const showConfig = ref(false);
+const agreed = ref(props.visionEnabled ?? false);
+const mainModelSupportsVision = ref<boolean | null>(null);
+const checkingVision = ref(false);
 
 const useMainModel = ref(props.useMainModel);
 const model = ref(props.model || "");
@@ -31,37 +42,48 @@ const baseUrl = ref(props.baseUrl || "");
 
 const isOllamaModel = computed(() => model.value.startsWith("ollama/"));
 
-const isValid = computed(() => useMainModel.value || !!model.value);
+const isValid = computed(() => !agreed.value || useMainModel.value || !!model.value);
 
-function showPrivacy() {
-  showConfig.value = false;
+async function checkVisionSupport(modelName: string | null) {
+  if (!modelName) {
+    mainModelSupportsVision.value = null;
+    checkingVision.value = false;
+    return;
+  }
+  checkingVision.value = true;
+  try {
+    const caps = await getModelCapabilities(modelName);
+    mainModelSupportsVision.value = caps.supports_vision;
+    useMainModel.value = caps.supports_vision;
+  } catch {
+    mainModelSupportsVision.value = null;
+  } finally {
+    checkingVision.value = false;
+  }
 }
 
-function showVisionConfig() {
-  showConfig.value = true;
-}
+watch(() => props.mainModelName, checkVisionSupport, { immediate: true });
 
-function next() {
-  emit("update", {
+function getVlmValue() {
+  return {
     useMainModel: useMainModel.value,
     model: useMainModel.value ? null : model.value,
     apiKey: useMainModel.value ? null : isOllamaModel.value ? null : apiKey.value || null,
     baseUrl: useMainModel.value ? null : baseUrl.value || null,
-  });
+    visionEnabled: agreed.value,
+  };
 }
 
-function back() {
-  if (showConfig.value) {
-    showConfig.value = false;
-  } else {
-    emit("back");
-  }
+function submit() {
+  emit("update", getVlmValue());
 }
+
+defineExpose({ isValid, getVlmValue });
 </script>
 
 <template>
-  <!-- Page 1: Privacy consent -->
-  <div v-if="!showConfig" class="flex flex-col gap-6 h-full">
+  <div class="flex flex-col gap-6 h-full max-w-2xl">
+    <!-- Privacy notice -->
     <div class="flex items-center gap-3 text-amber-500">
       <i class="pi pi-exclamation-triangle text-2xl" />
       <h3 class="text-lg font-semibold">Privacy Notice</h3>
@@ -90,7 +112,7 @@ function back() {
         </li>
       </ul>
       <p class="text-slate-500 dark:text-slate-400">
-        You can disable Vision at any time by removing the configuration from your settings.
+        You can disable Vision at any time by unchecking the consent below.
       </p>
     </div>
 
@@ -101,58 +123,62 @@ function back() {
       </label>
     </div>
 
-    <div class="flex pt-4 justify-between mt-auto">
-      <Button label="Back" severity="secondary" @click="back" />
-      <Button label="Next" :disabled="!agreed" @click="showVisionConfig" />
-    </div>
-  </div>
+    <!-- Vision model configuration (shown after consent) -->
+    <template v-if="agreed">
+      <hr class="border-slate-200 dark:border-slate-700" />
 
-  <!-- Page 2: Vision model configuration -->
-  <div v-else class="flex flex-col gap-6 h-full">
-    <div class="flex items-center gap-2">
-      <Button icon="pi pi-arrow-left" text rounded severity="secondary" @click="showPrivacy" />
       <p class="text-sm text-slate-500 dark:text-slate-400">
         Configure the vision model used for image analysis tasks.
       </p>
-    </div>
 
-    <FormItem for="useMainVlm" label="Use main model for vision" layout="row">
-      <ToggleSwitch v-model="useMainModel" inputId="useMainVlm" />
-    </FormItem>
+      <div class="flex items-center gap-3">
+        <FormItem for="useMainVlm" label="Use main model for vision" layout="row" class="flex-1">
+          <ToggleSwitch
+            v-model="useMainModel"
+            inputId="useMainVlm"
+            :disabled="checkingVision || mainModelSupportsVision === false"
+          />
+        </FormItem>
+        <ProgressSpinner v-if="checkingVision" style="width: 20px; height: 20px" strokeWidth="4" />
+      </div>
 
-    <p v-if="useMainModel" class="text-sm text-slate-500 dark:text-slate-400 -mt-4">
-      Vision tasks will use the same model and API key as the main model.
-    </p>
+      <p v-if="checkingVision" class="text-sm text-slate-400 -mt-4">Checking vision capability…</p>
 
-    <template v-if="!useMainModel">
-      <FormItem for="vlmModel" label="Model" required>
-        <ModelAutoComplete v-model="model" inputId="vlmModel" />
-      </FormItem>
+      <p v-else-if="mainModelSupportsVision === false" class="text-sm text-amber-600 -mt-4">
+        The selected model does not support image input. Please configure a separate vision model below.
+      </p>
 
-      <FormItem v-if="!isOllamaModel" for="vlmApiKey" label="API Key">
-        <InputText
-          type="password"
-          v-model="apiKey"
-          inputId="vlmApiKey"
-          placeholder="Enter your API key"
-          class="w-full"
-        />
-      </FormItem>
+      <p v-else-if="useMainModel" class="text-sm text-slate-500 dark:text-slate-400 -mt-4">
+        Vision tasks will use the same model and API key as the main model.
+      </p>
 
-      <FormItem for="vlmBaseUrl" label="Base URL">
-        <InputText
-          type="text"
-          v-model="baseUrl"
-          inputId="vlmBaseUrl"
-          placeholder="https://api.example.com/v1 (optional)"
-          class="w-full"
-        />
-      </FormItem>
+      <template v-if="!useMainModel">
+        <FormItem for="vlmModel" label="Model" required>
+          <ModelAutoComplete v-model="model" inputId="vlmModel" />
+        </FormItem>
+
+        <FormItem v-if="!isOllamaModel" for="vlmApiKey" label="API Key">
+          <InputText
+            type="password"
+            v-model="apiKey"
+            inputId="vlmApiKey"
+            placeholder="Enter your API key"
+            class="w-full"
+          />
+        </FormItem>
+
+        <FormItem for="vlmBaseUrl" label="Base URL">
+          <InputText
+            type="text"
+            v-model="baseUrl"
+            inputId="vlmBaseUrl"
+            placeholder="https://api.example.com/v1 (optional)"
+            class="w-full"
+          />
+        </FormItem>
+      </template>
     </template>
 
-    <div class="flex pt-4 justify-between mt-auto">
-      <Button label="Back" severity="secondary" @click="showPrivacy" />
-      <Button label="Next" :disabled="!isValid" @click="next" />
-    </div>
+    <Button v-if="showSubmitButton" label="Submit" @click="submit" />
   </div>
 </template>
