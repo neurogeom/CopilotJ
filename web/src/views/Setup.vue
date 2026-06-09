@@ -32,6 +32,7 @@ const wizard = reactive({
     model: null as string | null,
     apiKey: null as string | null,
     baseUrl: null as string | null,
+    visionEnabled: false,
   },
   proxy: null as string | null,
   tavilyApiKey: null as string | null,
@@ -54,6 +55,7 @@ function completeSetup() {
     base_url: wizard.vlm.baseUrl,
     useMainModel: wizard.vlm.useMainModel,
   });
+  config.setVisionEnabled(wizard.vlm.visionEnabled ?? false);
   config.setProxy(wizard.proxy);
   config.setTavilyApiKey(wizard.tavilyApiKey);
   config.setKbAutosave(wizard.kbAutosave);
@@ -118,6 +120,8 @@ function completeSetup() {
           :model="wizard.vlm.model"
           :api-key="wizard.vlm.apiKey"
           :base-url="wizard.vlm.baseUrl"
+          :main-model-name="wizard.model?.name"
+          :vision-enabled="wizard.vlm.visionEnabled"
           @update="wizard.vlm = { ...wizard.vlm, ...$event }"
         />
         <div class="flex pt-4 justify-between mt-auto">

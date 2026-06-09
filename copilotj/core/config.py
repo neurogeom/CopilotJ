@@ -5,9 +5,10 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import dotenv
@@ -28,6 +29,7 @@ __all__ = [
     "get_vlm_base_url",
     "get_proxy",
     "bootstrap_assets",
+    "resolve_vision_config",
 ]
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -76,10 +78,19 @@ class Config:
     dev: bool = False
     vision_enabled: bool = False
 
+    # Auto-detected model capabilities (set by resolve_vision_config, info-only)
+    llm_supports_vision: bool = False  # Whether the LLM model supports vision (from model DB)
+    vlm_configured: bool = False  # Whether a separate VLM is explicitly configured
+
     # BioImage Model Zoo
     bioimage_model_zoo_url: str = "https://bioimage-io.github.io/collection-bioimage-io/collection.json"
     bioimage_model_zoo_cache: str = ""
     bioimage_model_zoo_cache_ttl: int = 86400
+
+    @property
+    def vision_available(self) -> bool:
+        """Whether vision can actually work (main model supports it or separate VLM configured)."""
+        return self.llm_supports_vision or self.vlm_configured
 
 
 def load_config() -> Config:
@@ -114,6 +125,46 @@ def load_config() -> Config:
         ),
         bioimage_model_zoo_cache_ttl=int(os.getenv("BIOIMAGE_MODEL_ZOO_CACHE_TTL", "86400")),
     )
+
+
+_log = logging.getLogger("copilotj.core.config")
+
+
+def resolve_vision_config(cfg: Config) -> Config:
+    """Detect model capabilities and populate info fields.
+
+    Called after ``load_config()`` at server startup.  Uses the LiteLLM
+    model database to check whether the configured LLM supports vision.
+
+    This does **not** change ``vision_enabled`` — that remains the user's
+    explicit opt-in switch.  The detected info fields are used by the
+    frontend for UX guidance (e.g. suggesting the user enable vision
+    when the model supports it, or warning when vision is enabled but
+    the model lacks vision support).
+    """
+    from copilotj.core.model_info import get_model_capabilities
+
+    # Detect main model vision capability
+    main_caps = get_model_capabilities(cfg.llm_model) if cfg.llm_model else None
+    llm_supports_vision = bool(main_caps and main_caps.supports_vision)
+
+    # Check if a separate VLM is explicitly configured
+    vlm_configured = bool(cfg.vlm_model and cfg.vlm_model != cfg.llm_model)
+
+    if llm_supports_vision:
+        _log.info("Model %s supports vision (source=%s)", cfg.llm_model, main_caps.source)
+    else:
+        _log.info("Model %s does not support vision", cfg.llm_model)
+
+    # Warn if vision is enabled but the model can't handle it and no VLM fallback exists
+    if cfg.vision_enabled and not llm_supports_vision and not vlm_configured:
+        _log.warning(
+            "Vision is enabled but model %s does not support vision and no separate VLM is configured. "
+            "Set COPILOTJ_VLM_MODEL to configure a vision-capable model.",
+            cfg.llm_model,
+        )
+
+    return replace(cfg, llm_supports_vision=llm_supports_vision, vlm_configured=vlm_configured)
 
 
 # ---------------------------------------------------------------------------

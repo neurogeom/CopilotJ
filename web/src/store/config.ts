@@ -54,6 +54,14 @@ function saveToStorage(config: ConfigData) {
 export const useConfig = defineStore("config", () => {
   const data = ref<ConfigData>(loadFromStorage());
 
+  // Server model from /api/config — NOT persisted to localStorage.
+  // Refreshed on every app load so it always reflects the backend's actual model.
+  const serverModel = ref<ThreadConfigModel | null>(null);
+
+  function setServerModel(model: ThreadConfigModel | null) {
+    serverModel.value = model;
+  }
+
   function persist() {
     saveToStorage(data.value);
   }
@@ -95,6 +103,8 @@ export const useConfig = defineStore("config", () => {
 
   return {
     data,
+    serverModel,
+    setServerModel,
     setDefaultModel,
     setVlm,
     setProxy,
