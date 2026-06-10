@@ -16,13 +16,13 @@ The core agent framework follows a layered architecture:
 
 **`copilotj/core/`** — Foundation abstractions:
 
-- `Agent` / `ChatAgent` — Base agent classes. Agents register `@message_handler` methods for typed message routing. `ChatAgent` adds LLM streaming via `ModelClient` with abort support.
+- `Agent` / `ChatAgent` — Base agent classes. `ChatAgent` adds LLM streaming via `ModelClient` with abort support.
 - `Runtime` — Shared logging/UI dispatch layer. Every agent in a pattern shares one runtime.
 - `Pattern` — Orchestrator that groups agents, manages their shared runtime, and routes messages.
 - `ModelClient` — Abstract LLM interface with concrete implementations for OpenAI (chat completions + responses API), Gemini, Ollama, and DeepSeek. Uses `ReActChatCompletionClient` wrapper for ReAct-format output parsing.
 - `Tool` / `FunctionTool` — Tools are pydantic models with auto-generated JSON schemas from function signatures. `HandoffFunctionTool` emits UI handoff events when called.
 - `UI` / `CLI` — Abstract UI event system. Events (`UIEventPost`, `UIEventToolCall`, etc.) are sent as NDJSON to the frontend. `CLI` is the terminal fallback.
-- `config` — Environment-based configuration. `.env` then `.env.local` are loaded. Key vars: `COPILOTJ_MODEL`, `COPILOTJ_API_KEY`, `COPILOTJ_BASE_URL`, `COPILOTJ_VLM_MODEL`.
+- `Config` — Environment-based configuration.
 
 **`copilotj/multiagent/`** — Agent orchestration:
 
@@ -102,3 +102,13 @@ Tests live in `copilotj/test/`. The test runner is pytest with `--doctest-module
 ### Nix Development Environment
 
 The project uses `flake.nix` with `uv2nix` for reproducible Python environments. Direnv (`.envrc`) loads the nix shell automatically. The Python virtualenv is at `.venv/`.
+
+## Compact Instructions
+
+When compressing, preserve in priority order:
+
+1. Architecture decisions (NEVER summarize)
+2. Modified files and their key changes
+3. Current verification status (pass/fail)
+4. Open TODOs and rollback notes
+5. Tool outputs (can delete, keep pass/fail only)
