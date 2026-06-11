@@ -1,0 +1,7 @@
+name: CI
+
+on: push
+
+jobs:
+  build:
+    uses: ./.github/workflows/_build-jars.yml

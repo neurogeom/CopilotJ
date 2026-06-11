@@ -1,0 +1,67 @@
+name: Build JARs
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: "Version to set (e.g. 0.0.3). Leave empty to use pom SNAPSHOT."
+        type: string
+        default: ""
+    outputs:
+      version:
+        description: "Resolved version string"
+        value: ${{ jobs.build.outputs.version }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.resolve_version.outputs.VERSION }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Resolve version
+        id: resolve_version
+        working-directory: plugin
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            echo "VERSION=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+            echo "VERSION=${VERSION}" >> "$GITHUB_OUTPUT"
+          fi
+
+      # A single JDK 21 build suffices: maven-compiler-plugin cross-compiles the
+      # core to Java 8 bytecode and the MCP sources to Java 17 bytecode, then the
+      # assembly plugin embeds lib/mcp-bundle.jar. The resulting JAR runs on both
+      # Java 8 Fiji (core only) and Java 17+ Fiji (full MCP).
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: "21"
+
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ runner.os }}-${{ hashFiles('plugin/pom.xml') }}
+          restore-keys: |
+            maven-${{ runner.os }}-
+
+      - name: Set Maven version
+        if: inputs.version != ''
+        working-directory: plugin
+        run: mvn versions:set -DnewVersion=${{ inputs.version }} -DgenerateBackupPom=false
+
+      - name: Build plugin JAR
+        working-directory: plugin
+        run: mvn -B -DskipTests clean package
+
+      - name: Upload JAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: copilotj-jars
+          path: |
+            plugin/target/CopilotJBridge-${{ steps.resolve_version.outputs.VERSION }}.jar
+          retention-days: 5
