@@ -92,5 +92,5 @@ class Pattern:
             raise ValueError(f"No agent registered with name: {name}")
 
         agent = self._agents[name]
-        result = await agent.on_message(message)
+        await agent.on_message(message)
         raise NotImplementedError("Not implemented")
