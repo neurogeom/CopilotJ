@@ -13,13 +13,7 @@ import pydantic
 
 from copilotj.core.config import (
     Config,
-    _get_llm_and_key,
-    _get_llm_base_url,
-    _get_llm_provider,
-    _get_proxy,
-    _get_vlm_and_key,
-    _get_vlm_base_url,
-    _get_vlm_provider,
+    load_config,
 )
 from copilotj.core.message import ImageMessage, TextMessage
 from copilotj.core.tool import Tool
@@ -157,41 +151,25 @@ class ModelClient(abc.ABC):
     ) -> AsyncGenerator[ModelResponseChunk | ToolCall, None]: ...
 
 
-def new_model_client(
-    model: str | None = None,
-    api_key: str | None = None,
-    *,
-    proxy: str | None = None,
-    base_url: str | None = None,
-    cfg: Config | None = None,
-    provider: str | None = None,
-) -> ModelClient:
-    from copilotj.core.config import load_config
-
-    cfg = cfg or load_config()
-    model, api_key = _get_llm_and_key(cfg, model, api_key)
-    provider = provider or _get_llm_provider(cfg)
+def new_model_client(cfg: Config) -> ModelClient:
     return _new_model_client(
-        model, api_key, proxy=proxy, base_url=base_url or _get_llm_base_url(cfg), cfg=cfg, provider=provider
+        cfg.llm_model,
+        cfg.llm_api_key,
+        proxy=cfg.llm_proxy,
+        base_url=cfg.llm_base_url,
+        cfg=cfg,
+        provider=cfg.llm_provider,
     )
 
 
-def new_vlm_model_client(
-    model: str | None = None,
-    api_key: str | None = None,
-    *,
-    proxy: str | None = None,
-    base_url: str | None = None,
-    cfg: Config | None = None,
-    provider: str | None = None,
-) -> ModelClient:
-    from copilotj.core.config import load_config
-
-    cfg = cfg or load_config()
-    model, api_key = _get_vlm_and_key(cfg, model, api_key)
-    provider = provider or _get_vlm_provider(cfg)
+def new_vlm_model_client(cfg: Config) -> ModelClient:
     return _new_model_client(
-        model, api_key, proxy=proxy, base_url=base_url or _get_vlm_base_url(cfg), cfg=cfg, provider=provider
+        cfg.vlm_model,
+        cfg.vlm_api_key,
+        proxy=cfg.llm_proxy,
+        base_url=cfg.vlm_base_url,
+        cfg=cfg,
+        provider=cfg.vlm_provider or cfg.llm_provider,
     )
 
 
@@ -249,16 +227,14 @@ def _new_model_client(
     cfg: Config | None = None,
     provider: str | None = None,
 ) -> ModelClient:
-    from copilotj.core.config import load_config
-
     cfg = cfg or load_config()
-    proxy = _get_proxy(cfg, proxy)
+    proxy = proxy or cfg.llm_proxy
 
     # If provider is explicitly given, use it directly.
     if provider is not None:
         # Strip any known prefix from model name (e.g. "ollama/llama3" -> "llama3")
         _, model = _strip_provider_prefix(model)
-        return _resolve_client(provider, model, api_key, proxy=proxy, base_url=base_url)
+        return _resolve_client(provider=provider, model=model, api_key=api_key, proxy=proxy, base_url=base_url)
 
     # Backward-compatible prefix-based detection
     logger.warning(
@@ -983,7 +959,7 @@ if __name__ == "__main__":
     from rich.console import Console
     from rich.prompt import Prompt
 
-    from copilotj.core.config import Config, _get_llm_and_key, _get_proxy, load_config
+    from copilotj.core.config import Config, load_config
     from copilotj.core.tool import FunctionTool
 
     @click.command()
@@ -993,13 +969,11 @@ if __name__ == "__main__":
     @click.option("--stream", is_flag=True, help="Whether to stream the response.")
     def cli(model, api_key, proxy, stream):
         cfg: Config = load_config()
-        model, api_key = _get_llm_and_key(cfg, model, api_key)
-        proxy = _get_proxy(cfg, proxy)
 
         console = Console()
 
         async def run():
-            client = new_model_client()
+            client = new_model_client(cfg)
 
             def get_temperature(city: str):
                 return 15

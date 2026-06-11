@@ -6,6 +6,7 @@ import asyncio
 import json
 import os
 from collections.abc import Awaitable, Callable
+from dataclasses import replace
 from typing import Annotated, Any
 
 import pydantic
@@ -386,12 +387,7 @@ class LeaderDriven(Pattern):
 
         self._cfg = cfg
 
-        self.model_client = new_model_client(
-            model=cfg.llm_model or None,
-            api_key=cfg.llm_api_key or None,
-            base_url=cfg.llm_base_url,
-            cfg=cfg,
-        )
+        self.model_client = new_model_client(cfg)
         # wrap the model client to handle ReAct-style responses
         wrapped_model_client = ReActChatCompletionClient(self.model_client)
 
@@ -454,11 +450,17 @@ class LeaderDriven(Pattern):
         provider: str | None = None,
     ) -> None:
         if model is not None or api_key is not None or base_url is not None or provider is not None:
-            model = model or self.model_client.get_model()
-            api_key = api_key or self.model_client.get_api_key()
-            self.model_client = new_model_client(
-                model=model, api_key=api_key, base_url=base_url, cfg=self._cfg, provider=provider
-            )
+            overrides = {
+                "llm_model": model or self.model_client.get_model(),
+                "llm_api_key": api_key or self.model_client.get_api_key(),
+            }
+            if base_url is not None:
+                overrides["llm_base_url"] = base_url
+            if provider is not None:
+                overrides["llm_provider"] = provider
+            new_cfg = replace(self._cfg, **overrides)
+            self._cfg = new_cfg
+            self.model_client = new_model_client(new_cfg)
             self.workflow_saver.model_client = self.model_client
             self.leader_agent.set_model_client(self.model_client)
             for agent in self.specialized_agents.values():

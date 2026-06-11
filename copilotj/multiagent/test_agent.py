@@ -16,7 +16,7 @@ class LeaderDriven(Pattern):
 
         # Load all agents from agent_configs and store in a dictionary
         cfg = load_config()
-        self.agents = load_agent_configs(model_client=new_model_client(cfg=cfg), cfg=cfg)
+        self.agents = load_agent_configs(model_client=new_model_client(cfg), cfg=cfg)
         for agent in self.agents.values():
             self.register(agent)
 

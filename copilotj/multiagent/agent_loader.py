@@ -120,7 +120,7 @@ if __name__ == "__main__":
     # Test: Load agent configurations and print each agent's tool list
     print("Loading agent configurations...")
     agent_configs = os.path.join(os.path.dirname(__file__), "agent_configs")
-    agents = load_agent_configs(model_client=new_model_client(cfg=cfg), cfg=cfg)
+    agents = load_agent_configs(model_client=new_model_client(cfg), cfg=cfg)
     for name, agent in agents.items():
         print(f"Loaded agent: {name}")
         print(

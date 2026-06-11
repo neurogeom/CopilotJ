@@ -101,12 +101,7 @@ class PluginTools:
                 f"Basic ImageJ window info:\n{window_info}"
             )
 
-        vlm = new_vlm_model_client(
-            model=self._cfg.vlm_model or None,
-            api_key=self._cfg.vlm_api_key or None,
-            base_url=self._cfg.vlm_base_url,
-            cfg=self._cfg,
-        )
+        vlm = new_vlm_model_client(self._cfg)
         imagejCapture_resp = await self.apis.capture_screen()
         vision_prompt = """
 You are an ImageJ Vision Perception tool.  
@@ -236,12 +231,7 @@ imagejOperation is the monitor event history of ImageJ.
                 "Operation assumed successful."
             )
 
-        vlm = new_vlm_model_client(
-            model=self._cfg.vlm_model or None,
-            api_key=self._cfg.vlm_api_key or None,
-            base_url=self._cfg.vlm_base_url,
-            cfg=self._cfg,
-        )
+        vlm = new_vlm_model_client(self._cfg)
         imagejCapture_resp = await self.apis.capture_screen()
 
         verification_prompt = f"""
