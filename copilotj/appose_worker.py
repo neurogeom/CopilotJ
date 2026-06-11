@@ -34,12 +34,14 @@ stdin (graceful shutdown), the worker exits and the daemon thread is killed.
 
 import asyncio
 import logging
+import signal as _signal
 import sys
 import threading
 from urllib.parse import urlparse
 
 from copilotj.core import load_config
 from copilotj.core.config import bootstrap_assets, load_managed_config, save_managed_config
+from copilotj.core.lifecycle import run_cleanup as _run_cleanup
 from copilotj.server import Server
 
 __all__ = ["start_server", "query_port", "stop_server"]
@@ -105,6 +107,19 @@ def start_server() -> None:
 
     # Remember if the port changed from the saved value.
     _previous_port = saved_port if (saved_port and saved_port != port) else None
+
+    # Register signal handlers on the main thread (managed mode).
+    # The daemon thread cannot register signal handlers, so we do it here
+    # before returning control to Appose's stdin loop.  When a signal
+    # arrives, Python interrupts the blocking input() call and invokes
+    # the handler, which runs all registered lifecycle cleanups.
+    def _managed_signal_handler(signum: int, _frame) -> None:
+        _log.warning("Received signal %d in managed mode, running cleanup", signum)
+        _run_cleanup()
+        raise SystemExit(0)
+
+    _signal.signal(_signal.SIGTERM, _managed_signal_handler)
+    _signal.signal(_signal.SIGINT, _managed_signal_handler)
 
 
 def query_port() -> dict:

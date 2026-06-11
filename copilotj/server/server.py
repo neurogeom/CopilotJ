@@ -11,6 +11,7 @@ import aiohttp_cors
 
 from copilotj.core.config import Config
 from copilotj.core.kb import ensure_faiss_index_async
+from copilotj.core.lifecycle import run_cleanup
 from copilotj.server.bridge import Bridge
 from copilotj.server.threads import Threads
 
@@ -105,6 +106,8 @@ class Server:
 
         async def on_shutdown(app: web.Application) -> None:
             await asyncio.gather(self._threads.close(), self._bridge.close())
+            # Run all registered resource cleanups (Jupyter kernels, etc.).
+            run_cleanup()
 
         app.on_shutdown.append(on_shutdown)
 
