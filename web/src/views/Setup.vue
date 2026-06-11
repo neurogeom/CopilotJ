@@ -120,7 +120,7 @@ function completeSetup() {
           :model="wizard.vlm.model"
           :api-key="wizard.vlm.apiKey"
           :base-url="wizard.vlm.baseUrl"
-          :main-model-name="wizard.model?.name"
+          :main-model-name="wizard.model?.name ?? null"
           :vision-enabled="wizard.vlm.visionEnabled"
           @update="wizard.vlm = { ...wizard.vlm, ...$event }"
         />
