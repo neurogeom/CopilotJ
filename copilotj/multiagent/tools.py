@@ -3,10 +3,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import asyncio
-import atexit
 import logging
 import platform
 import signal
+import threading
 import sys
 import textwrap
 import warnings
@@ -15,6 +15,7 @@ from typing import Annotated
 
 from copilotj.core import ImageMessage, TextMessage, new_vlm_model_client
 from copilotj.core.config import Config
+from copilotj.core.lifecycle import register_cleanup
 from copilotj.plugin.api import ClientPluginAPI
 from copilotj.util import JupyterNotebook
 
@@ -390,8 +391,24 @@ class JupyterClient:
         self._notebook = None
         self._initialize_notebook()
 
-        # Register cleanup handlers
-        atexit.register(self.cleanup)
+        # Register cleanup via lifecycle (signal handler and server
+        # on_shutdown both call run_cleanup()).  lifecycle also
+        # registers run_cleanup with atexit as a safety net.
+        self._register_signal_handlers()
+        register_cleanup("jupyter_client", self.cleanup)
+
+    def _register_signal_handlers(self):
+        """Register signal handlers only if running in the main thread.
+
+        In Appose managed mode, the server runs in a daemon thread while
+        Appose's stdin loop occupies the main thread.  Python's signal
+        module requires main-thread execution, so we skip registration
+        when running outside the main thread.  Cleanup is still guaranteed
+        via :mod:`copilotj.core.lifecycle` and ``atexit``.
+        """
+        if threading.current_thread() is not threading.main_thread():
+            _log.info("Skipping Jupyter signal handlers outside the main thread")
+            return
         signal.signal(signal.SIGTERM, self._signal_handler)
         signal.signal(signal.SIGINT, self._signal_handler)
 
@@ -484,10 +501,6 @@ def cleanup_jupyter_client():
     if _jupyter_client:
         _jupyter_client.cleanup()
         _jupyter_client = None
-
-
-# Register global cleanup
-atexit.register(cleanup_jupyter_client)
 
 
 async def execute_python_script(script: Annotated[str, "Python script to execute"]) -> str:
