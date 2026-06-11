@@ -55,9 +55,8 @@ else
 fi
 
 # Copy gitignored .env files from the original worktree
-for f in $(git ls-files --others --ignored --exclude-standard -- "$root/.env*"); do
-  rel="${f#$root/}"
-  cp "$f" "$worktree/$rel"
+for f in $(git -C "$root" ls-files --others --ignored --exclude-standard -- ".env*"); do
+  cp "$root/$f" "$worktree/$f"
 done
 
 # Activate direnv for the new worktree if direnv is installed and current directory is allowed
