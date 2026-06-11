@@ -100,7 +100,7 @@ function saveIntegrations() {
           :api-key="config.data.vlm.api_key"
           :base-url="config.data.vlm.base_url"
           :use-main-model="config.data.vlm.useMainModel"
-          :main-model-name="settings.model?.name"
+          :main-model-name="settings.model?.name ?? null"
           :vision-enabled="config.data.visionEnabled"
           :show-submit-button="true"
           @update="submitVlm"

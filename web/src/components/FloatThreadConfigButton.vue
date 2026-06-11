@@ -41,6 +41,6 @@ async function submitModel(newModel: ThreadConfigModel | null) {
   <FloatIconButton :icon="IconSettings" :disabled="thread.loading" @click="onClick" />
 
   <Dialog v-model:visible="showConfig" modal header="Thread Configuration">
-    <SettingLLM v-if="config" :model="config?.model" @update:model="submitModel" />
+    <SettingLLM v-if="config" :model="config?.model" :server-model-name="null" @update:model="submitModel" />
   </Dialog>
 </template>
