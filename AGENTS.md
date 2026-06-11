@@ -70,43 +70,21 @@ TOML-based RAG system with `macro/` (ImageJ macro snippets) and `research/` (dia
 
 Task runner is [just](https://github.com/casey/just). Run `just` or `just --list` to see all commands.
 
-| Common Command      | Purpose                                                      |
-| ------------------- | ------------------------------------------------------------ |
-| `just dev-server`   | Start the Python bridge server (`python -m copilotj.server`) |
-| `just dev-plugin`   | Run the ImageJ plugin in debug mode                          |
-| `just dev-web`      | Start the Vue frontend dev server                            |
-| `just build-plugin` | Build the plugin JAR via Maven                               |
-| `just test`         | Run Python tests via pytest (with doctest)                   |
-| `just build-kb`     | Build knowledge base from source data                        |
-| `just rebuild-kb`   | Rebuild FAISS index from JSONL export                        |
-| `just status-kb`    | Show knowledge base status                                   |
-
-### Running a single test
-
-```bash
-uv run --with pytest pytest copilotj/test/core/test_model_client.py -k "test_function_name"
-```
-
-### Linting
-
-```bash
-uv run --with ruff ruff check copilotj/
-uv run --with ruff ruff format copilotj/
-```
-
-Ruff config is in `pyproject.toml`: line-length 120, target Python 3.12, Google docstring convention.
+| Common Command      | Purpose                                    |
+| ------------------- | ------------------------------------------ |
+| `just dev-server`   | Start the Python bridge server             |
+| `just dev-plugin`   | Run the ImageJ plugin in debug mode        |
+| `just dev-web`      | Start the Vue frontend dev server          |
+| `just build-plugin` | Build the plugin JAR via Maven             |
+| `just test`         | Run Python tests via pytest (with doctest) |
+| `just lint`         | Run all linters (Python + frontend)        |
+| `just format`       | Auto-format all code (Python + frontend)   |
 
 ### Coding Conventions
 
-- Prefer module-level imports over local imports inside functions. Avoid `import` inside function bodies unless there is a proven circular dependency that cannot be resolved otherwise.
-
-### Testing
-
-Tests live in `copilotj/test/`. The test runner is pytest with `--doctest-modules` enabled. Tests cover `core/` (model client) and `util/` (base64, JSON, markdown, ReAct parser, trie).
-
-### Nix Development Environment
-
-The project uses `flake.nix` with `uv2nix` for reproducible Python environments. Direnv (`.envrc`) loads the nix shell automatically. The Python virtualenv is at `.venv/`.
+- Prefer module-level imports over local imports inside function bodies. Avoid placing import statements inside functions unless required to address a heavy dependency or an unavoidable circular dependency.
+- Ruff config is in `pyproject.toml`: line-length 120, target Python 3.12, Google docstring convention.
+- The project uses `flake.nix` with `uv2nix` for reproducible Python environments. Direnv (`.envrc`) loads the nix shell automatically. The Python virtualenv is at `.venv/`.
 
 ## Compact Instructions
 

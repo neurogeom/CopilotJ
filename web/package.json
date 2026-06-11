@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "type-check": "vue-tsc -b",
+    "format-check": "prettier --check ."
   },
   "dependencies": {
     "@primeuix/themes": "^2.0.3",
