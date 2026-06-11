@@ -64,3 +64,26 @@ add-worktree name:
 # Interactively remove branches that are merged or closed
 cleanup-branches *args:
   scripts/cleanup-branches.sh {{args}}
+
+# --- Linting ---
+
+lint-web:
+  cd web && pnpm run type-check
+  cd web && pnpm run format-check
+
+lint-python:
+  uv run --with ruff ruff check
+  uv run --with ruff ruff format --check
+
+lint: lint-python lint-web
+
+# --- Formatting ---
+
+format-web:
+  cd web && prettier --write .
+
+format-python:
+  uv run --with ruff ruff check --fix
+  uv run --with ruff ruff format
+
+format: format-python format-web

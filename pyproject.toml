@@ -88,5 +88,6 @@ filterwarnings = ["ignore:.*Jupyter is migrating.*:DeprecationWarning"]
 line-length = 120
 target-version = "py312"
 src = ["copilotj"]
+extend-exclude = [".agents"]
 format.docstring-code-format = true
 lint.pydocstyle.convention = "google"
