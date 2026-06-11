@@ -13,7 +13,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from copilotj.core.config import load_config
+from copilotj.core.config import load_config  # noqa: E402
 import copilotj.multiagent.tools as tools  # noqa: E402
 from copilotj.core import FunctionTool, ToolCall  # noqa: E402
 from copilotj.multiagent.leader_prompts import (  # noqa: E402
