@@ -23,6 +23,7 @@ The core agent framework follows a layered architecture:
 - `Tool` / `FunctionTool` — Tools are pydantic models with auto-generated JSON schemas from function signatures. `HandoffFunctionTool` emits UI handoff events when called.
 - `UI` / `CLI` — Abstract UI event system. Events (`UIEventPost`, `UIEventToolCall`, etc.) are sent as NDJSON to the frontend. `CLI` is the terminal fallback.
 - `Config` — Environment-based configuration.
+- `lifecycle` — Thread-safe cleanup registry (`register_cleanup` / `run_cleanup`). Used by resources that need cleanup on shutdown or signal but may be created on the daemon thread in managed mode.
 
 **`copilotj/multiagent/`** — Agent orchestration:
 
@@ -45,6 +46,7 @@ The core agent framework follows a layered architecture:
 
 #### Key Environment Variables
 
+- `COPILOTJ_MANAGED`: Set `1` when run under Appose managed mode
 - `COPILOTJ_API_KEY`: API key for the primary model
 - `COPILOTJ_BASE_URL`: Override API endpoint
 - `COPILOTJ_VISION_ENABLED`: Set `1` to enable vision features (disabled by default for privacy)
@@ -53,6 +55,20 @@ The core agent framework follows a layered architecture:
 - `COPILOTJ_PROXY`: HTTP proxy
 - `COPILOTJ_KB_AUTOSAVE`: Set `1` to auto-ingest dialog summaries into knowledge bank
 - `LANGFUSE_SECRET_KEY`/`LANGFUSE_PUBLIC_KEY`: Optional Langfuse observability
+
+### Managed Mode Threading Constraints
+
+When running under Appose managed mode, the Python process has a specific thread architecture:
+
+```
+Main thread: start_server() (init script) → Appose stdin/stdout blocking loop
+  └── Daemon thread: asyncio event loop (aiohttp server)
+```
+
+The daemon thread cannot call `signal.signal()` or any API requiring the main thread. Code running on the daemon thread (agent tools, HTTP handlers) must:
+
+1. Avoid `signal`, `tkinter`, `curses`, and any other API that requires the main thread. Minimize direct use of stdin and stdout, including `input()` and `print()`, because they may interfere with the Appose stdin/stdout loop.
+2. Register cleanup callbacks via `copilotj.core.lifecycle.register_cleanup()` instead of `atexit.register()` or signal handlers directly.
 
 ### Java Plugin
 
