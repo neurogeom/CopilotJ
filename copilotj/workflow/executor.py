@@ -125,7 +125,9 @@ class WorkflowExecutor:
         }
 
     @staticmethod
-    def _with_batch_metadata(index: int, item_inputs: dict[str, Any], results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def _with_batch_metadata(
+        index: int, item_inputs: dict[str, Any], results: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         tagged = []
         for result in results:
             item_result = dict(result)

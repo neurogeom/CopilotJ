@@ -99,7 +99,7 @@ Gemini models are well-supported and competitively priced. `gemini-2.5-flash` is
 [Ollama](https://ollama.com) runs models locally on your own hardware, with no data sent to external servers and no per-request cost.
 
 **Model recommendations:** When using Ollama with CopilotJ, we recommend choosing models with strong multi-step reasoning, vision capability, and reliable tool use.
-As of early 2026, capable options for agentic tasks include *gemma4* (Google), *qwen3.6* (Alibaba), and *kimi-k2.6* (Kimi).
+As of early 2026, capable options for agentic tasks include _gemma4_ (Google), _qwen3.6_ (Alibaba), and _kimi-k2.6_ (Kimi).
 In general, prefer the largest variant your hardware can comfortably run, as larger models tend to perform better on complex workflows.
 You can also check the [Ollama model library](https://ollama.com/library) for newer releases.
 If a smaller model lacks sufficient reasoning, vision, or tool-calling capability, it may not be able to reliably support complex agentic applications.

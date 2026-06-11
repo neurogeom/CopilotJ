@@ -99,14 +99,14 @@ def wf_dir(wf_id: str) -> Path:
 
 def write_json(path: Path, obj: Any):
     """Write JSON file"""
-    path.write_text(json.dumps(obj, ensure_ascii=False, indent=2), encoding='utf-8')
+    path.write_text(json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def read_json(path: Path) -> Any:
     """Read JSON file with robust encoding handling"""
     # Try UTF-8 first (for new files), then fall back to system default encoding
-    encodings_to_try = ['utf-8', 'gbk', 'cp936', 'latin1']
-    
+    encodings_to_try = ["utf-8", "gbk", "cp936", "latin1"]
+
     for encoding in encodings_to_try:
         try:
             content = path.read_text(encoding=encoding)
@@ -119,7 +119,7 @@ def read_json(path: Path) -> Any:
         except json.JSONDecodeError:
             # If JSON is invalid, that's a different issue - re-raise
             raise
-    
+
     # If all encodings fail, raise an error with helpful message
     raise ValueError(f"Could not decode file {path} with any of the attempted encodings: {encodings_to_try}")
 
@@ -286,4 +286,3 @@ class WorkflowManager:
                     z.write(p, p.relative_to(d))
 
         return f"Files in {wf_id} exported to: {out} successfully"
-
