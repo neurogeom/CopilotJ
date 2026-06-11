@@ -69,7 +69,9 @@ def bind_workflow_context(
     return WorkflowExecutionContext(inputs=inputs, outputs=outputs, run_dir=run_dir)
 
 
-def expand_batch_inputs(interface: WorkflowInterface | None, provided_inputs: dict[str, Any] | None) -> list[dict[str, Any]]:
+def expand_batch_inputs(
+    interface: WorkflowInterface | None, provided_inputs: dict[str, Any] | None
+) -> list[dict[str, Any]]:
     inputs = dict(provided_inputs or {})
     if interface is None:
         return [inputs]
@@ -231,7 +233,9 @@ def _provided_output_dir(specs: dict[str, Any], inputs: dict[str, Any]) -> Path 
     return Path(output_dir) if isinstance(output_dir, str) and output_dir else None
 
 
-def _batch_item_inputs(inputs: dict[str, Any], input_name: str, file_path: Path, output_dir: Path | None) -> dict[str, Any]:
+def _batch_item_inputs(
+    inputs: dict[str, Any], input_name: str, file_path: Path, output_dir: Path | None
+) -> dict[str, Any]:
     item_inputs = dict(inputs)
     item_inputs[input_name] = str(file_path)
     if output_dir is not None:
