@@ -1429,8 +1429,7 @@ async def _llm_extract_with_retry(
 
     for attempt in range(max_retries):
         try:
-            load_config()
-            model_client = new_model_client()
+            model_client = new_model_client(load_config())
             llm_response = await model_client.create([TextMessage(role="user", text=prompt)])
 
             if not llm_response.content:

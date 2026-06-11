@@ -26,15 +26,6 @@ __all__ = [
     "is_single_client",
     "load_managed_config",
     "save_managed_config",
-    "get_llm_and_key",
-    "get_llm_base_url",
-    "get_llm_proxy",
-    "get_llm_provider",
-    "get_vlm_and_key",
-    "get_vlm_base_url",
-    "get_vlm_proxy",
-    "get_vlm_provider",
-    "get_proxy",
     "bootstrap_assets",
     "resolve_vision_config",
 ]
@@ -208,7 +199,8 @@ def resolve_vision_config(cfg: Config) -> Config:
 
 
 # ---------------------------------------------------------------------------
-# Legacy helpers — still used by bridge.py, plugin/api.py, appose_worker.py
+# Runtime helpers — environment-based checks used during startup and by the
+# bridge / plugin / appose-worker layers.
 # ---------------------------------------------------------------------------
 
 
@@ -245,75 +237,6 @@ def save_managed_config(data: dict) -> None:
     path.write_text(json.dumps(data, indent=2), "utf-8")
 
 
-def get_llm_provider() -> str | None:
-    """Return the explicitly-configured LLM provider, or None to auto-detect from model name."""
-    return os.getenv("COPILOTJ_LLM_PROVIDER", None)
-
-
-def get_llm_and_key(model: str | None = None, api_key: str | None = None) -> tuple[str, str]:
-    if model is None:
-        model = os.getenv("COPILOTJ_LLM_MODEL", "")
-        if not model:
-            old = os.getenv("COPILOTJ_MODEL")
-            if old:
-                _logger.warning("COPILOTJ_MODEL is deprecated, use COPILOTJ_LLM_MODEL instead")
-                model = old
-    if api_key is None:
-        api_key = os.getenv("COPILOTJ_LLM_API_KEY", "") or ""
-        if not api_key:
-            old = os.getenv("COPILOTJ_API_KEY")
-            if old:
-                _logger.warning("COPILOTJ_API_KEY is deprecated, use COPILOTJ_LLM_API_KEY instead")
-                api_key = old
-    return model, api_key
-
-
-def get_llm_base_url() -> str | None:
-    value = os.getenv("COPILOTJ_LLM_BASE_URL")
-    if value is None:
-        old = os.getenv("COPILOTJ_BASE_URL")
-        if old:
-            _logger.warning("COPILOTJ_BASE_URL is deprecated, use COPILOTJ_LLM_BASE_URL instead")
-            return old
-    return value
-
-
-def get_llm_proxy(default_value: str | None = None) -> str | None:
-    if default_value:
-        return default_value
-    value = os.getenv("COPILOTJ_LLM_PROXY")
-    if value is None:
-        old = os.getenv("COPILOTJ_PROXY")
-        if old:
-            _logger.warning("COPILOTJ_PROXY is deprecated, use COPILOTJ_LLM_PROXY instead")
-            return old
-    return value
-
-
-def get_vlm_provider() -> str | None:
-    """Return the explicitly-configured VLM provider, falling back to LLM provider."""
-    return os.getenv("COPILOTJ_VLM_PROVIDER", None) or os.getenv("COPILOTJ_LLM_PROVIDER", None)
-
-
-def get_vlm_and_key(model: str | None = None, api_key: str | None = None) -> tuple[str, str]:
-    model = model or os.getenv("COPILOTJ_VLM_MODEL") or os.getenv("COPILOTJ_LLM_MODEL", "")
-    api_key = api_key or os.getenv("COPILOTJ_VLM_API_KEY", os.getenv("COPILOTJ_LLM_API_KEY", "")) or ""
-    return model, api_key
-
-
-def get_vlm_base_url() -> str | None:
-    return os.getenv("COPILOTJ_VLM_BASE_URL", None) or os.getenv("COPILOTJ_LLM_BASE_URL", None)
-
-
-def get_vlm_proxy(default_value: str | None = None) -> str | None:
-    return default_value or os.getenv("COPILOTJ_VLM_PROXY", None) or os.getenv("COPILOTJ_LLM_PROXY", None)
-
-
-def get_proxy(default_value: str | None = None) -> str | None:
-    """Deprecated: use get_llm_proxy instead."""
-    return get_llm_proxy(default_value)
-
-
 def bootstrap_assets() -> None:
     """Copy assets/ from project source to COPILOTJ_HOME if missing."""
     home = get_home()
@@ -327,40 +250,6 @@ def bootstrap_assets() -> None:
         return
 
     shutil.copytree(source_assets, target_assets, dirs_exist_ok=True)
-
-
-# ---------------------------------------------------------------------------
-# Private helpers — used internally by model_client.py.
-# External code should read fields directly from the Config object.
-# ---------------------------------------------------------------------------
-
-
-def _get_llm_and_key(cfg: Config, model: str | None = None, api_key: str | None = None) -> tuple[str, str]:
-    return model or cfg.llm_model, api_key or cfg.llm_api_key
-
-
-def _get_llm_base_url(cfg: Config) -> str | None:
-    return cfg.llm_base_url
-
-
-def _get_vlm_and_key(cfg: Config, model: str | None = None, api_key: str | None = None) -> tuple[str, str]:
-    return model or cfg.vlm_model, api_key or cfg.vlm_api_key
-
-
-def _get_vlm_base_url(cfg: Config) -> str | None:
-    return cfg.vlm_base_url
-
-
-def _get_proxy(cfg: Config, default_value: str | None = None) -> str | None:
-    return default_value or cfg.llm_proxy
-
-
-def _get_llm_provider(cfg: Config) -> str | None:
-    return cfg.llm_provider
-
-
-def _get_vlm_provider(cfg: Config) -> str | None:
-    return cfg.vlm_provider or cfg.llm_provider
 
 
 def _is_dev(cfg: Config) -> bool:
