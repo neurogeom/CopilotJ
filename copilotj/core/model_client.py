@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import abc
+import json
 import logging
 from typing import Any, AsyncGenerator, Literal, Sequence, cast, overload, override
 
@@ -19,7 +20,7 @@ from copilotj.core.config import (
     _get_vlm_and_key,
     _get_vlm_base_url,
 )
-from copilotj.core.message import ImageMessage, TextMessage
+from copilotj.core.message import ImageMessage, TextMessage, ToolCallMessage, ToolResultMessage
 from copilotj.core.tool import Tool
 
 logger = logging.getLogger(__name__)
@@ -37,10 +38,12 @@ __all__ = [
     "OllamaChatCompletionClient",
     "new_model_client",
     "new_vlm_model_client",
+    "detect_tool_call_mode",
 ]
 
 
 type FinishReasons = Literal["stop", "tool_calls", "unknown"]
+type MessageInput = TextMessage | ImageMessage | ToolCallMessage | ToolResultMessage
 
 
 class ToolCall(pydantic.BaseModel):
@@ -117,7 +120,7 @@ class ModelClient(abc.ABC):
     @abc.abstractmethod
     async def create(
         self,
-        messages: Sequence[TextMessage | ImageMessage],
+        messages: Sequence[MessageInput],
         *,
         tools: list[Tool] | None = None,
         extra_args: dict[str, Any] | None = None,
@@ -126,7 +129,7 @@ class ModelClient(abc.ABC):
     @abc.abstractmethod
     def create_stream(
         self,
-        messages: Sequence[TextMessage | ImageMessage],
+        messages: Sequence[MessageInput],
         *,
         tools: list[Tool] | None = None,
         extra_args: dict[str, Any] | None = None,
@@ -226,7 +229,7 @@ class OpenAIChatCompletionClient(ModelClient):
     @override
     async def create(
         self,
-        messages: Sequence[TextMessage | ImageMessage],
+        messages: Sequence[MessageInput],
         *,
         tools: list[Tool] | None = None,
         extra_args: dict[str, Any] | None = None,
@@ -261,7 +264,7 @@ class OpenAIChatCompletionClient(ModelClient):
     @override
     async def create_stream(
         self,
-        messages: Sequence[TextMessage | ImageMessage],
+        messages: Sequence[MessageInput],
         *,
         tools: list[Tool] | None = None,
         extra_args: dict[str, Any] | None = None,
@@ -347,7 +350,7 @@ class OpenAIChatCompletionClient(ModelClient):
     ) -> openai.AsyncStream[openai.types.chat.ChatCompletionChunk]: ...
     async def _create(
         self,
-        messages: Sequence[TextMessage | ImageMessage],
+        messages: Sequence[MessageInput],
         *,
         tools: list[Tool] | None,
         extra_args: dict[str, Any] | None,
@@ -382,10 +385,19 @@ class OpenAIChatCompletionClient(ModelClient):
             raise ModelProviderError(f"OpenAI error: {str(e)}", "openai") from e
 
     @classmethod
-    def _format_messages(cls, messages: Sequence[TextMessage | ImageMessage]):
+    def _format_messages(cls, messages: Sequence[TextMessage | ImageMessage | ToolCallMessage | ToolResultMessage]):
         openai_messages: list[openai.types.chat.ChatCompletionMessageParam] = []
         group: list[TextMessage | ImageMessage] = []
         for message in messages:
+            # ToolCallMessage and ToolResultMessage are standalone — flush any
+            # pending group first, then emit them directly.
+            if isinstance(message, (ToolCallMessage, ToolResultMessage)):
+                if group:
+                    openai_messages.append(cls._merge_messages(group))
+                    group.clear()
+                openai_messages.append(cls._format_tool_message(message))
+                continue
+
             if len(group) > 0 and group[0].role != message.role:
                 openai_messages.append(cls._merge_messages(group))
                 group.clear()
@@ -398,8 +410,34 @@ class OpenAIChatCompletionClient(ModelClient):
         return openai_messages
 
     @staticmethod
+    def _format_tool_message(
+        msg: ToolCallMessage | ToolResultMessage,
+    ) -> openai.types.chat.ChatCompletionMessageParam:
+        """Convert a ToolCallMessage or ToolResultMessage to OpenAI API format."""
+        if isinstance(msg, ToolCallMessage):
+            return {
+                "role": "assistant",
+                "content": msg.reasoning_content,
+                "tool_calls": [
+                    {
+                        "id": tc.id,
+                        "type": "function",
+                        "function": {"name": tc.name, "arguments": json.dumps(tc.arguments, ensure_ascii=False)},
+                    }
+                    for tc in msg.tool_calls
+                ],
+            }  # type: ignore[return-value]
+
+        # ToolResultMessage
+        return {
+            "role": "tool",
+            "tool_call_id": msg.tool_call_id,
+            "content": msg.content,
+        }  # type: ignore[return-value]
+
+    @staticmethod
     def _merge_messages(
-        messages: Sequence[TextMessage | ImageMessage],
+        messages: Sequence[MessageInput],
     ) -> openai.types.chat.ChatCompletionMessageParam:
         """Format a sequence of messages into OpenAI's chat completion format."""
         content = []
@@ -435,7 +473,7 @@ class OpenAIResponseClient(ModelClient):
     @override
     async def create(
         self,
-        messages: Sequence[TextMessage | ImageMessage],
+        messages: Sequence[MessageInput],
         *,
         tools: list[Tool] | None = None,
         extra_args: dict[str, Any] | None = None,
@@ -490,7 +528,7 @@ class OpenAIResponseClient(ModelClient):
     @override
     async def create_stream(
         self,
-        messages: Sequence[TextMessage | ImageMessage],
+        messages: Sequence[MessageInput],
         *,
         tools: list[Tool] | None = None,
         extra_args: dict[str, Any] | None = None,
@@ -599,7 +637,7 @@ class OpenAIResponseClient(ModelClient):
     ) -> openai.AsyncStream[openai.types.responses.ResponseStreamEvent]: ...
     async def _create(
         self,
-        messages: Sequence[TextMessage | ImageMessage],
+        messages: Sequence[MessageInput],
         *,
         tools: list[Tool] | None,
         extra_args: dict[str, Any] | None,
@@ -609,6 +647,13 @@ class OpenAIResponseClient(ModelClient):
             inputs: list[openai.types.responses.ResponseInputItemParam] = []
             group: list[TextMessage | ImageMessage] = []
             for message in messages:
+                if isinstance(message, (ToolCallMessage, ToolResultMessage)):
+                    if group:
+                        inputs.append(self._merge_messages(group))
+                        group.clear()
+                    inputs.append(self._format_tool_input(message))
+                    continue
+
                 if len(group) > 0 and group[0].role != message.role:
                     inputs.append(self._merge_messages(group))
                     group.clear()
@@ -645,8 +690,30 @@ class OpenAIResponseClient(ModelClient):
             raise ModelProviderError(f"OpenAI error: {str(e)}", "openai") from e
 
     @staticmethod
+    def _format_tool_input(
+        msg: ToolCallMessage | ToolResultMessage,
+    ) -> openai.types.responses.ResponseInputItemParam:
+        """Convert a ToolCallMessage or ToolResultMessage to Responses API input format."""
+        if isinstance(msg, ToolCallMessage):
+            # Responses API uses function_call_output items for assistant tool calls
+            return {
+                "type": "function_call",
+                "id": msg.tool_calls[0].id if msg.tool_calls else "unknown",
+                "call_id": msg.tool_calls[0].id if msg.tool_calls else "unknown",
+                "name": msg.tool_calls[0].name if msg.tool_calls else "unknown",
+                "arguments": json.dumps(msg.tool_calls[0].arguments, ensure_ascii=False) if msg.tool_calls else "{}",
+            }  # type: ignore[return-value]
+
+        # ToolResultMessage → function_call_output
+        return {
+            "type": "function_call_output",
+            "call_id": msg.tool_call_id,
+            "output": msg.content,
+        }  # type: ignore[return-value]
+
+    @staticmethod
     def _merge_messages(
-        messages: Sequence[TextMessage | ImageMessage],
+        messages: Sequence[MessageInput],
     ) -> openai.types.responses.ResponseInputItemParam:
         """Format a sequence of messages into the Responses API input format."""
         role = _openai_convert_role(messages[0].role)
@@ -747,6 +814,25 @@ def _openai_parse_finish_reason(finish_reason: str | None) -> FinishReasons | No
 
 
 #############################
+#     Tool Call Detection   #
+#############################
+
+
+def detect_tool_call_mode(model_client: ModelClient) -> Literal["native", "react"]:
+    """Detect whether the model supports native tool calling.
+
+    Queries the LiteLLM model capability database via
+    :func:`copilotj.core.model_info.get_model_capabilities`.  Models with
+    ``supports_function_calling=True`` use the native path; everything else
+    falls back to ReAct text parsing.
+    """
+    from copilotj.core.model_info import get_model_capabilities
+
+    caps = get_model_capabilities(model_client.get_model())
+    return "native" if caps.supports_function_calling else "react"
+
+
+#############################
 #          Gemini           #
 #############################
 
@@ -791,7 +877,7 @@ class OllamaChatCompletionClient(ModelClient):
     def get_api_key(self) -> str | None:
         return None
 
-    def _format_messages(self, messages: Sequence[TextMessage | ImageMessage]) -> list[dict]:
+    def _format_messages(self, messages: Sequence[MessageInput]) -> list[dict]:
         """Formats messages for the Ollama API."""
         ollama_messages = []
         for msg in messages:
@@ -799,6 +885,18 @@ class OllamaChatCompletionClient(ModelClient):
                 ollama_messages.append({"role": msg.role, "content": msg.text})
             elif isinstance(msg, ImageMessage):
                 logger.warning("Image messages not fully supported by Ollama client yet. Skipping image.")
+            elif isinstance(msg, ToolCallMessage):
+                ollama_messages.append(
+                    {
+                        "role": "assistant",
+                        "content": msg.reasoning_content or None,
+                        "tool_calls": [
+                            {"function": {"name": tc.name, "arguments": tc.arguments}} for tc in msg.tool_calls
+                        ],
+                    }
+                )
+            elif isinstance(msg, ToolResultMessage):
+                ollama_messages.append({"role": "tool", "content": msg.content})
             else:
                 raise ValueError(f"Unsupported message type: {msg}")
         return ollama_messages
@@ -806,7 +904,7 @@ class OllamaChatCompletionClient(ModelClient):
     @override
     async def create(
         self,
-        messages: Sequence[TextMessage | ImageMessage],
+        messages: Sequence[MessageInput],
         *,
         tools: list[Tool] | None = None,
         extra_args: dict[str, Any] | None = None,
@@ -846,7 +944,7 @@ class OllamaChatCompletionClient(ModelClient):
     @override
     async def create_stream(
         self,
-        messages: Sequence[TextMessage | ImageMessage],
+        messages: Sequence[MessageInput],
         *,
         tools: list[Tool] | None = None,
         extra_args: dict[str, Any] | None = None,

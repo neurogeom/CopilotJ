@@ -45,13 +45,17 @@ Let's work this out in a step by step way to be sure we have the right answer.
 ## Execution Workflow
 - Thought: When you thought, please reflect on your progress with several sentences about current status, Tool usage, and Expected outcome.(Thought should be short and concise)
 
+{% if tool_call_mode == "react" %}
 - Action: output EXACTLY ONE tool call in this JSON form: \
 Action: {"name": "<tool_name>", "args": { ... }}
+{% else %}
+- When you need to use a tool, call it directly with the appropriate parameters.
+{% endif %}
 
-After the Action is executed, you will get the result of the tool call as an "observation".
-This Thought/Action/Observation can repeat N times, you should take several steps when needed.
+After the tool is executed, you will get the result as an "observation".
+This Thought/Tool/Observation can repeat N times, you should take several steps when needed.
 
-If the task is already complete, skip the Action and output:
+If the task is already complete, skip the tool call and output:
 Final Answer: [your answer or summary of the process]
 
 # Saved Workflow Execution Shortcut
@@ -105,16 +109,28 @@ For these special plugins, ALWAYS call `kb_retrieve` FIRST for usage tips before
 ## Few-Shot Examples
 #### Example 1 — Perception then Knowledge Retrieval
 Thought: I need to analyze the image characteristics first.
+{% if tool_call_mode == "react" %}
 Action: {"name":"imagej_perception","args":{"task":"analyze this image for nuclei segmentation"}}
+{% else %}
+→ Call imagej_perception with task="analyze this image for nuclei segmentation"
+{% endif %}
 (Observation returned with image_desc and perception_info)
 Thought: Now I should retrieve relevant macros and workflow tips.
+{% if tool_call_mode == "react" %}
 Action: {"name":"kb_retrieve","args":{"query":"nuclei segmentation","image_desc":"8-bit, single-channel, fluorescence","perception_info":"bright nuclei on dark background","topk":8}}
+{% else %}
+→ Call kb_retrieve with query="nuclei segmentation", perception_info="bright nuclei on dark background"
+{% endif %}
 
 #### Example 2 — Incremental Segmentation (DAPI nuclei)
 **User:** "Please segment nuclei from my DAPI image and export counts."
 **Assistant:**
 Thought: I need to plan a stepwise segmentation macro and get user permission first.
+{% if tool_call_mode == "react" %}
 Action: {"name":"user_manipulate","args":{"instructions":"Permission needed: Incremental DAPI nuclei segmentation (stepwise).
+{% else %}
+→ Call user_manipulate with instructions="Permission needed: Incremental DAPI nuclei segmentation (stepwise).
+{% endif %}
 **What I will do, step by step**
 1) Duplicate the current image (preserve original).
 2) Apply Gaussian Blur (sigma=1.5) to smooth local noise and enhance object continuity.
@@ -140,17 +156,23 @@ Tip: If background gets fragmented, polarity was inverted; recheck Step 5."
 **Please respond**
 - Reply `Yes` to proceed, `No` to cancel
 - Reply `<your changes>` to adjust parameters or refine this plan.
+{% if tool_call_mode == "react" %}
 "}}
+{% else %}
+"
+{% endif %}
 
 ## Dialog Structure
 The first user message contains the current request and, if relevant, a summary of previous chat history. \
 Tool observations are returned as subsequent user messages. You must connect each new request with the \
 prior conversation context.
 
+{% if tool_call_mode == "react" %}
 ## Anti-pattern (do NOT do this):
 Thought: I'll open the image and then threshold it.
 Action: {"name": "run_macro", "args": {"script": "run(\"Open...\", \"path=/a.tif\");"}}
 Action: {"name": "run_macro", "args": {"script": "setAutoThreshold(\"Otsu\");"}}  <-- Wrong: two Actions in one message
+{% endif %}
 
 ## Rules
 ### Execution Flow
@@ -698,6 +720,8 @@ def build_leader_system_prompt(
     plugins_text: str,
     system_info_text: str,
     default_image_path: str,
+    *,
+    tool_call_mode: str = "react",
 ) -> str:
     """Build the static system prompt for the leader agent.
 
@@ -706,12 +730,15 @@ def build_leader_system_prompt(
     Dynamic content (chat history, current task, ImageJ window info, tool
     observations) lives in subsequent user/assistant messages.
     """
-    return (
+    from copilotj.util.prompt_template import render_prompt
+
+    template = (
         PROMPT_LEADER.replace("{TOOL_LIST}", tool_list)
         .replace("{SPECIAL_PLUGIN}", plugins_text)
         .replace("{SYSTEM_INFO}", system_info_text)
         .replace("{DEFAULT_IMAGE_PATH}", default_image_path)
     )
+    return render_prompt(template, tool_call_mode=tool_call_mode)
 
 
 def build_initial_user_message(

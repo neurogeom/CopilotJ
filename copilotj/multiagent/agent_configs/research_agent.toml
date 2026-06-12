@@ -13,15 +13,19 @@ Your mandate: answer accurately with the **fewest necessary tool calls**.
 Let's work this out in a step by step way to be sure we have the right answer.
 
 ## Execution Workflow
-- Thought: When you thought, please reflect on your progress with several sentences about current status, Tool usage, and Expected outcome: 
+- Thought: When you thought, please reflect on your progress with several sentences about current status, Tool usage, and Expected outcome:
 
+{% if tool_call_mode == "react" %}
 - Action: output EXACTLY ONE tool call in this JSON form: \
 Action: {"name": "<tool_name>", "args": { ... }}
+{% else %}
+- When you need to use a tool, call it directly with the appropriate parameters.
+{% endif %}
 
-After the Action is executed, you will get the result of the tool call as an "observation".
-This Thought/Action/Observation can repeat N times, you should take several steps when needed.
+After the tool is executed, you will get the result as an "observation".
+This Thought/Tool/Observation can repeat N times, you should take several steps when needed.
 
-If the task is already complete, skip the Action and output:
+If the task is already complete, skip the tool call and output:
 Final Answer: [your answer or summary of the process]
 
 ## Response Process:

@@ -26,6 +26,9 @@ from copilotj.core import (
     Pattern,
     TextMessage,
     Tool,
+    ToolCallMessage,
+    ToolCallRecord,
+    ToolResultMessage,
     new_model_client,
 )
 from copilotj.core.config import Config
@@ -49,13 +52,14 @@ from copilotj.multiagent.leader_prompts import (
     build_available_specialized_agents_prompt,
     build_initial_user_message,
     build_leader_system_prompt,
-    build_observation_message,
     build_tool_prompt,
     make_summary_prompt,
 )
 from copilotj.multiagent.tools import system_info
 from copilotj.plugin import ClientPluginAPI
 from copilotj.util import ReActChatCompletionClient
+
+from copilotj.core.model_client import detect_tool_call_mode
 
 __all__ = ["LeaderDriven"]
 
@@ -64,27 +68,6 @@ OPTIMIZE_CHAT_HISTORY_LIMIT = 3
 OPTIMIZE_ASSISTANT_SNIPPET_CHARS = 100
 CONTEXT_SNIPPET_CHARS = 500
 SaveWorkflowHandler = Callable[[str, str | None, int | None, list[int] | None], Awaitable[str]]
-
-
-def _reconstruct_react_text(response: ModelResponse) -> str:
-    """Rebuild an assistant-side ReAct text block from a parsed ModelResponse.
-
-    The ReAct wrapper parses the model's raw text output into ``reasoning_content``
-    (Thought), ``tool_calls`` (Action), and ``content`` (Final Answer). For
-    multi-turn conversation we re-assemble those parts into the same shape the
-    model originally produced, so the next turn's context matches the
-    ReAct-formatted examples in the system prompt.
-    """
-    parts: list[str] = []
-    if response.reasoning_content:
-        parts.append(f"Thought: {response.reasoning_content.strip()}")
-    if response.tool_calls:
-        tc = response.tool_calls[0]
-        args_json = json.dumps(tc.args.model_dump(), ensure_ascii=False)
-        parts.append(f'Action: {{"name": "{tc.tool.name}", "args": {args_json}}}')
-    if response.content:
-        parts.append(f"Final Answer: {response.content.strip()}")
-    return "\n".join(parts)
 
 
 class LeaderAgent(ChatAgent):
@@ -97,15 +80,17 @@ class LeaderAgent(ChatAgent):
         model_client: ModelClient,
         apis: ClientPluginAPI,
         cfg: Config,
+        tool_call_mode: str = "react",
     ):
         super().__init__(name, description, model_client=model_client)
 
         self.chat_history: list[dict[str, Any]] = []
         self._save_workflow_handler: SaveWorkflowHandler | None = None
+        self._tool_call_mode = tool_call_mode
 
         # Per-dialog conversation state. Populated by begin_dialog() and
         # extended by continue_dialog(). Reset at the start of each dialog.
-        self._dialog_messages: list[TextMessage] = []
+        self._dialog_messages: list[TextMessage | ToolCallMessage | ToolResultMessage] = []
 
         self._apis = apis
         self.plugin_tools = tools.PluginTools(apis, cfg=cfg)
@@ -163,7 +148,7 @@ class LeaderAgent(ChatAgent):
         ]
         return "\n".join(history)
 
-    async def _build_system_prompt(self) -> str:
+    async def _build_system_prompt(self, *, tool_call_mode: str = "react") -> str:
         """Build the static system prompt for the current session."""
         tool_list = build_tool_prompt(self.tools) + "\n" + build_available_specialized_agents_prompt(self.agents)
         macro_plugins = _load_macro_plugin_names() or ["StarDist", "TrackMate", "CLIJ2"]
@@ -175,6 +160,7 @@ class LeaderAgent(ChatAgent):
             plugins_text=plugins_text,
             system_info_text=system_info_text,
             default_image_path=str(py_tools.get_project_temp_dir()),
+            tool_call_mode=tool_call_mode,
         )
 
     async def begin_dialog(self, main_task: str, *, trace_ctx: Langfuse | None = None) -> ModelResponse:
@@ -186,7 +172,7 @@ class LeaderAgent(ChatAgent):
         only append new turns rather than resending the whole prompt.
         """
         self.imagej_windowInfo_text = await self.plugin_tools.imagej_windowInfo()
-        system_prompt = await self._build_system_prompt()
+        system_prompt = await self._build_system_prompt(tool_call_mode=self._tool_call_mode)
 
         initial_user = build_initial_user_message(
             main_task=main_task,
@@ -210,20 +196,35 @@ class LeaderAgent(ChatAgent):
     ) -> ModelResponse:
         """Continue the current dialog after a tool call.
 
-        Appends the prior assistant response (reconstructed from the ReAct
-        parser's structured output) and a new user message carrying the tool
-        observation plus refreshed ImageJ window info.
+        Appends the prior assistant response as a ToolCallMessage (with
+        reasoning) and a ToolResultMessage for the observation.  The client
+        layer converts these to the appropriate format (native API or
+        reconstructed ReAct text) depending on the active tool-call mode.
         """
-        assistant_text = _reconstruct_react_text(prior_response)
-        if assistant_text:
-            self._dialog_messages.append(TextMessage(role="assistant", text=assistant_text))
+        if prior_response.tool_calls:
+            # Record the assistant turn with its tool calls
+            records = [
+                ToolCallRecord(
+                    id=tc.id,
+                    name=tc.tool.name,
+                    arguments=tc.args.model_dump(),
+                )
+                for tc in prior_response.tool_calls
+            ]
+            self._dialog_messages.append(
+                ToolCallMessage(tool_calls=records, reasoning_content=prior_response.reasoning_content)
+            )
+            # Record each tool result
+            for tc in prior_response.tool_calls:
+                self._dialog_messages.append(ToolResultMessage(tool_call_id=tc.id, content=str(observation)))
+        elif prior_response.content:
+            self._dialog_messages.append(TextMessage(role="assistant", text=prior_response.content))
 
+        # Window info as a user message (always, regardless of mode)
         self.imagej_windowInfo_text = await self.plugin_tools.imagej_windowInfo()
-        user_text = build_observation_message(
-            tool_response=observation,
-            imagej_window_info=self.imagej_windowInfo_text,
+        self._dialog_messages.append(
+            TextMessage(role="user", text=f"## ImageJ WindowInfo\n{self.imagej_windowInfo_text or '(no image open)'}")
         )
-        self._dialog_messages.append(TextMessage(role="user", text=user_text))
         self._log_prompt_size("continue_dialog")
         return await self._create(*self._dialog_messages, tools=self.tools, trace_ctx=trace_ctx)
 
@@ -392,8 +393,15 @@ class LeaderDriven(Pattern):
             base_url=cfg.llm_base_url,
             cfg=cfg,
         )
-        # wrap the model client to handle ReAct-style responses
-        wrapped_model_client = ReActChatCompletionClient(self.model_client)
+        # Detect tool call mode from LiteLLM model capability database
+        self._tool_call_mode = detect_tool_call_mode(self.model_client)
+        self.log_info(f"Detected tool call mode: {self._tool_call_mode}")
+
+        # Wrap the model client for ReAct mode only
+        if self._tool_call_mode == "react":
+            wrapped_model_client: ModelClient = ReActChatCompletionClient(self.model_client)
+        else:
+            wrapped_model_client = self.model_client
 
         self.dialog_counter = 1
         self.max_steps_before_summary = max_steps_before_summary
@@ -440,6 +448,7 @@ class LeaderDriven(Pattern):
             agents=self.specialized_agents,
             apis=apis,
             cfg=cfg,
+            tool_call_mode=self._tool_call_mode,
         )
         self.workflow_saver.chat_history = self.leader_agent.chat_history
         self.leader_agent.set_save_workflow_handler(self.workflow_saver.save)

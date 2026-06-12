@@ -7,6 +7,7 @@ from typing import Any
 
 from copilotj.core import ChatAgent, ModelClient, ModelSyntaxError, TextMessage, Tool
 from copilotj.multiagent.leader_prompts import build_tool_prompt
+from copilotj.util import ReActChatCompletionClient
 
 __all__ = ["Executor"]
 
@@ -37,11 +38,21 @@ class Executor(ChatAgent):
 
         tools_info = build_tool_prompt(self.tools)
 
-        tools_usage = """\
+        if isinstance(self._client, ReActChatCompletionClient):
+            # ReAct mode: include Action format instructions
+            tools_usage = """\
 ## Tool Usage Format:
 When you need to use a tool, format your action as json format:
 Action: {"name": "<tool_name>", "args": <tool_args_in_json_format>}
 
+## Tool Selection Guidelines:
+- Choose the most appropriate tool based on the task requirements
+- Provide clear and specific parameters for the tool
+- If unsure about parameters, describe what you want to accomplish
+"""
+        else:
+            # Native mode: tools are called directly, just list them
+            tools_usage = """\
 ## Tool Selection Guidelines:
 - Choose the most appropriate tool based on the task requirements
 - Provide clear and specific parameters for the tool
@@ -186,11 +197,17 @@ Action: {"name": "<tool_name>", "args": <tool_args_in_json_format>}
 
         if suggested_tools:
             top_suggestions = [tool[0] for tool in suggested_tools[:3]]
-            TEMPLATE = 'Consider using one of these tools: {{TOOLS}}. Format: {"name": "tool_name", "args": <tool_args_in_json_format>}'
-            return TEMPLATE.replace("{{TOOLS}}", ", ".join(top_suggestions))
+            if isinstance(self._client, ReActChatCompletionClient):
+                template = 'Consider using one of these tools: {{TOOLS}}. Format: {"name": "tool_name", "args": <tool_args_in_json_format>}'
+            else:
+                template = "Consider using one of these tools: {{TOOLS}}."
+            return template.replace("{{TOOLS}}", ", ".join(top_suggestions))
         else:
-            TEMPLATE = 'Please choose from available tools: {{TOOLS}}. Format: {"name": "tool_name", "args": <tool_args_in_json_format>}'
-            return TEMPLATE.replace("{{TOOLS}}", self._tool_names())
+            if isinstance(self._client, ReActChatCompletionClient):
+                template = 'Please choose from available tools: {{TOOLS}}. Format: {"name": "tool_name", "args": <tool_args_in_json_format>}'
+            else:
+                template = "Please choose from available tools: {{TOOLS}}."
+            return template.replace("{{TOOLS}}", self._tool_names())
 
     def _build_execution_context(self, conversation_context: dict[str, Any], iteration: int) -> str:
         """Build the execution context for the current iteration"""
@@ -231,7 +248,7 @@ Previous Steps:
         response_lower = response.lower()
         return any(indicator in response_lower for indicator in completion_indicators)
 
-    REFLECTION_TEMPLATE = """\
+    REFLECTION_TEMPLATE_REACT = """\
 Please reflect on your progress so far:
 
 1. **Status Check**: What have you accomplished toward the task goal?
@@ -243,18 +260,30 @@ Available tools: {{TOOL_NAMES}}
 
 Use the format:
 Thought: [Your analysis and reasoning]
-Action: {"name": "<tool_name>", "args": <tool_args_in_json_format>}
+Action: {"name": "<tool_name>", "args": <tool_args_in_json_format>}"""
 
-Iteration: {{CURRENT_ITERATION}}/{{MAX_ITERATIONS}}
-"""
+    REFLECTION_TEMPLATE_NATIVE = """\
+Please reflect on your progress so far:
+
+1. **Status Check**: What have you accomplished toward the task goal?
+2. **Next Action**: What specific action should you take next?
+3. **Tool Usage**: Which tool would be most appropriate for the next step?
+4. **Expected Outcome**: What do you expect to achieve with this action?
+
+Available tools: {{TOOL_NAMES}}
+
+Use the format:
+Thought: [Your analysis and reasoning]
+Then call the appropriate tool directly."""
 
     def _generate_reflection_prompt(self, iteration: int) -> str:
         """Generate a reflection prompt for the agent"""
-        return (
-            self.REFLECTION_TEMPLATE.replace("{{TOOL_NAMES}}", self._tool_names())
-            .replace("{{CURRENT_ITERATION}}", str(iteration + 1))
-            .replace("{{MAX_ITERATIONS}}", str(self.max_iterations))
+        template = (
+            self.REFLECTION_TEMPLATE_REACT
+            if isinstance(self._client, ReActChatCompletionClient)
+            else self.REFLECTION_TEMPLATE_NATIVE
         )
+        return template.replace("{{TOOL_NAMES}}", self._tool_names())
 
     def _generate_final_summary(self, conversation_context: dict[str, Any]) -> str:
         """Generate a final summary of the task execution"""

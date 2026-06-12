@@ -211,6 +211,25 @@ class ChatAgent(Agent):
             tool_calls=tool_calls if len(tool_calls) else None,
             finish_reason=finish_reason,
         )
+
+        # In native mode, the model may output "Thought: ..." as regular
+        # content before calling a tool.  Move that text to
+        # reasoning_content so the downstream logic (LeaderDriven.run)
+        # correctly distinguishes between a tool-call turn and a final
+        # answer turn.
+        if (
+            completion.tool_calls
+            and completion.content
+            and not completion.reasoning_content
+            and completion.content.strip().lower().startswith("thought")
+        ):
+            completion = ModelResponse(
+                content=None,
+                reasoning_content=completion.content.strip(),
+                tool_calls=completion.tool_calls,
+                finish_reason=completion.finish_reason,
+            )
+
         self._runtime.log_info(str(completion))
         return completion
 

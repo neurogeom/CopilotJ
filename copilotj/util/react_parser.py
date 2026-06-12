@@ -22,6 +22,8 @@ from copilotj.core import (
     TextMessage,
     Tool,
     ToolCall,
+    ToolCallMessage,
+    ToolResultMessage,
 )
 
 __all__ = ["ReActChatCompletionClient", "ModelSyntaxError"]
@@ -84,13 +86,14 @@ class ReActChatCompletionClient(ModelClient):
     @override
     async def create(
         self,
-        messages: Sequence[TextMessage | ImageMessage],
+        messages: Sequence[TextMessage | ImageMessage | ToolCallMessage | ToolResultMessage],
         *,
         tools: list[Tool] | None = None,
         extra_args: dict[str, Any] | None = None,
     ) -> ModelResponse:
         # NOTE: dont send tools since we are parsing the response manually
-        response = await self._model_client.create(messages, extra_args=extra_args)
+        converted = self._convert_messages(messages)
+        response = await self._model_client.create(converted, extra_args=extra_args)
         if response.reasoning_content is not None or response.content is None:
             return response
 
@@ -136,7 +139,7 @@ class ReActChatCompletionClient(ModelClient):
     @override
     async def create_stream(
         self,
-        messages: Sequence[TextMessage | ImageMessage],
+        messages: Sequence[TextMessage | ImageMessage | ToolCallMessage | ToolResultMessage],
         *,
         tools: list[Tool] | None = None,
         extra_args: dict[str, Any] | None = None,
@@ -144,7 +147,8 @@ class ReActChatCompletionClient(ModelClient):
         tools = tools or []
 
         # NOTE: dont send tools since we are parsing the response manually
-        stream = self._model_client.create_stream(messages, tools=None, extra_args=extra_args)
+        converted = self._convert_messages(messages)
+        stream = self._model_client.create_stream(converted, tools=None, extra_args=extra_args)
 
         buffer = ""
         state = _StreamingState.Init
@@ -234,6 +238,32 @@ class ReActChatCompletionClient(ModelClient):
 
             case _:
                 raise ValueError(f"Unexpected last item type: {type(last)}")
+
+    @staticmethod
+    def _convert_messages(
+        messages: Sequence[TextMessage | ImageMessage | ToolCallMessage | ToolResultMessage],
+    ) -> list[TextMessage | ImageMessage]:
+        """Convert ToolCallMessage/ToolResultMessage back to TextMessage for ReAct mode.
+
+        Reconstructs the ReAct text format so the underlying model client only
+        sees plain TextMessage and ImageMessage objects.
+        """
+        result: list[TextMessage | ImageMessage] = []
+        for msg in messages:
+            if isinstance(msg, ToolCallMessage):
+                parts: list[str] = []
+                if msg.reasoning_content:
+                    parts.append(f"Thought: {msg.reasoning_content.strip()}")
+                for tc in msg.tool_calls:
+                    args_json = json.dumps(tc.arguments, ensure_ascii=False)
+                    parts.append(f'Action: {{"name": "{tc.name}", "args": {args_json}}}')
+                if parts:
+                    result.append(TextMessage(role="assistant", text="\n".join(parts)))
+            elif isinstance(msg, ToolResultMessage):
+                result.append(TextMessage(role="user", text=f"Observation:\n{msg.content}"))
+            else:
+                result.append(msg)
+        return result
 
     def _fsm_init(
         self, buffer: str, *, tools: list[Tool]
