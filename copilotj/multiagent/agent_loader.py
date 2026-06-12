@@ -10,7 +10,9 @@ import tomllib
 
 from copilotj.core import FunctionTool, ModelClient, Tool
 from copilotj.core.config import Config
+from copilotj.core.model_client import detect_tool_call_mode
 from copilotj.multiagent.Executor import Executor
+from copilotj.util.prompt_template import render_prompt
 
 __all__ = ["load_agent_configs"]
 
@@ -100,9 +102,13 @@ def _load_agent_configs(glob_pattern: str, *, model_client: ModelClient, cfg: Co
 
             _log.info("Loaded tools for %s: %s", name, list(agent_tools))
 
+            # Render prompt template with detected tool_call_mode
+            tool_call_mode = detect_tool_call_mode(model_client)
+            rendered_prompt = render_prompt(prompt, tool_call_mode=tool_call_mode)
+
             # Create agent instance with tool descriptions
             agents[name] = agent_class(
-                name=name, description=description, prompt=prompt, tools=agent_tools, model_client=model_client
+                name=name, description=description, prompt=rendered_prompt, tools=agent_tools, model_client=model_client
             )
             _log.info("Successfully loaded agent: %s", name)
 

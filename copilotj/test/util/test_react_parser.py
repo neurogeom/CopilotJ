@@ -6,7 +6,13 @@ import asyncio
 from collections.abc import AsyncGenerator, Sequence
 from typing import Any, override
 
-from copilotj.core.message import ImageMessage, TextMessage
+from copilotj.core.message import (
+    ImageMessage,
+    TextMessage,
+    ToolCallMessage,
+    ToolCallRecord,
+    ToolResultMessage,
+)
 from copilotj.core.model_client import ModelClient, ModelResponse, ModelResponseChunk, ModelSyntaxError, ToolCall
 from copilotj.core.tool import FunctionTool, Tool
 from copilotj.util.react_parser import ReActChatCompletionClient, _build_last_line_prefix_regex
@@ -330,3 +336,152 @@ async def _collect_stream(client: ReActChatCompletionClient, tools: list[Tool]) 
     async for item in client.create_stream([TextMessage(role="user", text="help")], tools=tools):
         items.append(item)
     return items
+
+
+# --- _convert_messages tests ---
+
+
+def test_convert_tool_call_message_with_thought():
+    messages = [
+        ToolCallMessage(
+            reasoning_content="I need to look something up",
+            tool_calls=[ToolCallRecord(id="tc1", name="lookup", arguments={"query": "cells"})],
+        )
+    ]
+    result = ReActChatCompletionClient._convert_messages(messages)
+
+    assert len(result) == 1
+    assert isinstance(result[0], TextMessage)
+    assert result[0].role == "assistant"
+    assert "Thought: I need to look something up" in result[0].text
+    assert 'Action: {"name": "lookup"' in result[0].text
+
+
+def test_convert_tool_call_message_without_thought():
+    messages = [ToolCallMessage(tool_calls=[ToolCallRecord(id="tc1", name="lookup", arguments={"query": "cells"})])]
+    result = ReActChatCompletionClient._convert_messages(messages)
+
+    assert len(result) == 1
+    assert isinstance(result[0], TextMessage)
+    assert "Thought:" not in result[0].text
+    assert 'Action: {"name": "lookup"' in result[0].text
+
+
+def test_convert_tool_result_message():
+    messages = [ToolResultMessage(tool_call_id="tc1", content="found 42 items")]
+    result = ReActChatCompletionClient._convert_messages(messages)
+
+    assert len(result) == 1
+    assert isinstance(result[0], TextMessage)
+    assert result[0].role == "user"
+    assert result[0].text == "Observation:\nfound 42 items"
+
+
+def test_convert_mixed_messages():
+    messages = [
+        TextMessage(role="user", text="hello"),
+        ToolCallMessage(
+            reasoning_content="thinking",
+            tool_calls=[ToolCallRecord(id="tc1", name="lookup", arguments={"query": "x"})],
+        ),
+        ToolResultMessage(tool_call_id="tc1", content="result text"),
+        TextMessage(role="assistant", text="done"),
+    ]
+    result = ReActChatCompletionClient._convert_messages(messages)
+
+    assert len(result) == 4
+    # First: TextMessage passed through
+    assert isinstance(result[0], TextMessage)
+    assert result[0].text == "hello"
+    # Second: ToolCallMessage → TextMessage with Thought + Action
+    assert isinstance(result[1], TextMessage)
+    assert "Thought: thinking" in result[1].text
+    assert "Action:" in result[1].text
+    # Third: ToolResultMessage → TextMessage with Observation
+    assert isinstance(result[2], TextMessage)
+    assert result[2].text == "Observation:\nresult text"
+    # Fourth: TextMessage passed through
+    assert isinstance(result[3], TextMessage)
+    assert result[3].text == "done"
+
+
+def test_convert_empty_tool_calls_list():
+    messages = [ToolCallMessage(tool_calls=[])]
+    result = ReActChatCompletionClient._convert_messages(messages)
+
+    # Empty tool_calls with no reasoning_content → empty parts → no message
+    assert len(result) == 0
+
+
+def test_convert_preserves_non_tool_messages():
+    messages = [
+        TextMessage(role="user", text="question"),
+        ImageMessage(role="user", image="data:image/png;base64,abc"),
+    ]
+    result = ReActChatCompletionClient._convert_messages(messages)
+
+    assert len(result) == 2
+    assert isinstance(result[0], TextMessage)
+    assert result[0].text == "question"
+    assert isinstance(result[1], ImageMessage)
+    assert result[1].image == "data:image/png;base64,abc"
+
+
+class _CapturingStubClient(ModelClient):
+    """Stub that records the messages it receives."""
+
+    def __init__(self):
+        self.received_messages = None
+
+    @override
+    def get_model(self) -> str:
+        return "stub"
+
+    @override
+    def get_api_key(self) -> str | None:
+        return None
+
+    @override
+    async def create(
+        self,
+        messages,
+        *,
+        tools: list[Tool] | None = None,
+        extra_args: dict[str, Any] | None = None,
+    ) -> ModelResponse:
+        self.received_messages = messages
+        return ModelResponse(
+            reasoning_content=None, content="Final Answer: done", tool_calls=None, finish_reason="stop"
+        )
+
+    @override
+    async def create_stream(self, messages, *, tools=None, extra_args=None):
+        return
+        yield  # make this an async generator  # noqa: RET503
+
+
+def test_create_converts_messages_before_forwarding():
+    stub = _CapturingStubClient()
+    client = ReActChatCompletionClient(stub)
+
+    tool_messages = [
+        TextMessage(role="user", text="help"),
+        ToolCallMessage(
+            reasoning_content="thinking",
+            tool_calls=[ToolCallRecord(id="tc1", name="lookup", arguments={"query": "x"})],
+        ),
+        ToolResultMessage(tool_call_id="tc1", content="observed"),
+    ]
+
+    asyncio.run(client.create(tool_messages, tools=[]))
+
+    # The stub should have received only TextMessage/ImageMessage
+    assert stub.received_messages is not None
+    for msg in stub.received_messages:
+        assert isinstance(msg, (TextMessage, ImageMessage)), f"Unexpected type: {type(msg)}"
+
+    # Verify reconstructed content
+    # The ToolCallMessage should have been converted to a TextMessage with Action:
+    assert any("Action:" in m.text for m in stub.received_messages if isinstance(m, TextMessage))
+    # The ToolResultMessage should have been converted to a TextMessage with Observation:
+    assert any("Observation:" in m.text for m in stub.received_messages if isinstance(m, TextMessage))
