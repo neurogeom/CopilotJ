@@ -20,7 +20,7 @@ from copilotj.core.model_client._types import (
 
 # Provider clients
 from copilotj.core.model_client.anthropic import AnthropicChatCompletionClient
-from copilotj.core.model_client.gemini import GeminiChatCompletionClient, GeminiResponseClient
+from copilotj.core.model_client.gemini import GeminiChatCompletionClient
 from copilotj.core.model_client.ollama import OllamaChatCompletionClient
 from copilotj.core.model_client.openai_chat_completion import OpenAIChatCompletionClient
 from copilotj.core.model_client.openai_response import OpenAIResponseClient
@@ -40,7 +40,6 @@ __all__ = [
     "OpenAIChatCompletionClient",
     "OpenAIResponseClient",
     "GeminiChatCompletionClient",
-    "GeminiResponseClient",
     "OllamaChatCompletionClient",
     "AnthropicChatCompletionClient",
     # Factory functions
@@ -102,7 +101,7 @@ def _resolve_client(
         case "anthropic":
             return AnthropicChatCompletionClient(model, api_key, base_url=base_url, proxy=proxy)
         case "gemini":
-            return GeminiChatCompletionClient(model, api_key, proxy=proxy)
+            return GeminiChatCompletionClient(model, api_key, proxy=proxy, base_url=base_url)
         case "ollama":
             return OllamaChatCompletionClient(model=model, base_url=base_url)
         case "deepseek":
@@ -151,7 +150,7 @@ def _new_model_client(
         return OpenAIChatCompletionClient(model=model_name, api_key=api_key, base_url=url, proxy=proxy)
 
     elif model.startswith("gemini-"):
-        return GeminiChatCompletionClient(model, api_key, proxy=proxy)
+        return GeminiChatCompletionClient(model, api_key, proxy=proxy, base_url=base_url)
 
     elif model.startswith("claude-"):
         return AnthropicChatCompletionClient(model, api_key, base_url=base_url, proxy=proxy)
