@@ -33,6 +33,45 @@ THREAD_LOCK_TIMEOUT = 0.3
 
 _log = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# OTEL instrumentation for Langfuse tracing
+# ---------------------------------------------------------------------------
+# After `langfuse.Langfuse()` creates the global TracerProvider, calling
+# `.instrument()` on these instrumentors makes all Anthropic / Gemini SDK
+# calls automatically emit OTEL spans that Langfuse picks up.
+# ---------------------------------------------------------------------------
+
+_otel_instrumented = False
+
+
+def _setup_otel_instrumentation() -> None:
+    """Initialize OTEL instrumentors for Anthropic and Gemini SDKs.
+
+    Safe to call multiple times (idempotent).  Each instrumentor is wrapped
+    in ``try/except ImportError`` so the server starts even if the OTEL
+    packages are not installed.
+    """
+    global _otel_instrumented
+    if _otel_instrumented:
+        return
+    _otel_instrumented = True
+
+    try:
+        from opentelemetry.instrumentation.anthropic import AnthropicInstrumentor
+
+        AnthropicInstrumentor().instrument()
+        _log.debug("OTEL Anthropic instrumentor enabled")
+    except ImportError:
+        _log.debug("opentelemetry-instrumentation-anthropic not installed, skipping")
+
+    try:
+        from openinference.instrumentation.google_genai import GoogleGenAIInstrumentor
+
+        GoogleGenAIInstrumentor().instrument()
+        _log.debug("OTEL Google GenAI instrumentor enabled")
+    except ImportError:
+        _log.debug("openinference-instrumentation-google-genai not installed, skipping")
+
 
 dumpable = str | int | float | bool | pydantic.BaseModel
 
@@ -301,6 +340,7 @@ class Threads:
         self._threads: dict[str, tuple[_Thread, threading.Lock]] = {}
         self._threads_lock = threading.Lock()
         self._trace_ctx = langfuse.Langfuse()
+        _setup_otel_instrumentation()
 
     def update_cfg(self, cfg: Config) -> None:
         """Update the stored config (e.g. after async vision resolution)."""
