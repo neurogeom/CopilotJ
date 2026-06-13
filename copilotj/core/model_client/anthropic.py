@@ -26,6 +26,12 @@ logger = logging.getLogger(__name__)
 
 _DATA_URL_RE = re.compile(r"^data:(image/[^;]+);base64,(.+)$", re.DOTALL)
 
+# Ephemeral prompt-cache breakpoint (5-minute TTL). Tagged onto the last system
+# block (caches tools+system) and the last message content block (caches the
+# growing conversation prefix) in _format_messages. Two breakpoints, within the
+# Anthropic 4-breakpoint-per-request limit.
+_CACHE_CONTROL = {"type": "ephemeral"}
+
 
 class AnthropicChatCompletionClient(ModelClient):
     """Anthropic/Claude client using the native ``anthropic`` SDK.
@@ -159,6 +165,16 @@ class AnthropicChatCompletionClient(ModelClient):
                 anthropic_messages[-1]["content"].append(content_block)
             else:
                 anthropic_messages.append({"role": msg.role, "content": [content_block]})
+
+        # Tag the last system block and the last message content block as cache
+        # breakpoints. The system breakpoint caches tools+system (stable across a
+        # run); the message breakpoint caches the growing conversation prefix.
+        # Two breakpoints, within the 4-breakpoint limit.
+        # PERF: It should be added at the AI level, not at the API level.
+        if system_parts:
+            system_parts[-1]["cache_control"] = _CACHE_CONTROL
+        if anthropic_messages:
+            anthropic_messages[-1]["content"][-1]["cache_control"] = _CACHE_CONTROL
 
         return system_parts or anthropic.NOT_GIVEN, anthropic_messages
 
