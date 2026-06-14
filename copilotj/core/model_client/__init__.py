@@ -110,6 +110,9 @@ def _resolve_client(
         case "siliconflow":
             url = base_url or "https://api.siliconflow.cn/v1"
             return OpenAIChatCompletionClient(model, api_key, base_url=url, proxy=proxy)
+        case "openrouter":
+            url = base_url or "https://openrouter.ai/api/v1"
+            return OpenAIChatCompletionClient(model=model, api_key=api_key, base_url=url, proxy=proxy)
         case "openai-compatible":
             return OpenAIChatCompletionClient(model, api_key, base_url=base_url, proxy=proxy)
 

@@ -50,16 +50,17 @@ async def _fetch_ollama_tags(base_url: str, *, timeout: float) -> dict[str, Any]
         return None
 
 
-async def list_ollama_models(base_url: str, *, timeout: float = 2.0) -> list[CatalogModel]:
+async def list_ollama_models(base_url: str, *, timeout: float = 2.0) -> list[CatalogModel] | None:
     """List models installed on a local Ollama instance.
 
     Performs a live ``GET {base_url}/api/tags``.  Ollama runs locally, so we
-    request on demand without caching.  Returns an empty list on any error or
-    timeout (e.g. Ollama not running).
+    request on demand without caching.  Returns ``None`` when Ollama is
+    unreachable (not running / connection refused / timeout), or the list of
+    installed models otherwise (empty when reachable but nothing is pulled).
     """
     data = await _fetch_ollama_tags(base_url, timeout=timeout)
     if not isinstance(data, dict):
-        return []
+        return None
 
     models: list[CatalogModel] = []
     for entry in data.get("models", []):
@@ -97,8 +98,9 @@ async def list_provider_models(provider: str, *, base_url: str | None = None) ->
     """Resolve available models for *provider* into a uniform dict.
 
     - ``ollama`` → live ``/api/tags`` at ``base_url`` (default
-      :data:`DEFAULT_OLLAMA_URL`); ``source`` is ``"live"`` when models are
-      returned, else ``"unavailable"`` (Ollama not reachable / no models).
+      :data:`DEFAULT_OLLAMA_URL`); ``source`` is ``"live"`` when Ollama is
+      reachable (empty list when no models are pulled), or ``"unreachable"``
+      when the request fails (Ollama not running / refused / timeout).
     - any other provider → filtered LiteLLM catalog; ``source`` is
       ``"catalog"`` (empty list when nothing matches).
 
@@ -106,9 +108,11 @@ async def list_provider_models(provider: str, *, base_url: str | None = None) ->
     """
     if provider == "ollama":
         models = await list_ollama_models(base_url or DEFAULT_OLLAMA_URL)
+        if models is None:
+            return {"provider": provider, "source": "unreachable", "models": []}
         return {
             "provider": provider,
-            "source": "live" if models else "unavailable",
+            "source": "live",
             "models": [_model_to_dict(m) for m in models],
         }
 

@@ -233,8 +233,8 @@ class Server:
           ignored for catalog providers.
 
         Cloud providers come from the cached LiteLLM catalog; Ollama is queried
-        live.  Never returns 5xx — provider failures surface as
-        ``source: "unavailable"`` with an empty model list.
+        live.  Never returns 5xx — Ollama being unreachable surfaces as
+        ``source: "unreachable"`` with an empty model list.
         """
         from copilotj.core.model_listing import list_provider_models
 
@@ -245,8 +245,10 @@ class Server:
             result = await list_provider_models(provider, base_url=base_url)
             return web.json_response(result)
 
-        # Grouped: resolve all supported providers concurrently.
-        providers = ["openai", "anthropic", "gemini", "ollama"]
+        # Grouped: resolve all supported providers concurrently. Catalog-backed
+        # cloud providers (incl. DeepSeek / OpenRouter) are listed so the model
+        # picker can offer autocomplete for them; Ollama is queried live.
+        providers = ["openai", "anthropic", "gemini", "deepseek", "openrouter", "ollama"]
         results = await asyncio.gather(*(list_provider_models(p, base_url=base_url) for p in providers))
         return web.json_response({"providers": {r["provider"]: r for r in results}})
 

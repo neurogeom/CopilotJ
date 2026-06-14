@@ -8,7 +8,14 @@ SPDX-License-Identifier: Apache-2.0
 import { computed, ref, watch } from "vue";
 import { IconAlertTriangle, IconChevronDown, IconChevronRight } from "@tabler/icons-vue";
 import { getModelCapabilities } from "../apis";
-import { PROVIDER_OPTIONS, inferProvider } from "../composables";
+import {
+  PROVIDER_OPTIONS,
+  inferProvider,
+  resolveBaseUrl,
+  hasCustomBaseUrl,
+  persistBaseUrl,
+  getDefaultBaseUrl,
+} from "../composables";
 
 const props = defineProps<{
   useMainModel: boolean;
@@ -42,9 +49,15 @@ const checkingVision = ref(false);
 const useMainModel = ref(props.useMainModel);
 const model = ref(props.model || "");
 const apiKey = ref(props.apiKey || "");
-const baseUrl = ref(props.baseUrl || "");
 const provider = ref(props.provider || (props.model ? inferProvider(props.model) : ""));
-const showAdvanced = ref(!!baseUrl.value);
+// Show the effective endpoint (stored override or the provider default), but
+// only reveal "Advanced settings" for a genuine override.
+const baseUrl = ref(resolveBaseUrl(provider.value, props.baseUrl));
+const showAdvanced = ref(hasCustomBaseUrl(provider.value, props.baseUrl));
+
+// Template ref to the Ollama model picker so the Base URL field can trigger an
+// immediate refresh on blur via the picker's exposed reloadOllama().
+const ollamaModelRef = ref<{ reloadOllama: () => void } | null>(null);
 
 const isOllamaModel = computed(() => model.value.startsWith("ollama/"));
 
@@ -70,9 +83,11 @@ async function checkVisionSupport(modelName: string | null) {
 
 watch(() => props.mainModelName, checkVisionSupport, { immediate: true });
 
-// Clear the model when the user switches provider — models are provider-specific.
+// Clear the model and pre-fill the provider's default base URL when the user
+// switches provider — models and endpoints are provider-specific.
 function onProviderChange() {
   model.value = "";
+  baseUrl.value = getDefaultBaseUrl(provider.value);
 }
 
 function getVlmValue() {
@@ -80,7 +95,7 @@ function getVlmValue() {
     useMainModel: useMainModel.value,
     model: useMainModel.value ? null : model.value,
     apiKey: useMainModel.value ? null : isOllamaModel.value ? null : apiKey.value || null,
-    baseUrl: useMainModel.value ? null : baseUrl.value || null,
+    baseUrl: useMainModel.value ? null : persistBaseUrl(provider.value, baseUrl.value),
     provider: useMainModel.value ? null : provider.value || inferProvider(model.value),
     visionEnabled: agreed.value,
   };
@@ -186,11 +201,18 @@ defineExpose({ isValid, getVlmValue });
               v-model="baseUrl"
               inputId="vlmBaseUrl"
               placeholder="http://localhost:11434"
+              @blur="ollamaModelRef?.reloadOllama()"
               class="w-full"
             />
           </FormItem>
           <FormItem for="vlmModel" label="Model" required>
-            <ModelAutoComplete v-model="model" inputId="vlmModel" :provider="provider" :base-url="baseUrl" />
+            <ModelAutoComplete
+              ref="ollamaModelRef"
+              v-model="model"
+              inputId="vlmModel"
+              :provider="provider"
+              :base-url="baseUrl"
+            />
           </FormItem>
         </template>
 

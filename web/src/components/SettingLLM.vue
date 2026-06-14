@@ -8,7 +8,14 @@ SPDX-License-Identifier: Apache-2.0
 import { computed, ref, watch } from "vue";
 import { IconChevronDown, IconChevronRight } from "@tabler/icons-vue";
 import type { ThreadConfigModel } from "../apis";
-import { PROVIDER_OPTIONS, inferProvider } from "../composables";
+import {
+  PROVIDER_OPTIONS,
+  inferProvider,
+  resolveBaseUrl,
+  hasCustomBaseUrl,
+  persistBaseUrl,
+  getDefaultBaseUrl,
+} from "../composables";
 
 const props = defineProps<{
   model: ThreadConfigModel | null;
@@ -35,22 +42,28 @@ watch(
     if (newModel) {
       model.value = newModel.name || "";
       apiKey.value = newModel.api_key || "";
-      baseUrl.value = newModel.base_url || "";
       provider.value = newModel.provider || inferProvider(newModel.name || "");
+      // Show the effective endpoint (stored override or the provider default),
+      // but only reveal "Advanced settings" for a genuine override.
+      const stored = newModel.base_url || "";
+      baseUrl.value = resolveBaseUrl(provider.value, stored);
+      showAdvanced.value = hasCustomBaseUrl(provider.value, stored);
     } else {
       model.value = "";
       apiKey.value = "";
       baseUrl.value = "";
       provider.value = "";
+      showAdvanced.value = false;
     }
-    showAdvanced.value = !!baseUrl.value;
   },
   { immediate: true },
 );
 
-// Clear the model when the user switches provider — models are provider-specific.
+// Clear the model and pre-fill the provider's default base URL when the user
+// switches provider — models and endpoints are provider-specific.
 function onProviderChange() {
   model.value = "";
+  baseUrl.value = getDefaultBaseUrl(provider.value);
 }
 
 function submit() {
@@ -62,7 +75,7 @@ function submit() {
     emit("update:model", {
       name: model.value,
       api_key: isOllamaModel.value ? null : apiKey.value || null,
-      base_url: baseUrl.value || null,
+      base_url: persistBaseUrl(provider.value, baseUrl.value),
       provider: provider.value || inferProvider(model.value),
     });
   }

@@ -8,7 +8,14 @@ SPDX-License-Identifier: Apache-2.0
 import { computed, ref, watch } from "vue";
 import { IconChevronDown, IconChevronRight } from "@tabler/icons-vue";
 import type { ServerConfig, ThreadConfigModel } from "../apis";
-import { PROVIDER_OPTIONS, inferProvider } from "../composables";
+import {
+  PROVIDER_OPTIONS,
+  inferProvider,
+  resolveBaseUrl,
+  hasCustomBaseUrl,
+  persistBaseUrl,
+  getDefaultBaseUrl,
+} from "../composables";
 
 const props = defineProps<{
   model: ThreadConfigModel | null;
@@ -25,6 +32,10 @@ const baseUrl = ref("");
 const provider = ref("");
 const showAdvanced = ref(false);
 
+// Template ref to the Ollama model picker so the Base URL field can trigger an
+// immediate refresh on blur via the picker's exposed reloadOllama().
+const ollamaModelRef = ref<{ reloadOllama: () => void } | null>(null);
+
 const isOllamaModel = computed(() => model.value.startsWith("ollama/"));
 
 const isValid = computed(() => !!model.value);
@@ -33,32 +44,37 @@ const isValid = computed(() => !!model.value);
 watch(
   [() => props.serverConfig, () => props.model],
   ([cfg, existingModel]) => {
+    let stored = "";
     if (cfg?.model) {
       model.value = cfg.model.name || "";
-      baseUrl.value = cfg.model.base_url || "";
       provider.value = cfg.model.provider || inferProvider(cfg.model.name || "");
+      stored = cfg.model.base_url || "";
     } else if (existingModel) {
       model.value = existingModel.name || "";
       apiKey.value = existingModel.api_key || "";
-      baseUrl.value = existingModel.base_url || "";
       provider.value = existingModel.provider || inferProvider(existingModel.name || "");
+      stored = existingModel.base_url || "";
     }
-    // Reveal Advanced when an existing base URL is present.
-    showAdvanced.value = !!baseUrl.value;
+    // Show the effective endpoint (stored override or the provider default),
+    // but only reveal "Advanced settings" for a genuine override.
+    baseUrl.value = resolveBaseUrl(provider.value, stored);
+    showAdvanced.value = hasCustomBaseUrl(provider.value, stored);
   },
   { immediate: true },
 );
 
-// Clear the model when the user switches provider — models are provider-specific.
+// Clear the model and pre-fill the provider's default base URL when the user
+// switches provider — models and endpoints are provider-specific.
 function onProviderChange() {
   model.value = "";
+  baseUrl.value = getDefaultBaseUrl(provider.value);
 }
 
 function getModelValue(): ThreadConfigModel {
   return {
     name: model.value,
     api_key: isOllamaModel.value ? null : apiKey.value || null,
-    base_url: baseUrl.value || null,
+    base_url: persistBaseUrl(provider.value, baseUrl.value),
     provider: provider.value || inferProvider(model.value),
   };
 }
@@ -91,11 +107,18 @@ defineExpose({ isValid, getModelValue });
           v-model="baseUrl"
           inputId="baseUrl"
           placeholder="http://localhost:11434"
+          @blur="ollamaModelRef?.reloadOllama()"
           class="w-full"
         />
       </FormItem>
       <FormItem for="model" label="Model" required>
-        <ModelAutoComplete v-model="model" inputId="model" :provider="provider" :base-url="baseUrl" />
+        <ModelAutoComplete
+          ref="ollamaModelRef"
+          v-model="model"
+          inputId="model"
+          :provider="provider"
+          :base-url="baseUrl"
+        />
       </FormItem>
     </template>
 
