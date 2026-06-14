@@ -113,6 +113,50 @@ class CatalogModel:
 
 
 # ---------------------------------------------------------------------------
+# Locally maintained model entries
+# ---------------------------------------------------------------------------
+#
+# Newest models that are not yet in the upstream LiteLLM catalog. These are
+# merged into the catalog listing by :func:`list_catalog_models` and silently
+# dropped once the catalog catches up (deduped by model id, catalog wins). Keep
+# this minimal — only models the catalog is missing — and prune entries as the
+# upstream catalog adds them. Capabilities left as conservative defaults
+# (vision=False, function_calling=True, context_window=None) rather than
+# guessing unverified specs.
+_SUPPLEMENTAL_MODELS: dict[str, list[CatalogModel]] = {
+    # DeepSeek-V4 (Preview, released 2026-04-24) is absent from the upstream
+    # catalog as of 2026-06 — see BerriAI/litellm#26709, #28309 and the unmerged
+    # PRs #26380 / #27056. Remove these once `deepseek/deepseek-v4*` ships there.
+    "deepseek": [
+        CatalogModel(
+            id="deepseek-v4",
+            label="deepseek-v4",
+            provider="deepseek",
+            supports_vision=False,
+            supports_function_calling=True,
+            context_window=None,
+        ),
+        CatalogModel(
+            id="deepseek-v4-pro",
+            label="deepseek-v4-pro",
+            provider="deepseek",
+            supports_vision=False,
+            supports_function_calling=True,
+            context_window=None,
+        ),
+        CatalogModel(
+            id="deepseek-v4-flash",
+            label="deepseek-v4-flash",
+            provider="deepseek",
+            supports_vision=False,
+            supports_function_calling=True,
+            context_window=None,
+        ),
+    ],
+}
+
+
+# ---------------------------------------------------------------------------
 # Cache helpers
 # ---------------------------------------------------------------------------
 
@@ -400,6 +444,26 @@ def supports_vision(model: str) -> bool:
     return get_model_capabilities(model).supports_vision
 
 
+def _merge_supplements(provider: str, catalog_models: list[CatalogModel]) -> list[CatalogModel]:
+    """Merge locally-maintained entries (see :data:`_SUPPLEMENTAL_MODELS`) into *catalog_models*.
+
+    Catalog entries win: a supplemental entry whose id already exists in the
+    catalog is dropped, so this becomes a no-op for a provider once the upstream
+    catalog catches up. Result is sorted by id.
+    """
+    extras = _SUPPLEMENTAL_MODELS.get(provider)
+    if not extras:
+        return catalog_models
+    seen = {m.id for m in catalog_models}
+    merged = list(catalog_models)
+    for model in extras:
+        if model.id not in seen:
+            merged.append(model)
+            seen.add(model.id)
+    merged.sort(key=lambda m: m.id)
+    return merged
+
+
 def list_catalog_models(provider: str) -> list[CatalogModel]:
     """Return chat models from the cached LiteLLM catalog for *provider*.
 
@@ -408,14 +472,16 @@ def list_catalog_models(provider: str) -> list[CatalogModel]:
     (keys starting with ``ft:``), strips a leading ``{provider}/`` prefix
     from the key to form the bare model id (e.g. ``gemini/gemini-2.5-pro``
     -> ``gemini-2.5-pro``), and returns the result sorted by id with
-    duplicates removed.  Returns an empty list when the catalog is
-    unavailable or no entries match.
+    duplicates removed.  Locally maintained entries for models the upstream
+    catalog has not yet added (see :data:`_SUPPLEMENTAL_MODELS`) are merged
+    in, with catalog entries taking precedence.  Returns only those
+    supplemental entries when the catalog is unavailable.
     """
     db = _load_db()
     if not db:
         db = _download_db_sync()
     if not db:
-        return []
+        return _merge_supplements(provider, [])
 
     prefix = f"{provider}/"
     seen: set[str] = set()
@@ -445,7 +511,7 @@ def list_catalog_models(provider: str) -> list[CatalogModel]:
         )
 
     models.sort(key=lambda m: m.id)
-    return models
+    return _merge_supplements(provider, models)
 
 
 async def ensure_model_db_async() -> bool:

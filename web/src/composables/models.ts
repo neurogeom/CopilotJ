@@ -15,8 +15,54 @@ export const PROVIDER_OPTIONS = [
   { label: "Ollama (local)", value: "ollama" },
   { label: "DeepSeek", value: "deepseek" },
   { label: "SiliconFlow", value: "siliconflow" },
+  { label: "OpenRouter", value: "openrouter" },
   { label: "OpenAI-compatible", value: "openai-compatible" },
 ];
+
+/**
+ * Default API base URL for OpenAI-compatible providers whose endpoint is fixed
+ * and publicly known (DeepSeek / SiliconFlow / OpenRouter) plus Ollama's local
+ * host. Cloud providers whose SDK picks its own endpoint (OpenAI / Anthropic /
+ * Gemini) are intentionally absent — getDefaultBaseUrl returns "" for them so
+ * the field stays blank unless overridden.
+ */
+const PROVIDER_BASE_URLS: Record<string, string> = {
+  ollama: "http://localhost:11434",
+  deepseek: "https://api.deepseek.com",
+  siliconflow: "https://api.siliconflow.cn/v1",
+  openrouter: "https://openrouter.ai/api/v1",
+};
+
+/** Default API base URL for *provider*, or "" when the SDK chooses its own. */
+export function getDefaultBaseUrl(provider: string): string {
+  return PROVIDER_BASE_URLS[provider] ?? "";
+}
+
+/**
+ * Resolve the base URL to display: the explicitly stored value, or the
+ * provider's default when none was configured — so the field always reflects
+ * the effective endpoint.
+ */
+export function resolveBaseUrl(provider: string, baseUrl: string | null | undefined): string {
+  const stored = (baseUrl ?? "").trim();
+  return stored || getDefaultBaseUrl(provider);
+}
+
+/** Whether *baseUrl* is a non-empty value that differs from the provider default. */
+export function hasCustomBaseUrl(provider: string, baseUrl: string | null | undefined): boolean {
+  const stored = (baseUrl ?? "").trim();
+  return !!stored && stored !== getDefaultBaseUrl(provider);
+}
+
+/**
+ * Return the base URL to persist, or null when it is empty or equal to the
+ * provider default — only genuine overrides are stored.
+ */
+export function persistBaseUrl(provider: string, baseUrl: string): string | null {
+  const trimmed = (baseUrl ?? "").trim();
+  if (!trimmed || trimmed === getDefaultBaseUrl(provider)) return null;
+  return trimmed;
+}
 
 interface ModelGroup {
   label: string;
@@ -68,6 +114,10 @@ export function useModelGroups(
   // provider value -> dropdown items (catalog providers + ollama)
   const itemsByProvider = ref<Record<string, { label: string; value: string }[]>>({});
   let ollamaTimer: ReturnType<typeof setTimeout> | undefined;
+  // Live status of the Ollama fetch, surfaced to the UI so failures are not
+  // silent: shows a loading spinner / "unreachable" / "reachable but empty".
+  const ollamaLoading = ref(false);
+  const ollamaSource = ref<string | undefined>();
 
   async function loadCatalogProviders() {
     try {
@@ -85,12 +135,17 @@ export function useModelGroups(
 
   async function loadOllama() {
     if (provider.value !== "ollama") return;
+    ollamaLoading.value = true;
     let items: { label: string; value: string }[] = [];
     try {
       const data = await listProviderModels("ollama", ollamaBaseUrl?.value);
+      ollamaSource.value = data.source;
       items = data.source === "live" ? toItems("ollama", data.models) : [];
     } catch {
+      ollamaSource.value = "unreachable";
       items = [];
+    } finally {
+      ollamaLoading.value = false;
     }
     itemsByProvider.value = { ...itemsByProvider.value, ollama: items };
   }
@@ -108,6 +163,13 @@ export function useModelGroups(
     },
     { immediate: true },
   );
+
+  /** Re-fetch Ollama models immediately, bypassing the debounce (e.g. on blur). */
+  function reloadOllama() {
+    if (provider.value !== "ollama") return;
+    if (ollamaTimer) clearTimeout(ollamaTimer);
+    void loadOllama();
+  }
 
   const modelGroups = computed<ModelGroup[]>(() => {
     const groups: ModelGroup[] = [];
@@ -158,5 +220,18 @@ export function useModelGroups(
 
   const isOllamaModel = computed(() => currentModel.value.startsWith("ollama/"));
 
-  return { modelGroups, filteredGroups, suggestions, search, isOllamaModel };
+  // Single status for the Ollama model-picker footer, so the UI can render
+  // loading / unreachable / reachable-but-empty instead of an empty dropdown.
+  const ollamaStatus = computed<"idle" | "loading" | "unreachable" | "empty" | "ready">(() => {
+    if (provider.value !== "ollama") return "idle";
+    if (ollamaLoading.value) return "loading";
+    if (ollamaSource.value === "unreachable") return "unreachable";
+    if (ollamaSource.value === "live") {
+      const items = itemsByProvider.value.ollama;
+      return items && items.length > 0 ? "ready" : "empty";
+    }
+    return "idle";
+  });
+
+  return { modelGroups, filteredGroups, suggestions, search, isOllamaModel, ollamaStatus, reloadOllama };
 }

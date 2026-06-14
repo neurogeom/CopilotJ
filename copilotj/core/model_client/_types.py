@@ -36,6 +36,7 @@ type LLMProvider = Literal[
     "ollama",
     "deepseek",
     "siliconflow",
+    "openrouter",
     "openai-compatible",
 ]
 
@@ -47,6 +48,7 @@ _VALID_PROVIDERS = (
     "ollama",
     "deepseek",
     "siliconflow",
+    "openrouter",
     "openai-compatible",
 )
 

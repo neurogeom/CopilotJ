@@ -18,7 +18,7 @@ export interface ModelItem {
 
 export interface ProviderModels {
   provider: string;
-  /** "catalog" (LiteLLM DB) | "live" (Ollama reachable) | "unavailable" (Ollama not reachable). */
+  /** "catalog" (LiteLLM DB) | "live" (Ollama reachable) | "unreachable" (Ollama not reachable). */
   source: string;
   models: ModelItem[];
 }
