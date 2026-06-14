@@ -5,3 +5,4 @@
  */
 
 export * from "./threads";
+export * from "./models";

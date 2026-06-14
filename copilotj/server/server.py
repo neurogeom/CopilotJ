@@ -80,6 +80,7 @@ class Server:
         r.add_get("/api/ping", _on_ping)
         r.add_get("/api/config", self._on_config)
         r.add_get("/api/model/capabilities", self._on_model_capabilities)
+        r.add_get("/api/models", self._on_list_models)
         r.add_get("/api/plugins", self._bridge.on_plugin_connect)
         r.add_post("/api/plugins/events", self._bridge.on_forward_event)
         r.add_post("/api/threads", self._threads.new_thread)
@@ -221,6 +222,33 @@ class Server:
                 "vlm_configured": cfg.vlm_configured,
             }
         )
+
+    async def _on_list_models(self, request: web.Request) -> web.Response:
+        """List available models for one or all providers.
+
+        Query params:
+
+        - ``provider`` (optional): restrict to a single provider.
+        - ``base_url`` (optional): Ollama host (default ``http://localhost:11434``);
+          ignored for catalog providers.
+
+        Cloud providers come from the cached LiteLLM catalog; Ollama is queried
+        live.  Never returns 5xx — provider failures surface as
+        ``source: "unavailable"`` with an empty model list.
+        """
+        from copilotj.core.model_listing import list_provider_models
+
+        provider = request.query.get("provider")
+        base_url = request.query.get("base_url")
+
+        if provider:
+            result = await list_provider_models(provider, base_url=base_url)
+            return web.json_response(result)
+
+        # Grouped: resolve all supported providers concurrently.
+        providers = ["openai", "anthropic", "gemini", "ollama"]
+        results = await asyncio.gather(*(list_provider_models(p, base_url=base_url) for p in providers))
+        return web.json_response({"providers": {r["provider"]: r for r in results}})
 
 
 async def _on_ping(request: web.Request) -> web.Response:

@@ -4,7 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { computed, onMounted, type Ref, ref } from "vue";
+import { computed, onMounted, ref, watch, type Ref } from "vue";
+
+import { listModels, listProviderModels, type ModelItem } from "../apis";
 
 export const PROVIDER_OPTIONS = [
   { label: "OpenAI", value: "openai" },
@@ -22,45 +24,8 @@ interface ModelGroup {
   items: { label: string; value: string }[];
 }
 
-const staticGroups: ModelGroup[] = [
-  {
-    label: "Anthropic",
-    provider: "anthropic",
-    items: [
-      { label: "Claude Opus 4.6", value: "claude-opus-4-6" },
-      { label: "Claude Sonnet 4.6", value: "claude-sonnet-4-6" },
-      { label: "Claude Haiku 4.5", value: "claude-haiku-4-5-20251001" },
-    ],
-  },
-  {
-    label: "OpenAI",
-    provider: "openai",
-    items: [
-      { label: "GPT-5.4", value: "gpt-5.4" },
-      { label: "GPT-5.4 mini", value: "gpt-5.4-mini" },
-      { label: "GPT-5", value: "gpt-5" },
-      { label: "GPT-5 mini", value: "gpt-5-mini" },
-      { label: "GPT-5 nano", value: "gpt-5-nano" },
-      { label: "GPT-4.1", value: "gpt-4.1" },
-      { label: "GPT-4.1 mini", value: "gpt-4.1-mini" },
-      { label: "GPT-4.1 nano", value: "gpt-4.1-nano" },
-      { label: "GPT-4o", value: "gpt-4o" },
-      { label: "GPT-4o mini", value: "gpt-4o-mini" },
-    ],
-  },
-  {
-    label: "Google",
-    provider: "gemini",
-    items: [
-      { label: "Gemini 3.1 Pro", value: "gemini-3.1-pro-preview" },
-      { label: "Gemini 3 Flash", value: "gemini-3-flash-preview" },
-      { label: "Gemini 3.1 Flash Lite", value: "gemini-3.1-flash-lite-preview" },
-      { label: "Gemini 2.5 Pro", value: "gemini-2.5-pro" },
-      { label: "Gemini 2.5 Flash", value: "gemini-2.5-flash" },
-      { label: "Gemini 2.5 Flash Lite", value: "gemini-2.5-flash-lite" },
-    ],
-  },
-];
+/** Map a provider value to its display label (reuses PROVIDER_OPTIONS). */
+const PROVIDER_LABELS: Record<string, string> = Object.fromEntries(PROVIDER_OPTIONS.map((o) => [o.value, o.label]));
 
 /**
  * Infer a provider string from a model name, matching the backend's prefix-based detection.
@@ -77,31 +42,79 @@ export function inferProvider(modelName: string): string {
   return "openai-compatible";
 }
 
-export function useModelGroups(currentModel: Ref<string>, provider: Ref<string>) {
-  const ollamaModels = ref<string[]>([]);
+/** Convert server model items into dropdown {label, value} entries. */
+function toItems(provider: string, models: ModelItem[]): { label: string; value: string }[] {
+  return models.map((m) => ({
+    label: m.label,
+    value: provider === "ollama" ? `ollama/${m.id}` : m.id,
+  }));
+}
 
-  onMounted(async () => {
+/**
+ * Reactive model groups for the model picker, sourced from the server
+ * (`/api/models`). Cloud providers come from the cached catalog; Ollama is
+ * queried live whenever the active provider is `ollama`, using the supplied
+ * base URL (default localhost).
+ *
+ * @param currentModel  the currently selected model value (for the "Current" fallback)
+ * @param provider      the active provider (drives which groups are shown)
+ * @param ollamaBaseUrl optional Ollama host (only relevant when provider is `ollama`)
+ */
+export function useModelGroups(
+  currentModel: Ref<string>,
+  provider: Ref<string>,
+  ollamaBaseUrl?: Ref<string | undefined>,
+) {
+  // provider value -> dropdown items (catalog providers + ollama)
+  const itemsByProvider = ref<Record<string, { label: string; value: string }[]>>({});
+  let ollamaTimer: ReturnType<typeof setTimeout> | undefined;
+
+  async function loadCatalogProviders() {
     try {
-      const resp = await fetch("http://localhost:11434/api/tags", {
-        signal: AbortSignal.timeout(2000),
-      });
-      if (resp.ok) {
-        const data = await resp.json();
-        ollamaModels.value = (data.models ?? []).map((m: { name: string }) => m.name);
+      const data = await listModels();
+      const next: Record<string, { label: string; value: string }[]> = {};
+      for (const [p, pm] of Object.entries(data.providers)) {
+        if (p === "ollama") continue;
+        next[p] = toItems(p, pm.models);
       }
+      itemsByProvider.value = { ...itemsByProvider.value, ...next };
     } catch {
-      // Ollama not running or unavailable — silently ignore
+      // Server unreachable — leave groups empty; "Current" fallback still applies.
     }
-  });
+  }
 
-  const modelGroups = computed(() => {
-    const groups: ModelGroup[] = [...staticGroups];
-    if (ollamaModels.value.length > 0) {
-      groups.push({
-        label: "Ollama (local)",
-        provider: "ollama",
-        items: ollamaModels.value.map((m) => ({ label: m, value: `ollama/${m}` })),
-      });
+  async function loadOllama() {
+    if (provider.value !== "ollama") return;
+    let items: { label: string; value: string }[] = [];
+    try {
+      const data = await listProviderModels("ollama", ollamaBaseUrl?.value);
+      items = data.source === "live" ? toItems("ollama", data.models) : [];
+    } catch {
+      items = [];
+    }
+    itemsByProvider.value = { ...itemsByProvider.value, ollama: items };
+  }
+
+  onMounted(loadCatalogProviders);
+
+  // Ollama models depend on the host (and only matter for the ollama provider).
+  // A short debounce avoids firing a request on every keystroke of the base URL.
+  watch(
+    [() => provider.value, () => ollamaBaseUrl?.value],
+    () => {
+      if (provider.value !== "ollama") return;
+      if (ollamaTimer) clearTimeout(ollamaTimer);
+      ollamaTimer = setTimeout(loadOllama, 350);
+    },
+    { immediate: true },
+  );
+
+  const modelGroups = computed<ModelGroup[]>(() => {
+    const groups: ModelGroup[] = [];
+    for (const [p, items] of Object.entries(itemsByProvider.value)) {
+      if (items && items.length > 0) {
+        groups.push({ label: PROVIDER_LABELS[p] ?? p, provider: p, items });
+      }
     }
     // If the active model isn't in any group (e.g. set via .env.local), surface it
     // so the dropdown shows it rather than appearing blank.

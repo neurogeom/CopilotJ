@@ -26,9 +26,11 @@ import aiohttp
 from copilotj.core.config import get_home
 
 __all__ = [
+    "CatalogModel",
     "ModelCapabilities",
     "ensure_model_db_async",
     "get_model_capabilities",
+    "list_catalog_models",
     "supports_vision",
 ]
 
@@ -92,6 +94,22 @@ class ModelCapabilities:
     context_window: int | None
     max_output_tokens: int | None
     source: str  # "litellm_db" | "heuristic" | "unknown"
+
+
+@dataclass(frozen=True)
+class CatalogModel:
+    """A model entry surfaced for provider-based selection (e.g. dropdowns).
+
+    Unlike :class:`ModelCapabilities` (a per-name lookup), this is a flat
+    listing entry carrying the bare model id a provider expects.
+    """
+
+    id: str
+    label: str
+    provider: str
+    supports_vision: bool
+    supports_function_calling: bool
+    context_window: int | None
 
 
 # ---------------------------------------------------------------------------
@@ -380,6 +398,54 @@ def get_model_capabilities(model: str) -> ModelCapabilities:
 def supports_vision(model: str) -> bool:
     """Return ``True`` if *model* is known to support vision / image input."""
     return get_model_capabilities(model).supports_vision
+
+
+def list_catalog_models(provider: str) -> list[CatalogModel]:
+    """Return chat models from the cached LiteLLM catalog for *provider*.
+
+    Filters entries whose ``litellm_provider`` equals *provider* and whose
+    ``mode`` is ``chat`` or ``completion``, drops fine-tune placeholders
+    (keys starting with ``ft:``), strips a leading ``{provider}/`` prefix
+    from the key to form the bare model id (e.g. ``gemini/gemini-2.5-pro``
+    -> ``gemini-2.5-pro``), and returns the result sorted by id with
+    duplicates removed.  Returns an empty list when the catalog is
+    unavailable or no entries match.
+    """
+    db = _load_db()
+    if not db:
+        db = _download_db_sync()
+    if not db:
+        return []
+
+    prefix = f"{provider}/"
+    seen: set[str] = set()
+    models: list[CatalogModel] = []
+    for key, entry in db.items():
+        if not isinstance(entry, dict):
+            continue
+        if entry.get("litellm_provider") != provider:
+            continue
+        if entry.get("mode") not in ("chat", "completion"):
+            continue
+        if key.startswith("ft:"):
+            continue
+        model_id = key[len(prefix) :] if key.startswith(prefix) else key
+        if model_id in seen:
+            continue
+        seen.add(model_id)
+        models.append(
+            CatalogModel(
+                id=model_id,
+                label=model_id,
+                provider=provider,
+                supports_vision=bool(entry.get("supports_vision", False)),
+                supports_function_calling=bool(entry.get("supports_function_calling", False)),
+                context_window=entry.get("max_input_tokens") or entry.get("max_tokens"),
+            )
+        )
+
+    models.sort(key=lambda m: m.id)
+    return models
 
 
 async def ensure_model_db_async() -> bool:
