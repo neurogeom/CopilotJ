@@ -101,6 +101,7 @@ Task runner is [just](https://github.com/casey/just). Run `just` or `just --list
 - Prefer module-level imports over local imports inside function bodies. Avoid placing import statements inside functions unless required to address a heavy dependency or an unavoidable circular dependency.
 - Ruff config is in `pyproject.toml`: line-length 120, target Python 3.12, Google docstring convention.
 - The project uses `flake.nix` with `uv2nix` for reproducible Python environments. Direnv (`.envrc`) loads the nix shell automatically. The Python virtualenv is at `.venv/`.
+- Frontend icons: use **`@tabler/icons-vue`** — the only icon dependency in `web/`. Render Tabler icons as `<IconX size="16" />` (named component imports, e.g. `IconChevronRight`); color comes from the parent `text-*` class since icons use `currentColor`.
 
 ## Compact Instructions
 

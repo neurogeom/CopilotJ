@@ -15,11 +15,14 @@ const props = withDefaults(
     disabled?: boolean;
     inputId?: string;
     placeholder?: string;
+    /** Ollama host; only used when provider is "ollama" to list installed models. */
+    baseUrl?: string;
   }>(),
   {
     disabled: false,
     inputId: undefined,
     placeholder: "Select or type a model",
+    baseUrl: undefined,
   },
 );
 
@@ -36,6 +39,7 @@ const internalValue = ref<string | { label: string; value: string }>(props.model
 const committedModel = ref(props.modelValue);
 
 const providerRef = computed(() => props.provider);
+const baseUrlRef = computed(() => props.baseUrl);
 
 const { suggestions, search, isOllamaModel } = useModelGroups(
   computed(() => {
@@ -43,6 +47,7 @@ const { suggestions, search, isOllamaModel } = useModelGroups(
     return typeof v === "string" ? v : (v?.value ?? "");
   }),
   providerRef,
+  baseUrlRef,
 );
 
 // Sync incoming prop changes.
