@@ -24,6 +24,7 @@ from copilotj.core.model_client.gemini import GeminiChatCompletionClient
 from copilotj.core.model_client.ollama import OllamaChatCompletionClient
 from copilotj.core.model_client.openai_chat_completion import OpenAIChatCompletionClient
 from copilotj.core.model_client.openai_response import OpenAIResponseClient
+from copilotj.core.model_client.openrouter import OpenRouterChatCompletionClient
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,7 @@ __all__ = [
     "GeminiChatCompletionClient",
     "OllamaChatCompletionClient",
     "AnthropicChatCompletionClient",
+    "OpenRouterChatCompletionClient",
     # Factory functions
     "new_model_client",
     "new_vlm_model_client",
@@ -112,7 +114,7 @@ def _resolve_client(
             return OpenAIChatCompletionClient(model, api_key, base_url=url, proxy=proxy)
         case "openrouter":
             url = base_url or "https://openrouter.ai/api/v1"
-            return OpenAIChatCompletionClient(model=model, api_key=api_key, base_url=url, proxy=proxy)
+            return OpenRouterChatCompletionClient(model=model, api_key=api_key, base_url=url, proxy=proxy)
         case "openai-compatible":
             return OpenAIChatCompletionClient(model, api_key, base_url=base_url, proxy=proxy)
 
