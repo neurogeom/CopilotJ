@@ -23,27 +23,19 @@ We also provide a hosted version of the web frontend for users who prefer not to
 
 ### Install the CopilotJ Bridge plugin
 
-**Download prebuilt JAR files**:
+The ImageJ Updater is the recommended way to install and update the CopilotJ plugin. Simply add the CopilotJ update site (https://sites.imagej.net/CopilotJ/), and the plugin will be installed automatically.
 
-Download the precompiled JAR files for the CopilotJ Bridge plugin:
+<details>
+<summary>Step-by-step instructions for using the ImageJ Updater</summary>
 
-- [`CopilotJBridge-0.1.0-SNAPSHOT.jar`](https://copilotj.cvcd.xyz/software/precompiled_plugin/CopilotJBridge-0.1.0-SNAPSHOT.jar)
-- [`jackson-datatype-jsr310-2.16.1.jar`](https://repo1.maven.org/maven2/com/fasterxml/jackson/datatype/jackson-datatype-jsr310/2.16.1/jackson-datatype-jsr310-2.16.1.jar)
-- [`Java-WebSocket-1.5.2.jar`](https://repo1.maven.org/maven2/org/java-websocket/Java-WebSocket/1.5.2/Java-WebSocket-1.5.2-sources.jar)
+1. Open Fiji and go to `Help` -> `Update...` to open the Fiji Updater.
+2. Click `Manage Update Sites` in the lower-left corner.
+3. Click “Add Unlisted Site”, add a new update site named CopilotJ with the URL https://sites.imagej.net/CopilotJ/, and then make sure the checkbox on the left is selected.
+4. Click `Apply and Close` to close the `Manage Update Sites` window.
+5. Click `Apply Changes` in the main `Fiji Updater` window to install the plugin.
+6. Restart Fiji, you should now see _Plugins -> CopilotJ_ in the menu.
 
-**Install into Fiji**:
-
-Install the CopilotJ Bridge plugin by placing the required JAR files in the appropriate `jars/` directory. The exact steps may vary slightly depending on your operating system and Fiji installation.
-
-1. **Windows:** Open the Fiji installation directory (e.g., `D:\Fiji.app\`).
-2. **macOS:** Locate `Fiji.app` in Finder, then right-click and select **Show Package Contents**.
-3. Copy the files `CopilotJBridge-0.1.0-SNAPSHOT.jar`, `jackson-datatype-jsr310-2.16.1.jar`, `Java-WebSocket-1.5.2.jar`, `appose-0.11.0.jar` and `groovy-4.0.18.jar` into `jars/`.
-
-**Verify plugin installation**:
-
-1. Restart Fiji.
-2. Confirm that **Plugins -> CopilotJ** appears in the menu.
-3. Click it and verify that the configuration dialog opens with **Managed Server** and **External Server** tabs.
+</details>
 
 ### Install the Python environment
 
