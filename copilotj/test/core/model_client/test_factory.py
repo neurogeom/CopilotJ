@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from copilotj.core.model_client import OpenAIChatCompletionClient, _resolve_client
+from copilotj.core.model_client import OpenAIChatCompletionClient, OpenRouterChatCompletionClient, _resolve_client
 from copilotj.core.model_client._types import _VALID_PROVIDERS
 
 
@@ -23,7 +23,8 @@ class TestResolveClient:
 
     def test_openrouter_default_base_url(self):
         client = _resolve_client("openrouter", "anthropic/claude-3-haiku", "k", proxy=None, base_url=None)
-        assert isinstance(client, OpenAIChatCompletionClient)
+        assert isinstance(client, OpenRouterChatCompletionClient)
+        assert isinstance(client, OpenAIChatCompletionClient)  # subclass relationship
         assert _base_url(client) == "https://openrouter.ai/api/v1"
         assert client.get_model() == "anthropic/claude-3-haiku"
 
