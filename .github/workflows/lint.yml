@@ -17,7 +17,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 11
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -31,11 +31,11 @@ jobs:
         working-directory: web
 
       - name: Type check
-        run: pnpm run type-check
+        run: pnpm dlx vue-tsc -b
         working-directory: web
 
       - name: Format check
-        run: pnpm run format-check
+        run: pnpm dlx prettier --check src
         working-directory: web
 
   python:
