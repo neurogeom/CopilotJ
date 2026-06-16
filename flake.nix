@@ -115,7 +115,7 @@
 
           # web
           nodejs
-          pnpm
+          (pnpm.override { nodejs-slim = pkgs.nodejs-slim_latest; }) # TODO: workaround with NixOS/nixpkgs#525627, remove after next bump of flake.lock
           prettier
 
           # misc
