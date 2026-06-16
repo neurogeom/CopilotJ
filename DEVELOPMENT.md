@@ -305,3 +305,17 @@ cd plugin && mvn clean install -Dscijava.app.directory=/path/to/Fiji
 ```
 
 This copies the plugin JAR and all dependency JARs into the specified Fiji installation. Fiji comes bundled with many of CopilotJ's dependencies; the [SciJava infrastructure](https://github.com/scijava/scijava-maven-plugin/) keeps only the newer version of each dependency JAR.
+
+**Install into Fiji**:
+
+Install the CopilotJ Bridge plugin by placing the required JAR files in the appropriate `jars/` directory. The exact steps may vary slightly depending on your operating system and Fiji installation.
+
+1. **Windows:** Open the Fiji installation directory (e.g., `D:\Fiji.app\`).
+2. **macOS:** Locate `Fiji.app` in Finder, then right-click and select **Show Package Contents**.
+3. Copy the files `CopilotJBridge-0.1.0-SNAPSHOT.jar`, `jackson-datatype-jsr310-2.16.1.jar`, `Java-WebSocket-1.5.2.jar` into `jars/`.
+
+**Verify plugin installation**:
+
+1. Restart Fiji.
+2. Confirm that **Plugins -> CopilotJ** appears in the menu.
+3. Click it and verify that the configuration dialog opens with **Managed Server** and **External Server** tabs.
