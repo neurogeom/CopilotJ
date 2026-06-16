@@ -13,7 +13,7 @@ This project contains three parts:
 
 - **Python 3.12+** with [uv](https://docs.astral.sh/uv/)
 - **Java 8+** and **Maven 3.x**
-- **Node.js 22+** with [pnpm](https://pnpm.io/installation)
+- **Node.js 22+** with [pnpm v11](https://pnpm.io/installation)
 - [just](https://github.com/casey/just) (command runner)
 
 ## Quick start with just

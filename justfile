@@ -68,8 +68,8 @@ cleanup-branches *args:
 # --- Linting ---
 
 lint-web:
-  cd web && pnpm run type-check
-  cd web && pnpm run format-check
+  cd web && pnpm dlx vue-tsc -b
+  cd web && prettier --check .
 
 lint-python:
   uv run --with ruff ruff check

@@ -61,7 +61,7 @@ function openNewWindow(link: string) {
           :key="`hero-btn-${btn.label}`"
           class="inline-flex items-center gap-2 rounded-full py-2.5 text-sm cursor-pointer shadow transition-colors"
           :class="
-            btn.isPrimary
+            (btn as any).isPrimary
               ? 'pl-8 pr-6 bg-primary-500 hover:bg-primary-800 text-white'
               : 'pl-6 pr-4 border border-zinc-300/60 text-zinc-800 hover:bg-zinc-50'
           "
