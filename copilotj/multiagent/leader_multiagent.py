@@ -135,7 +135,7 @@ class LeaderAgent(ChatAgent):
             FunctionTool(workflow_tools.export_workflow, PROMPT_TOOL_EXPORT_WORKFLOW),
             FunctionTool(self.execute_workflow, PROMPT_TOOL_EXECUTE_WORKFLOW),
             FunctionTool(
-                batch_qc.bind_batch_precheck(lambda: self._cfg),
+                batch_qc.make_batch_precheck(lambda: self._cfg),
                 PROMPT_TOOL_BATCH_PRECHECK,
                 name="batch_precheck",
                 display_name="Batch Pre-check QC",

@@ -34,7 +34,36 @@ UINT8_MAX = 255
 MAX_IMAGE_METADATA_LINES = 20
 
 
-async def batch_precheck(
+def make_batch_precheck(cfg: Config | Callable[[], Config], on_result: Callable[[str], None] | None = None):
+    def current_cfg() -> Config:
+        return cfg() if callable(cfg) else cfg
+
+    async def batch_precheck(
+        folder_path: Annotated[str, "Path to the image folder to check before batch processing"],
+        *,
+        sample_size: Annotated[int, "Number of images to sample for QC (default: 9)"] = 9,
+        analysis_focus: Annotated[str | None, "Optional focus, e.g. 'background consistency'"] = None,
+        output_dir: Annotated[str | None, "Optional output directory for montage and report"] = None,
+        skip_analysis: Annotated[bool, "Skip VLM analysis, only generate montage"] = False,
+        montage_count: Annotated[int, "Number of montages to sample/analyze (default: 1)"] = 1,
+    ) -> str:
+        result = await run_batch_precheck(
+            folder_path,
+            sample_size=sample_size,
+            analysis_focus=analysis_focus,
+            output_dir=output_dir,
+            skip_analysis=skip_analysis,
+            montage_count=montage_count,
+            cfg=current_cfg(),
+        )
+        if on_result is not None:
+            on_result(result)
+        return result
+
+    return batch_precheck
+
+
+async def run_batch_precheck(
     folder_path: Annotated[str, "Path to the image folder to check before batch processing"],
     *,
     sample_size: Annotated[int, "Number of images to sample for QC (default: 9)"] = 9,
@@ -62,32 +91,6 @@ async def batch_precheck(
     except Exception as error:
         logger.error("Batch QC failed: %s", error)
         return f"[FAILED] Batch QC Failed: {error}\n\nPlease check the folder path and Vision configuration."
-
-
-def bind_batch_precheck(cfg: Config | Callable[[], Config]):
-    def current_cfg() -> Config:
-        return cfg() if callable(cfg) else cfg
-
-    async def configured_batch_precheck(
-        folder_path: Annotated[str, "Path to the image folder to check before batch processing"],
-        *,
-        sample_size: Annotated[int, "Number of images to sample for QC (default: 9)"] = 9,
-        analysis_focus: Annotated[str | None, "Optional focus, e.g. 'background consistency'"] = None,
-        output_dir: Annotated[str | None, "Optional output directory for montage and report"] = None,
-        skip_analysis: Annotated[bool, "Skip VLM analysis, only generate montage"] = False,
-        montage_count: Annotated[int, "Number of montages to sample/analyze (default: 1)"] = 1,
-    ) -> str:
-        return await batch_precheck(
-            folder_path,
-            sample_size=sample_size,
-            analysis_focus=analysis_focus,
-            output_dir=output_dir,
-            skip_analysis=skip_analysis,
-            montage_count=montage_count,
-            cfg=current_cfg(),
-        )
-
-    return configured_batch_precheck
 
 
 def sample_images_from_folder(
