@@ -8,12 +8,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from copilotj.multiagent.py_tools import get_project_temp_dir
+
 SCHEMA_VERSION = "2.0"
 RUN_DIR_PREFIX = "run-"
 RUN_DIR_REF = "run_dir"
 TEMPLATE_RE = re.compile(r"\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}")
 DEFAULT_FILE_INPUT_NAME = "image"
 OUTPUT_DIR_INPUT_NAME = "output_dir"
+
+RUNS_DIR = get_project_temp_dir("workflow_runs")
 
 
 class WorkflowContractError(ValueError):
@@ -114,8 +118,8 @@ def _dict_or_empty(value: Any) -> dict[str, Any]:
     raise WorkflowContractError(f"Workflow interface section must be an object, got {type(value)}")
 
 
-def _make_run_dir(base_dir: Path) -> Path:
-    run_dir = base_dir / f"{RUN_DIR_PREFIX}{int(time.time() * 1000)}"
+def _make_run_dir() -> Path:
+    run_dir = RUNS_DIR / f"{RUN_DIR_PREFIX}{int(time.time() * 1000)}"
     run_dir.mkdir(parents=True, exist_ok=False)
     return run_dir
 
@@ -127,7 +131,7 @@ def _resolve_run_dir(
     require_run_dir: bool,
 ) -> str:
     if require_run_dir or _interface_needs_run_dir(interface, provided):
-        return str(_make_run_dir(base_dir))
+        return str(_make_run_dir())
     return ""
 
 

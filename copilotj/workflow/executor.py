@@ -7,6 +7,7 @@ from typing import Any, Optional
 
 from copilotj.core import ToolCall
 from copilotj.workflow.contract import (
+    RUNS_DIR,
     WorkflowExecutionContext,
     bind_workflow_context,
     expand_batch_inputs,
@@ -14,7 +15,7 @@ from copilotj.workflow.contract import (
     template_uses_run_dir,
     verify_declared_outputs,
 )
-from copilotj.workflow.manager import BASE_DIR, Workflow, WorkflowManager, WorkflowStep
+from copilotj.workflow.manager import Workflow, WorkflowManager, WorkflowStep
 
 
 class WorkflowExecutor:
@@ -70,7 +71,7 @@ class WorkflowExecutor:
         context = bind_workflow_context(
             workflow.interface,
             inputs,
-            BASE_DIR,
+            RUNS_DIR,
             require_run_dir=self._workflow_steps_use_run_dir(workflow),
         )
         results = []

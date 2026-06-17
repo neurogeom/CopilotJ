@@ -3,16 +3,19 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import json
-import time
 from typing import Annotated, Any, Optional
 
-import copilotj.multiagent.leader_multiagent as leader_multiagent
-from copilotj.core import ModelClient, TextMessage, load_config
+from copilotj.core import ModelClient, TextMessage
 from copilotj.multiagent.leader_prompts import make_workflow_definition_prompt
-from copilotj.plugin.api import ClientPluginAPI
 from copilotj.workflow.converter import DialogToWorkflowConverter
 from copilotj.workflow.executor import WorkflowExecutor
 from copilotj.workflow.manager import WorkflowManager
+
+WORKFLOW_ABOUT_PREVIEW_CHARS = 200
+
+
+def _preview_text(text: str, limit: int) -> str:
+    return f"{text[:limit]}..." if len(text) > limit else text
 
 
 class WorkflowSaveService:
@@ -126,7 +129,7 @@ async def save_workflow_from_steps(
 ✅ Workflow saved successfully:
 workflow_id: {workflow_id}
 workflow_name: {workflow_name}
-workflow_about: {workflow_about[:100]}...
+workflow_about: {_preview_text(workflow_about, WORKFLOW_ABOUT_PREVIEW_CHARS)}
 tags: {tags}
 """
     except Exception as e:
@@ -142,28 +145,12 @@ async def list_workflows(dummy: Annotated[Optional[str], "dummy"] = None) -> str
 
         result = ["📋 Available Workflows:"]
         for i, wf in enumerate(workflows, 1):
-            result.append(f"\n{i}. **{wf.get('name', 'Unknown')}** (ID: {wf.get('id', 'Unknown')})")
-            result.append(f"   Version: {wf.get('version', '1.0')}")
+            name = wf.get("name", "Unknown")
+            wf_id = wf.get("id", "Unknown")
+            line = f"{i}. **{name}** (ID: `{wf_id}`)"
+            result.append(line)
             if wf.get("about"):
-                result.append(f"   Description: {wf['about']}")  # TODO: be concise
-            if wf.get("tags"):
-                result.append(f"   Tags: {wf['tags']}")
-
-            # Format timestamps for better readability
-            created_at = wf.get("created_at")
-            updated_at = wf.get("updated_at")
-
-            if created_at and isinstance(created_at, (int, float)):
-                created_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(created_at))
-                result.append(f"   Created: {created_str}")
-            else:
-                result.append(f"   Created: {created_at or 'Unknown'}")
-
-            if updated_at and isinstance(updated_at, (int, float)):
-                updated_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(updated_at))
-                result.append(f"   Updated: {updated_str}")
-            else:
-                result.append(f"   Updated: {updated_at or 'Unknown'}")
+                result.append(f"   Description: {_preview_text(wf['about'], WORKFLOW_ABOUT_PREVIEW_CHARS)}")
 
         return "\n".join(result)
 
@@ -267,16 +254,14 @@ async def export_workflow(
 
 
 async def execute_workflow(
-    apis: ClientPluginAPI,
+    leader_agent: Any,
     workflow_id: Annotated[str, "The ID of the workflow to execute"],
     inputs: Annotated[Optional[dict[str, Any]], "Runtime inputs declared by workflow.interface.inputs"] = None,
     stop_on_error: Annotated[bool, "Whether to stop execution on first error"] = True,
 ) -> str:
     """Execute a workflow with the provided leader agent"""
     try:
-        cfg = load_config()
-        leader = leader_multiagent.LeaderDriven(apis=apis, cfg=cfg)
-        executor = WorkflowExecutor(leader.leader_agent)
+        executor = WorkflowExecutor(leader_agent)
         results = await executor.execute_workflow_by_id(workflow_id, stop_on_error, inputs)
 
         # Format results for display
