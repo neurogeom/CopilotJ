@@ -143,6 +143,15 @@ def _resolve_config(cfg: Config, config: _ConfigQuery | None) -> Config:
     return resolve_vision_config(replace(cfg, **overrides)) if overrides else cfg
 
 
+def _check_llm_config(cfg: Config) -> str | None:
+    """Return a user-facing configuration error, or None when usable."""
+    if not cfg.llm_model:
+        return "No model configured. Please click the Settings gear icon in the sidebar to set up a model."
+    if not cfg.llm_model.startswith("ollama/") and not cfg.llm_api_key:
+        return f"No API key configured for model {cfg.llm_model}. Please set an API key in Settings."
+    return None
+
+
 class _Thread(UI):
     def __init__(
         self,
@@ -358,17 +367,12 @@ class Threads:
             except pydantic.ValidationError as e:
                 return web.Response(status=400, text=f"Invalid configuration: {e}")
 
-        # If no model was explicitly provided, check that the server has one configured
-        config_model = config.model if config else None
-        if config_model is None:
-            if not self._cfg.llm_model:
-                return web.Response(
-                    status=400,
-                    text="No model configured. Please click the Settings gear icon in the sidebar to set up a model and API key.",
-                )
+        resolved = _resolve_config(self._cfg, config)
+        if message := _check_llm_config(resolved):
+            return web.Response(status=400, text=message)
 
         thread_id = str(uuid.uuid4())
-        thread = _Thread(thread_id, self._cfg, config=config, trace_context=self._trace_ctx, bridge=self._bridge)
+        thread = _Thread(thread_id, resolved, config=None, trace_context=self._trace_ctx, bridge=self._bridge)
         thread_lock = threading.Lock()
         with self._threads_lock:
             self._threads[thread_id] = (thread, thread_lock)

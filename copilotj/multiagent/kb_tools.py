@@ -16,7 +16,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 from copilotj.core.config import get_home, load_config
 from copilotj.core.message import TextMessage
-from copilotj.core.model_client import new_model_client
+from copilotj.core.model_client import ModelClient, new_model_client
 
 _SOURCE_ROOT = Path(__file__).resolve().parent.parent.parent
 _HOME = get_home()
@@ -1032,6 +1032,7 @@ async def kb_build(
     steps: Any = None,
     *,
     question: str | None = None,
+    model_client: ModelClient | None = None,
 ) -> str:
     _ensure_dirs()
 
@@ -1110,7 +1111,14 @@ Rules: lowercase, underscores only, 2-3 words maximum
 """
 
     try:
-        structured_output = await _llm_extract_with_retry(_llm_prompt_template, dialog, final_summary, steps, question)
+        structured_output = await _llm_extract_with_retry(
+            _llm_prompt_template,
+            dialog,
+            final_summary,
+            steps,
+            question,
+            model_client=model_client,
+        )
 
         # Process and persist entries
         results = {"status": "ok", "created": [], "skipped": [], "checklist_type": "task", "notes": []}
@@ -1421,6 +1429,8 @@ async def _llm_extract_with_retry(
     final_summary: str,
     steps: Any,
     question: str | None,
+    *,
+    model_client: ModelClient | None = None,
     max_retries: int = 3,
 ) -> dict[str, Any]:
     """Extract knowledge using LLM with retry mechanism."""
@@ -1429,8 +1439,8 @@ async def _llm_extract_with_retry(
 
     for attempt in range(max_retries):
         try:
-            model_client = new_model_client(load_config())
-            llm_response = await model_client.create([TextMessage(role="user", text=prompt)])
+            client = model_client or new_model_client(load_config())
+            llm_response = await client.create([TextMessage(role="user", text=prompt)])
 
             if not llm_response.content:
                 last_error = f"Empty response from LLM (attempt {attempt + 1})"
