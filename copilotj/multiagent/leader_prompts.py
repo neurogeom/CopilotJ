@@ -493,17 +493,11 @@ Rules:
 """
 
 PROMPT_TOOL_BATCH_PRECHECK = """\
-Perform pre-batch quality control check on an image dataset BEFORE starting batch processing.
-Samples images from a folder, creates overview montage(s), and runs VLM visual inspection when available.
-If VLM is unavailable, returns a manual-review warning instead.
+Run a pre-batch quality-control check before processing a new or unfamiliar image dataset. Sample images, generate up to three overview montages, and inspect them with a VLM when available.
 
-**When to use:** Before ANY batch operation on a new or unfamiliar dataset — segmentation, analysis, conversion, etc.
-
-**What it checks:** background/exposure variations, image quality (artifacts, blur), content consistency (object density, morphology), technical consistency (channels, resolution, bit depth), structural patterns (edge effects, tiling).
-
-**montage_count guidance:** 1 for small/familiar datasets (default); 2 for medium or multi-subfolder datasets; 3 for large/unfamiliar/heterogeneous datasets. Do not exceed 3 unless the user asks.
-
-**IMPORTANT:** Always run this BEFORE batch operations on new datasets. If the output says manual review is required or VLM is unavailable, open every saved montage in ImageJ via `run_macro` (split into multiple actions if more than three), then ask the user to inspect and reply yes/no: yes continues, no stops.
+Check for variation in exposure, background, image quality, content, channels, resolution, bit depth, and structural patterns.
+Use 1 montage by default, 2 for medium or multi-folder datasets, and 3 for large or heterogeneous datasets.
+If VLM inspection is unavailable or manual review is required, open all saved montages in ImageJ using `run_macro`, then ask the user to confirm whether batch processing should continue.
 """
 
 
