@@ -14,6 +14,7 @@ from copilotj.core.ui import (
     UI,
     DialogChange,
     Handoff,
+    RetryInfo,
     ToolCallId,
     ToolCallResult,
     UIEventContentMarkdown,
@@ -23,6 +24,7 @@ from copilotj.core.ui import (
     UIEventPost,
     UIEventPostContentChunk,
     UIEventPostReasoningChunk,
+    UIEventRetry,
     UIEventState,
     UIEventToolCall,
     UIEventToolCalled,
@@ -97,6 +99,18 @@ class Runtime(abc.ABC):
     async def print_error(self, role: str, message: str) -> None:
         self._logger.error(message)
         await self._ui.send(UIEventError(role=role, data=message))  # TODO: log level: info / warn / error?
+
+    async def print_retry(self, role: str, info: RetryInfo) -> None:
+        """Emit an in-progress 429 auto-retry event so the UI can show feedback (#96)."""
+        self._logger.info(
+            "Retry %d/%d in %.1fs (%s): %s",
+            info.attempt,
+            info.max_attempts,
+            info.wait_seconds,
+            role,
+            info.reason,
+        )
+        await self._ui.send(UIEventRetry(role=role, data=info))
 
     async def print_tool_called(self, role: str, id: str) -> None:
         self._logger.info("Tool called #%s", id)

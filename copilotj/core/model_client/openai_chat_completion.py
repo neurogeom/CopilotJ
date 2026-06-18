@@ -10,6 +10,7 @@ import langfuse.openai
 import openai.types.chat
 
 from copilotj.core.message import ImageMessage, TextMessage
+from copilotj.core.model_client._retry import parse_retry_after
 from copilotj.core.model_client._types import (
     FinishReasons,
     ModelClient,
@@ -25,6 +26,25 @@ logger = logging.getLogger(__name__)
 __all__ = ["OpenAIChatCompletionClient"]
 
 
+def _to_openai_provider_error(e: Exception, provider: str = "openai") -> ModelProviderError:
+    """Convert an OpenAI SDK exception into a ModelProviderError.
+
+    Preserves the HTTP status code and ``Retry-After`` header so the agent's
+    retry loop can decide retryability and backoff. Shared by the OpenAI-family
+    clients (chat completions, Responses API, and Ollama's OpenAI-compatible
+    API).
+    """
+    status_code = getattr(e, "status_code", None)
+    retry_after = None
+    response = getattr(e, "response", None)
+    if response is not None:
+        headers = getattr(response, "headers", None)
+        if headers is not None:
+            retry_after = parse_retry_after(headers.get("retry-after"))
+    message = getattr(e, "message", None) or str(e)
+    return ModelProviderError(message, provider, status_code=status_code, retry_after=retry_after)
+
+
 class OpenAIChatCompletionClient(ModelClient):
     def __init__(self, model: str, api_key: str, *, base_url: str | None = None, proxy: str | None = None):
         super().__init__()
@@ -33,7 +53,11 @@ class OpenAIChatCompletionClient(ModelClient):
         http_client = openai.DefaultAsyncHttpxClient(proxy=proxy) if proxy is not None else None
 
         # Langfuse support can be safely ignored if LANGFUSE_PUBLIC_KEY or LANGFUSE_SECRET_KEY is not set
-        self._client = langfuse.openai.AsyncOpenAI(api_key=self._api_key, http_client=http_client, base_url=base_url)
+        # max_retries=0: own the retry loop in ChatAgent so 429 retries are
+        # VISIBLE (the SDK retries silently and exposes no per-attempt hook).
+        self._client = langfuse.openai.AsyncOpenAI(
+            api_key=self._api_key, http_client=http_client, base_url=base_url, max_retries=0
+        )
 
     @override
     def get_model(self) -> str:
@@ -74,9 +98,9 @@ class OpenAIChatCompletionClient(ModelClient):
                 finish_reason=_openai_parse_finish_reason(choice.finish_reason),
             )
         except openai.APIError as e:
-            raise ModelProviderError(f"OpenAI API error: {e.message}", "openai") from e
+            raise _to_openai_provider_error(e) from e
         except openai.OpenAIError as e:
-            raise ModelProviderError(f"OpenAI error: {str(e)}", "openai") from e
+            raise _to_openai_provider_error(e) from e
 
     @override
     async def create_stream(
@@ -145,10 +169,10 @@ class OpenAIChatCompletionClient(ModelClient):
                 _log_cache_usage(self._model, stream_usage)
 
         except openai.APIError as e:
-            raise ModelProviderError(f"OpenAI API error: {e.message}", "openai") from e
+            raise _to_openai_provider_error(e) from e
 
         except openai.OpenAIError as e:
-            raise ModelProviderError(f"OpenAI error: {str(e)}", "openai") from e
+            raise _to_openai_provider_error(e) from e
 
         finally:
             if stream is not None:
@@ -197,9 +221,9 @@ class OpenAIChatCompletionClient(ModelClient):
                 model=self._model, messages=openai_messages, tools=openai_tools, **extra, stream=stream
             )
         except openai.APIError as e:
-            raise ModelProviderError(f"OpenAI API error: {e.message}", "openai") from e
+            raise _to_openai_provider_error(e) from e
         except openai.OpenAIError as e:
-            raise ModelProviderError(f"OpenAI error: {str(e)}", "openai") from e
+            raise _to_openai_provider_error(e) from e
 
     @classmethod
     def _format_messages(cls, messages: Sequence[TextMessage | ImageMessage]):

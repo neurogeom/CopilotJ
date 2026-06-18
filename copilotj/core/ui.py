@@ -24,6 +24,8 @@ __all__ = [
     "UIEventToolCalled",
     "UIEventToolCallResult",
     "UIEventHandoff",
+    "UIEventRetry",
+    "RetryInfo",
     "UIEvent",
     "Handoff",
 ]
@@ -73,6 +75,18 @@ class UIEventPostContentChunk(_Event[UIEventContentMarkdown], type="new:post_con
 class UIEventError(_Event[str], type="new:error"): ...
 
 
+class RetryInfo(pydantic.BaseModel):
+    """Payload for an in-progress 429 auto-retry, surfaced to the UI (#96)."""
+
+    attempt: int
+    max_attempts: int
+    wait_seconds: float
+    reason: str
+
+
+class UIEventRetry(_Event[RetryInfo], type="update:retry"): ...
+
+
 class UIEventToolCall(_Event[ToolCall], type="new:tool_call"): ...
 
 
@@ -115,6 +129,7 @@ type UIEvent = (
     | UIEventPostReasoningChunk
     | UIEventPostContentChunk
     | UIEventError
+    | UIEventRetry
     | UIEventToolCall
     | UIEventToolCalled
     | UIEventToolCallResult
@@ -169,6 +184,14 @@ class CLI(UI):
 
             case UIEventError():
                 self._console.print(rich.panel.Panel(event.data, title="❌ Error", style="red"))
+
+            case UIEventRetry():
+                info = event.data
+                msg = (
+                    f"⏳ Rate limited — retrying {info.attempt}/{info.max_attempts} "
+                    f"in {info.wait_seconds:.1f}s: {info.reason}"
+                )
+                self._console.print(rich.panel.Panel(msg, title="⚠️ Retry", style="yellow"))
 
             case UIEventState() if event.data == "confirmation_request":
                 pass  # Placeholder for confirmation request handling

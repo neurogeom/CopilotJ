@@ -23,9 +23,10 @@ from copilotj.core.model_client import (
     ModelSyntaxError,
     ToolCall,
 )
+from copilotj.core.model_client._retry import DEFAULT_RETRY_CONFIG, compute_backoff
 from copilotj.core.runtime import Runtime
 from copilotj.core.tool import FunctionTool, Tool
-from copilotj.core.ui import Handoff
+from copilotj.core.ui import Handoff, RetryInfo
 
 __all__ = ["Agent", "ChatAgent", "message_handler", "HandoffFunctionTool"]
 
@@ -124,10 +125,10 @@ class ChatAgent(Agent):
                 "agent_tools": json.dumps({t.name: t.description for t in tools}) if tools else "",
             },
         ):
-            # Reset abort event before starting new stream
+            # Reset abort event before starting. The waiter spans ALL retry
+            # attempts so an abort during a backoff sleep is honoured too.
             self._abort_event.clear()
             await self._runtime.update_current_agent(self.name)
-            stream = self._client.create_stream(messages, tools=tools, extra_args=extra_args)
 
             content = ""
             reasoning_content = ""
@@ -136,74 +137,114 @@ class ChatAgent(Agent):
 
             abort_waiter = asyncio.create_task(self._abort_event.wait())  # create a task to wait for abort signal
             try:
-                while True:
-                    next_chunk = asyncio.create_task(stream.__anext__())
-                    done, pending = await asyncio.wait(
-                        {next_chunk, abort_waiter},
-                        return_when=asyncio.FIRST_COMPLETED,
-                    )
-
-                    # Check for abort signal before processing each chunk
-                    if abort_waiter in done:
-                        for t in pending:
-                            t.cancel()
-
-                        # Close the underlying stream to ensure connections are returned
-                        if hasattr(stream, "aclose"):
-                            try:
-                                await asyncio.shield(stream.aclose())
-                            except Exception as e:
-                                # Best-effort cleanup during cancellation: log and continue abort flow.
-                                self.log_error(f"Failed to close stream during abort: {type(e).__name__}: {e}")
-                        raise asyncio.CancelledError("Stream was aborted by user request")
-
-                    # Process the next chunk
-                    assert next_chunk in done
+                # Retry loop: transient provider errors (429) are retried with
+                # visible feedback via print_retry. See _retry.DEFAULT_RETRY_CONFIG
+                # for the hardcoded policy and _sleep_interruptible for the
+                # abortable backoff.
+                for attempt in range(1, DEFAULT_RETRY_CONFIG.max_attempts + 1):
+                    stream = self._client.create_stream(messages, tools=tools, extra_args=extra_args)
+                    # emitted=True once any chunk was retrieved this attempt. A
+                    # later error after emission can't be retried without
+                    # duplicating output. emitted=False also means the attempt
+                    # left the accumulators untouched — no reset needed on retry.
+                    emitted = False
                     try:
-                        chunk = next_chunk.result()
-                    except StopAsyncIteration:
-                        break  # End of stream
+                        while True:
+                            next_chunk = asyncio.create_task(stream.__anext__())
+                            done, pending = await asyncio.wait(
+                                {next_chunk, abort_waiter},
+                                return_when=asyncio.FIRST_COMPLETED,
+                            )
 
-                    if isinstance(chunk, ToolCall):
-                        # Dont send handoff tool calls, they are handled separately
-                        if not isinstance(chunk.tool, HandoffTool):
-                            await self._runtime.print_chat(self.name, chunk)
+                            # Check for abort signal before processing each chunk
+                            if abort_waiter in done:
+                                for t in pending:
+                                    t.cancel()
 
-                        tool_calls.append(chunk)
+                                # Close the underlying stream to ensure connections are returned
+                                if hasattr(stream, "aclose"):
+                                    try:
+                                        await asyncio.shield(stream.aclose())
+                                    except Exception as e:
+                                        # Best-effort cleanup during cancellation: log and continue abort flow.
+                                        self.log_error(f"Failed to close stream during abort: {type(e).__name__}: {e}")
+                                raise asyncio.CancelledError("Stream was aborted by user request")
 
-                    else:
-                        await self._runtime.print_chat(self.name, chunk)
-                        if chunk.content is not None:
-                            content += chunk.content
+                            # Process the next chunk
+                            assert next_chunk in done
+                            try:
+                                chunk = next_chunk.result()
+                            except StopAsyncIteration:
+                                break  # End of stream
 
-                        if chunk.reasoning_content is not None:
-                            reasoning_content += chunk.reasoning_content
+                            emitted = True
 
-                        if chunk.finish_reason is not None:
-                            finish_reason = chunk.finish_reason
+                            if isinstance(chunk, ToolCall):
+                                # Dont send handoff tool calls, they are handled separately
+                                if not isinstance(chunk.tool, HandoffTool):
+                                    await self._runtime.print_chat(self.name, chunk)
 
-            except ModelSyntaxError as e:
-                # send a finish message to the runtime
-                await self._runtime.print_chat(
-                    self.name, ModelResponseChunk(reasoning_content="", content="", finish_reason="stop")
-                )
-                e.chat_completion = ModelResponse(
-                    content=content if len(content) else None,
-                    reasoning_content=reasoning_content if len(reasoning_content) else None,
-                    tool_calls=tool_calls if len(tool_calls) else None,
-                    finish_reason=finish_reason,
-                )
-                raise e
+                                tool_calls.append(chunk)
 
-            except ModelProviderError as e:
-                await self._runtime.print_error("system", f"LlmProviderError: {e}")
+                            else:
+                                await self._runtime.print_chat(self.name, chunk)
+                                if chunk.content is not None:
+                                    content += chunk.content
 
-            except Exception as e:
-                # Log it — otherwise unexpected stream errors silently yield an empty response.
-                self.log_error(f"Unexpected error during model stream: {type(e).__name__}: {e}")
-                await self._runtime.print_chat(
-                    self.name, ModelResponseChunk(reasoning_content="", content="", finish_reason="unknown")
-                )
+                                if chunk.reasoning_content is not None:
+                                    reasoning_content += chunk.reasoning_content
+
+                                if chunk.finish_reason is not None:
+                                    finish_reason = chunk.finish_reason
+
+                        # Stream consumed cleanly — done with retries.
+                        break
+
+                    except ModelSyntaxError as e:
+                        # send a finish message to the runtime
+                        await self._runtime.print_chat(
+                            self.name, ModelResponseChunk(reasoning_content="", content="", finish_reason="stop")
+                        )
+                        e.chat_completion = ModelResponse(
+                            content=content if len(content) else None,
+                            reasoning_content=reasoning_content if len(reasoning_content) else None,
+                            tool_calls=tool_calls if len(tool_calls) else None,
+                            finish_reason=finish_reason,
+                        )
+                        raise e
+
+                    except ModelProviderError as e:
+                        # Retry only transient errors (429 by default) and only
+                        # before any output was emitted (avoids duplicates).
+                        if emitted or not e.is_retryable() or attempt >= DEFAULT_RETRY_CONFIG.max_attempts:
+                            await self._runtime.print_error("system", f"LlmProviderError: {e}")
+                            break
+
+                        wait = compute_backoff(e.retry_after, attempt, DEFAULT_RETRY_CONFIG)
+                        await self._runtime.print_retry(
+                            self.name,
+                            RetryInfo(
+                                attempt=attempt,
+                                max_attempts=DEFAULT_RETRY_CONFIG.max_attempts,
+                                wait_seconds=wait,
+                                reason=str(e),
+                            ),
+                        )
+                        # Backoff, but stay abortable: abort during the wait
+                        # cancels immediately.
+                        if await self._sleep_interruptible(wait, abort_waiter):
+                            raise asyncio.CancelledError("Aborted during retry backoff")
+                        # else: loop again with a fresh stream.
+
+                    except Exception as e:
+                        # Log it — otherwise unexpected stream errors silently yield an empty response.
+                        self.log_error(f"Unexpected error during model stream: {type(e).__name__}: {e}")
+                        await self._runtime.print_chat(
+                            self.name, ModelResponseChunk(reasoning_content="", content="", finish_reason="unknown")
+                        )
+                        break
+            finally:
+                abort_waiter.cancel()
 
         completion = ModelResponse(
             content=content if len(content) else None,
@@ -213,6 +254,23 @@ class ChatAgent(Agent):
         )
         self._runtime.log_info(str(completion))
         return completion
+
+    async def _sleep_interruptible(self, wait: float, abort_waiter: asyncio.Task[None]) -> bool:
+        """Sleep ``wait`` seconds, returning True early if abort fires.
+
+        Never cancels ``abort_waiter`` — it spans all retry attempts. The sleep
+        task is always cleaned up so no dangling task lingers.
+        """
+        sleep_task = asyncio.create_task(asyncio.sleep(wait))
+        try:
+            await asyncio.wait({sleep_task, abort_waiter}, return_when=asyncio.FIRST_COMPLETED)
+        finally:
+            sleep_task.cancel()
+            try:
+                await sleep_task
+            except asyncio.CancelledError:
+                pass
+        return abort_waiter.done()
 
     async def _call_tool(self, tool_call: ToolCall) -> pydantic.BaseModel:
         if isinstance(tool_call.tool, HandoffTool):

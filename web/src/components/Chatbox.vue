@@ -155,7 +155,12 @@ function reset() {
         <div ref="post-container" class="relative h-full flex-1 overflow-y-auto">
           <!-- Chat Area -->
           <TransitionGroup name="message" tag="div" class="chatbox_chat w-full max-w-4xl mx-auto pt-20 px-4 space-y-4">
-            <ChatboxReactPosts v-if="active.thread.posts.length > 0" ref="posts" :posts="active.thread.posts" />
+            <ChatboxReactPosts
+              v-if="active.thread.posts.length > 0"
+              ref="posts"
+              :posts="active.thread.posts"
+              :retrying="active.thread.retrying"
+            />
 
             <ChatboxHello v-else @use-prompt-suggestion="usePromptSuggestion" />
           </TransitionGroup>
