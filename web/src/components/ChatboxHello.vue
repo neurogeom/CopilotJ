@@ -8,6 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 import { computed } from "vue";
 import Logo from "./Logo.vue";
 import { isApiBaseConfigurable } from "../apis/base";
+import { API_VERSION } from "../apis";
 import { useSettings, useSystemState } from "../store";
 
 const settings = useSettings();
@@ -15,6 +16,13 @@ const state = useSystemState();
 
 const showConnectionWarning = computed(
   () => isApiBaseConfigurable && state.backendReachable === false && !state.connectionWarningDismissed,
+);
+
+const showVersionWarning = computed(
+  () =>
+    isApiBaseConfigurable &&
+    (state.apiVersionStatus === "incompatible" || state.apiVersionStatus === "unknown") &&
+    !state.apiVersionWarningDismissed,
 );
 
 const suggestions = [
@@ -72,6 +80,40 @@ function usePromptSuggestion(suggestion: string) {
       <button
         class="shrink-0 font-bold hover:text-amber-600 dark:hover:text-amber-200"
         @click="state.connectionWarningDismissed = true"
+      >
+        &times;
+      </button>
+    </div>
+
+    <div
+      v-if="showVersionWarning"
+      class="mt-2 px-4 py-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-sm text-amber-800 dark:text-amber-300 max-w-md flex items-start justify-between gap-2"
+    >
+      <span v-if="state.apiVersionStatus === 'incompatible'">
+        Your server (API v{{ state.serverApiVersion ?? "?" }}) is not compatible with this version of CopilotJ (expects
+        v{{ API_VERSION }}). Please update your CopilotJ server, or switch to a compatible one in
+        <button
+          class="underline font-medium hover:text-amber-600 dark:hover:text-amber-200"
+          @click="state.showSettings = true"
+        >
+          Settings
+        </button>
+        .
+      </span>
+      <span v-else>
+        Couldn't verify your server's API version — it may be outdated. If chat isn't working, please update your
+        CopilotJ server or check the URL in
+        <button
+          class="underline font-medium hover:text-amber-600 dark:hover:text-amber-200"
+          @click="state.showSettings = true"
+        >
+          Settings
+        </button>
+        .
+      </span>
+      <button
+        class="shrink-0 font-bold hover:text-amber-600 dark:hover:text-amber-200"
+        @click="state.apiVersionWarningDismissed = true"
       >
         &times;
       </button>

@@ -13,6 +13,7 @@ from copilotj.core.config import Config
 from copilotj.core.kb import ensure_faiss_index_async
 from copilotj.core.lifecycle import run_cleanup
 from copilotj.server.bridge import Bridge
+from copilotj.server.protocol import API_VERSION
 from copilotj.server.threads import Threads
 
 __all__ = ["Server"]
@@ -78,6 +79,7 @@ class Server:
 
         r = app.router
         r.add_get("/api/ping", _on_ping)
+        r.add_get("/api/version", _on_version)
         r.add_get("/api/config", self._on_config)
         r.add_get("/api/model/capabilities", self._on_model_capabilities)
         r.add_get("/api/models", self._on_list_models)
@@ -251,6 +253,15 @@ class Server:
         providers = ["openai", "anthropic", "gemini", "deepseek", "openrouter", "ollama"]
         results = await asyncio.gather(*(list_provider_models(p, base_url=base_url) for p in providers))
         return web.json_response({"providers": {r["provider"]: r for r in results}})
+
+
+async def _on_version(request: web.Request) -> web.Response:
+    """Report the frontend/server protocol version (issue #68).
+
+    The frontend compares this MAJOR against its baked-in ``API_VERSION`` and
+    warns the user when they differ (self-hosted server too old/new).
+    """
+    return web.json_response({"api_version": API_VERSION})
 
 
 async def _on_ping(request: web.Request) -> web.Response:

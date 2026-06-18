@@ -27,6 +27,7 @@ onMounted(async () => {
   }
 
   state.testBackendConnection();
+  state.checkApiVersion();
 
   // 1. If config store has a user-configured model, apply it
   if (settings.model === null && config.data.defaultModel) {
@@ -81,6 +82,7 @@ const settingsRef = ref<InstanceType<typeof Settings> | null>(null);
 function onSetupComplete() {
   state.wizardMode = false;
   state.testBackendConnection();
+  state.checkApiVersion();
 }
 
 function startNewThread() {
