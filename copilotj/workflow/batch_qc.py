@@ -506,7 +506,9 @@ def _qc_gate(analysis: dict[str, Any]) -> tuple[str, str]:
         gate = "VLM is unavailable." if "disabled or not configured" in reason else reason
         return (
             "Manual Review Required",
-            f"{gate} Wait for the user's yes/no decision: yes continues the workflow, no stops it.",
+            f"{gate} Manual review is required, open all saved montages "
+            "in ImageJ using `run_macro`, then ask the user to confirm whether batch processing should continue. "
+            "Wait for the user's yes/no decision: yes continues the workflow, no stops it.",
         )
     if analysis.get("heterogeneity_detected"):
         return (
