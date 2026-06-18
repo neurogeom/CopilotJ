@@ -344,6 +344,16 @@ class _Thread(UI):
         finally:
             done_event.set()  # Signal that the chat is done
 
+    def abort(self) -> None:
+        """Abort any in-flight agent run promptly.
+
+        Lightweight vs :meth:`close`: sets the abort event only — does not tear
+        down plugin APIs or the mailbox. The abort endpoint uses this so a user
+        "stop" interrupts a retry backoff immediately; the normal fetch-abort →
+        disconnect → :meth:`close` path still runs for teardown.
+        """
+        self._agent.abort()
+
     async def close(self) -> None:
         self._agent.abort()
         self._mailbox.task_done()
@@ -544,6 +554,26 @@ class Threads:
 
         except Exception as e:
             return web.Response(status=500, text=f"Error deleting thread: {e}")
+
+    async def abort_endpoint(self, request: web.Request) -> web.Response:
+        """Abort any in-flight agent run for a thread.
+
+        Used by the frontend stop button so a retry backoff is interrupted
+        promptly (the fetch abort alone is only detected on the next NDJSON
+        write). Does NOT acquire the thread lock — that lock is held by the
+        in-flight post we are trying to abort.
+        """
+        thread_id = request.match_info["thread_id"]
+        with self._threads_lock:
+            thread_tuple = self._threads.get(thread_id)
+        if thread_tuple is None:
+            return web.Response(status=404, text=f"thread {thread_id} not found")
+        thread, _ = thread_tuple
+        try:
+            thread.abort()
+            return web.Response(status=204)
+        except Exception as e:
+            return web.Response(status=500, text=f"Error aborting thread: {e}")
 
     async def close(self) -> None:
         """Close all threads and clean up resources."""

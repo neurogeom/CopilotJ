@@ -221,6 +221,18 @@ export async function deleteThread(threadId: string): Promise<void> {
   return response.json();
 }
 
+export async function abortThread(threadId: string): Promise<void> {
+  const url = `${getBaseUrl()}/threads/${threadId}/abort`;
+  // Fire-and-forget best-effort signal: a failure here (e.g. thread already
+  // gone) must not break the local abort flow — the fetch abort still tears
+  // down the stream. Swallow network errors intentionally.
+  try {
+    await fetch(url, { method: "POST" });
+  } catch {
+    // ignored — best-effort prompt-abort signal
+  }
+}
+
 export async function optimizePrompt(threadId: string, prompt: string): Promise<OptimizePromptResponse> {
   const url = `${getBaseUrl()}/threads/${threadId}/optimize-prompt`;
   const options = {
