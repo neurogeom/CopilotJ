@@ -497,7 +497,6 @@ Run a pre-batch quality-control check before processing a new or unfamiliar imag
 
 Check for variation in exposure, background, image quality, content, channels, resolution, bit depth, and structural patterns.
 Use 1 montage by default, 2 for medium or multi-folder datasets, and 3 for large or heterogeneous datasets.
-If VLM inspection is unavailable or manual review is required, open all saved montages in ImageJ using `run_macro`, then ask the user to confirm whether batch processing should continue.
 """
 
 
