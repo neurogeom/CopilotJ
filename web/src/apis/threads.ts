@@ -29,6 +29,11 @@ export type PostContentChunkMessage = Payload<"new:post_content_chunk", Content>
 
 export type ErrorMessage = Payload<"new:error", string>;
 
+export type RetryMessage = Payload<
+  "update:retry",
+  { attempt: number; max_attempts: number; wait_seconds: number; reason: string }
+>;
+
 export interface ToolCall {
   id: string;
   tool: {
@@ -59,6 +64,7 @@ export type TypedMessage =
   | PostReasoningChunkMessage
   | PostContentChunkMessage
   | ErrorMessage
+  | RetryMessage
   | ToolCallMessage
   | ToolCallArgsMessage
   | ToolCallResultMessage

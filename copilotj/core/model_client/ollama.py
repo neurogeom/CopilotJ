@@ -14,11 +14,11 @@ from copilotj.core.message import ImageMessage, TextMessage
 from copilotj.core.model_client._types import (
     FinishReasons,
     ModelClient,
-    ModelProviderError,
     ModelResponse,
     ModelResponseChunk,
     ToolCall,
 )
+from copilotj.core.model_client.openai_chat_completion import _to_openai_provider_error
 from copilotj.core.tool import Tool
 
 __all__ = ["OllamaChatCompletionClient"]
@@ -41,7 +41,8 @@ class OllamaChatCompletionClient(ModelClient):
         # Ensure the base URL ends with /v1 for the OpenAI-compatible endpoint.
         v1_url = host if host.rstrip("/").endswith("/v1") else f"{host.rstrip('/')}/v1"
         # Langfuse support can be safely ignored if LANGFUSE_PUBLIC_KEY or LANGFUSE_SECRET_KEY is not set.
-        self._client = langfuse.openai.AsyncOpenAI(api_key="ollama", base_url=v1_url)
+        # max_retries=0: own the retry loop in ChatAgent so 429 retries are VISIBLE.
+        self._client = langfuse.openai.AsyncOpenAI(api_key="ollama", base_url=v1_url, max_retries=0)
 
     @override
     def get_model(self) -> str:
@@ -82,9 +83,9 @@ class OllamaChatCompletionClient(ModelClient):
                 finish_reason=_parse_finish_reason(choice.finish_reason),
             )
         except openai.APIError as e:
-            raise ModelProviderError(f"Ollama API error: {e.message}", "ollama") from e
+            raise _to_openai_provider_error(e, "ollama") from e
         except openai.OpenAIError as e:
-            raise ModelProviderError(f"Ollama error: {str(e)}", "ollama") from e
+            raise _to_openai_provider_error(e, "ollama") from e
 
     @override
     async def create_stream(
@@ -152,9 +153,9 @@ class OllamaChatCompletionClient(ModelClient):
                 _log_cache_usage(self._model, stream_usage)
 
         except openai.APIError as e:
-            raise ModelProviderError(f"Ollama API error: {e.message}", "ollama") from e
+            raise _to_openai_provider_error(e, "ollama") from e
         except openai.OpenAIError as e:
-            raise ModelProviderError(f"Ollama error: {str(e)}", "ollama") from e
+            raise _to_openai_provider_error(e, "ollama") from e
 
         finally:
             if stream is not None:
@@ -193,9 +194,9 @@ class OllamaChatCompletionClient(ModelClient):
                 model=self._model, messages=openai_messages, tools=openai_tools, **extra, stream=stream
             )
         except openai.APIError as e:
-            raise ModelProviderError(f"Ollama API error: {e.message}", "ollama") from e
+            raise _to_openai_provider_error(e, "ollama") from e
         except openai.OpenAIError as e:
-            raise ModelProviderError(f"Ollama error: {str(e)}", "ollama") from e
+            raise _to_openai_provider_error(e, "ollama") from e
 
     @classmethod
     def _format_messages(cls, messages: Sequence[TextMessage | ImageMessage]):

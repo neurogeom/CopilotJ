@@ -11,6 +11,7 @@ import {
   IconCopy,
   IconExclamationCircleFilled,
   IconLoader2,
+  IconRefresh,
   IconSquareRoundedCheckFilled,
   IconTools,
   IconUserFilled,
@@ -18,12 +19,13 @@ import {
 import { useTimestamp } from "@vueuse/core";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
-import { ref } from "vue";
-import type { Post } from "../store";
+import { computed, ref, watch } from "vue";
+import type { Post, RetryingState } from "../store";
 import ChatboxMarkdownContent from "./ChatboxMarkdownContent.vue";
 
 const props = defineProps<{
   posts: Post[];
+  retrying: RetryingState | null;
 }>();
 
 const itemRefs = ref<Record<string, HTMLElement>>({});
@@ -33,6 +35,22 @@ const showToolCallDetails = ref(new Set<string>());
 const copyStatus = ref<Record<number, boolean>>({}); // Track copy status for each post
 
 const timestamp = useTimestamp();
+
+// Live countdown for the 429 retry bar: reuse the reactive ``timestamp`` (updates
+// ~each animation frame) so "waiting Ns" ticks down instead of freezing on a
+// static backoff value. The start point resets on every new update:retry event.
+const retryStartedAt = ref(0);
+const remainingSeconds = computed(() => {
+  if (!props.retrying) return 0;
+  const elapsed = (timestamp.value - retryStartedAt.value) / 1000;
+  return Math.max(0, Math.ceil(props.retrying.wait - elapsed));
+});
+watch(
+  () => props.retrying,
+  (r) => {
+    if (r) retryStartedAt.value = Date.now();
+  },
+);
 
 defineExpose({
   getElement,
@@ -342,6 +360,18 @@ function getElement(id: string): HTMLElement | null {
           >
             <p v-if="post.content">🤗 Answering...</p>
             <p v-else>🤔 Thinking...</p>
+          </div>
+
+          <!-- 429 auto-retry feedback (#96) -->
+          <div
+            v-if="props.retrying && index === props.posts.length - 1"
+            class="ml-12 flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 animate-pulse"
+          >
+            <IconRefresh size="16" class="animate-spin" />
+            <span>
+              Rate limited — retrying ({{ props.retrying.attempt }}/{{ props.retrying.maxAttempts }}, waiting
+              {{ remainingSeconds }}s)…
+            </span>
           </div>
         </div>
       </div>

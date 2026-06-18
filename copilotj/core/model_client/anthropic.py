@@ -10,6 +10,7 @@ import anthropic
 import httpx
 
 from copilotj.core.message import ImageMessage, TextMessage
+from copilotj.core.model_client._retry import parse_retry_after
 from copilotj.core.model_client._types import (
     FinishReasons,
     ModelClient,
@@ -33,6 +34,22 @@ _DATA_URL_RE = re.compile(r"^data:(image/[^;]+);base64,(.+)$", re.DOTALL)
 _CACHE_CONTROL = {"type": "ephemeral"}
 
 
+def _to_anthropic_provider_error(e: Exception) -> ModelProviderError:
+    """Convert an Anthropic SDK exception into a ModelProviderError.
+
+    Preserves the status code and ``Retry-After`` header so the agent retry loop
+    can detect 429s and back off correctly.
+    """
+    status_code = getattr(e, "status_code", None)
+    retry_after = None
+    response = getattr(e, "response", None)
+    if response is not None:
+        headers = getattr(response, "headers", None)
+        if headers is not None:
+            retry_after = parse_retry_after(headers.get("retry-after"))
+    return ModelProviderError(str(e), "anthropic", status_code=status_code, retry_after=retry_after)
+
+
 class AnthropicChatCompletionClient(ModelClient):
     """Anthropic/Claude client using the native ``anthropic`` SDK.
 
@@ -45,7 +62,11 @@ class AnthropicChatCompletionClient(ModelClient):
         self._model = model
         self._api_key = api_key
         http_client = httpx.AsyncClient(proxy=proxy) if proxy else None
-        self._client = anthropic.AsyncAnthropic(api_key=api_key, base_url=base_url, http_client=http_client)
+        # max_retries=0: own the retry loop in ChatAgent so 429 retries are VISIBLE
+        # (the SDK retries silently and exposes no per-attempt hook).
+        self._client = anthropic.AsyncAnthropic(
+            api_key=api_key, base_url=base_url, http_client=http_client, max_retries=0
+        )
 
     @override
     def get_model(self) -> str:
@@ -76,7 +97,7 @@ class AnthropicChatCompletionClient(ModelClient):
             _log_cache_usage(self._model, response.usage)
             return _parse_response(response, tools)
         except anthropic.APIError as e:
-            raise ModelProviderError(str(e), "anthropic") from e
+            raise _to_anthropic_provider_error(e) from e
 
     @override
     async def create_stream(
@@ -122,7 +143,7 @@ class AnthropicChatCompletionClient(ModelClient):
                 _log_cache_usage(self._model, final.usage)
 
         except anthropic.APIError as e:
-            raise ModelProviderError(str(e), "anthropic") from e
+            raise _to_anthropic_provider_error(e) from e
 
     # ------------------------------------------------------------------
     # Message formatting

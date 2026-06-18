@@ -53,6 +53,18 @@ _EXTENSION_MIME_MAP: dict[str, str] = {
 }
 
 
+def _to_gemini_provider_error(e: Exception) -> ModelProviderError:
+    """Convert a google-genai APIError into a ModelProviderError.
+
+    google-genai errors carry the HTTP status as ``.code`` (e.g. 429 for
+    RESOURCE_EXHAUSTED). ``Retry-After`` is not reliably exposed, so it is left
+    as None and the agent falls back to exponential backoff.
+    """
+    status_code = getattr(e, "code", None)
+    message = getattr(e, "message", None) or str(e)
+    return ModelProviderError(message, "gemini", status_code=status_code)
+
+
 class GeminiChatCompletionClient(ModelClient):
     """ModelClient implementation using the native ``google-genai`` SDK.
 
@@ -75,6 +87,13 @@ class GeminiChatCompletionClient(ModelClient):
             if base_url:
                 http_options.base_url = base_url
 
+        # NOTE: google-genai's built-in retry is NOT disabled here. The retry
+        # knob for the installed SDK couldn't be verified (google-genai isn't
+        # importable in this dev env), and passing a wrong kwarg would break all
+        # Gemini calls. The agent-layer retry still works — a 429 surfaces after
+        # the SDK's own (invisible) pass, tagged with status_code — just with a
+        # possible invisible retry before the visible one. Revisit once the SDK
+        # retry param is confirmed.
         self._client = genai.Client(api_key=api_key, http_options=http_options)
 
     # ------------------------------------------------------------------
@@ -105,7 +124,7 @@ class GeminiChatCompletionClient(ModelClient):
                 model=self._model, contents=contents, config=config
             )
         except errors.APIError as e:  # type: ignore[misc]
-            raise ModelProviderError(f"Gemini API error: {e.message}", "gemini") from e
+            raise _to_gemini_provider_error(e) from e
         except Exception as e:
             raise ModelProviderError(f"Gemini error: {e!s}", "gemini") from e
 
@@ -171,7 +190,7 @@ class GeminiChatCompletionClient(ModelClient):
                 _log_cache_usage(self._model, stream_usage)
 
         except errors.APIError as e:  # type: ignore[misc]
-            raise ModelProviderError(f"Gemini API error: {e.message}", "gemini") from e
+            raise _to_gemini_provider_error(e) from e
         except Exception as e:
             raise ModelProviderError(f"Gemini error: {e!s}", "gemini") from e
 

@@ -12,11 +12,11 @@ from copilotj.core.message import ImageMessage, TextMessage
 from copilotj.core.model_client._types import (
     FinishReasons,
     ModelClient,
-    ModelProviderError,
     ModelResponse,
     ModelResponseChunk,
     ToolCall,
 )
+from copilotj.core.model_client.openai_chat_completion import _to_openai_provider_error
 from copilotj.core.tool import Tool
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,10 @@ class OpenAIResponseClient(ModelClient):
         self._model = model
         self._api_key = api_key
         http_client = openai.DefaultAsyncHttpxClient(proxy=proxy) if proxy is not None else None
-        self._client = langfuse.openai.AsyncOpenAI(api_key=self._api_key, http_client=http_client, base_url=base_url)
+        # max_retries=0: own the retry loop in ChatAgent so 429 retries are VISIBLE.
+        self._client = langfuse.openai.AsyncOpenAI(
+            api_key=self._api_key, http_client=http_client, base_url=base_url, max_retries=0
+        )
 
     @override
     def get_model(self) -> str:
@@ -91,9 +94,9 @@ class OpenAIResponseClient(ModelClient):
                 finish_reason="tool_calls" if len(tool_calls) > 0 else "stop",
             )
         except openai.APIError as e:
-            raise ModelProviderError(f"OpenAI API error: {e.message}", "openai") from e
+            raise _to_openai_provider_error(e) from e
         except openai.OpenAIError as e:
-            raise ModelProviderError(f"OpenAI error: {str(e)}", "openai") from e
+            raise _to_openai_provider_error(e) from e
 
     @override
     async def create_stream(
@@ -193,9 +196,9 @@ class OpenAIResponseClient(ModelClient):
 
                 yield ModelResponseChunk(content=None, reasoning_content=None, finish_reason=finish_reason)
         except openai.APIError as e:
-            raise ModelProviderError(f"OpenAI API error: {e.message}", "openai") from e
+            raise _to_openai_provider_error(e) from e
         except openai.OpenAIError as e:
-            raise ModelProviderError(f"OpenAI error: {str(e)}", "openai") from e
+            raise _to_openai_provider_error(e) from e
 
     @overload
     async def _create(
@@ -248,9 +251,9 @@ class OpenAIResponseClient(ModelClient):
                 stream=stream,
             )
         except openai.APIError as e:
-            raise ModelProviderError(f"OpenAI API error: {e.message}", "openai") from e
+            raise _to_openai_provider_error(e) from e
         except openai.OpenAIError as e:
-            raise ModelProviderError(f"OpenAI error: {str(e)}", "openai") from e
+            raise _to_openai_provider_error(e) from e
 
     @staticmethod
     def _merge_messages(

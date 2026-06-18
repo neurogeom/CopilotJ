@@ -47,6 +47,13 @@ export type Post = PostText | PostAgent;
 
 export type ThreadStatus = "init" | "started" | "error" | "aborted";
 
+export type RetryingState = {
+  attempt: number;
+  maxAttempts: number;
+  wait: number;
+  reason: string;
+};
+
 // TODO: merge into useActiveThread?
 export function useThread(): {
   onUpdate(cb: () => void): void;
@@ -59,6 +66,7 @@ export function useThread(): {
   readonly posts: Post[];
   readonly loading: boolean;
   readonly optimizing: boolean;
+  readonly retrying: RetryingState | null;
   readonly sendable: boolean;
 } {
   const id = ref<string | null>(null);
@@ -66,6 +74,7 @@ export function useThread(): {
   const posts = ref<Post[]>([]);
   const loading = ref(false);
   const optimizing = ref(false);
+  const retrying = ref<RetryingState | null>(null);
   const abortController = ref<AbortController | null>(null);
 
   const sendable = computed(
@@ -251,6 +260,16 @@ export function useThread(): {
             break;
           }
 
+          case "update:retry": {
+            retrying.value = {
+              attempt: chunk.data.attempt,
+              maxAttempts: chunk.data.max_attempts,
+              wait: chunk.data.wait_seconds,
+              reason: chunk.data.reason,
+            };
+            break;
+          }
+
           case "update:state": {
             switch (chunk.data) {
               case "agent_speaking":
@@ -296,6 +315,11 @@ export function useThread(): {
             // To be safe, let's cast chunk to any to check its type property
             console.warn("Unknown message:", chunk);
             break;
+        }
+
+        // Any non-retry event means we've moved past the retry (progress, finish, error).
+        if (chunk.type !== "update:retry") {
+          retrying.value = null;
         }
 
         for (const cb of callbacks) {
@@ -348,6 +372,9 @@ export function useThread(): {
     } finally {
       abortController.value = null;
       loading.value = false;
+      // Safety net: never leave a stale "retrying" bar if the stream ends
+      // unexpectedly (drop/abort) right after an update:retry event.
+      retrying.value = null;
     }
   }
 
@@ -455,6 +482,7 @@ export function useThread(): {
     posts,
     loading,
     optimizing,
+    retrying,
     sendable,
   });
 }
