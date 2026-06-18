@@ -9,6 +9,7 @@ import { acceptHMRUpdate, defineStore } from "pinia";
 import { computed, markRaw, reactive, ref } from "vue";
 import type { ThreadConfig, ThreadConfigQuery, ToolCall, OptimizePromptResponse } from "../apis";
 import {
+  abortThread,
   deleteThread,
   newThread,
   newThreadPost,
@@ -423,6 +424,13 @@ export function useThread(): {
     if (abortController.value) {
       abortController.value.abort();
       abortController.value = null;
+    }
+
+    // Signal the server to abort promptly so a retry backoff is interrupted
+    // immediately (the fetch abort above is only detected on the next NDJSON
+    // write). Fire-and-forget — abortThread swallows its own errors.
+    if (id.value) {
+      void abortThread(id.value);
     }
 
     // Mark the last post as finished if it's an agent post

@@ -478,9 +478,18 @@ class LeaderDriven(Pattern):
     def abort(self) -> None:
         """Abort any ongoing dialog or task.
 
-        NOTE: This will may make the pattern unstable.
+        Propagates to the leader AND every specialized agent: the agent
+        currently mid-stream (and possibly mid-retry-backoff) may be an
+        executor, not the leader, and each holds its own abort event. Setting an
+        idle agent's event is harmless — it is cleared at the start of its next
+        ``_create``.
+
+        NOTE: This may make the pattern unstable.
         """
         self.leader_agent.abort()
+        for agent in self._agents.values():
+            if hasattr(agent, "abort"):
+                agent.abort()
 
     async def optimize_prompt(self, user_prompt: str) -> str:
         """Optimize user prompt using the raw model client (not ReAct-wrapped).

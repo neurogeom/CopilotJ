@@ -86,6 +86,7 @@ class Server:
         r.add_post("/api/threads", self._threads.new_thread)
         r.add_delete("/api/threads/{thread_id}", self._threads.del_thread)
         r.add_post("/api/threads/{thread_id}/posts", self._threads.new_thread_post)
+        r.add_post("/api/threads/{thread_id}/abort", self._threads.abort_endpoint)
         r.add_get("/api/threads/{thread_id}/config", self._threads.get_thread_config)
         r.add_post("/api/threads/{thread_id}/config", self._threads.update_thread_config)
         r.add_post("/api/threads/{thread_id}/optimize-prompt", self._threads.optimize_prompt_endpoint)
