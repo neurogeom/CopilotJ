@@ -6,7 +6,7 @@
 # =============================================================================
 # Stage 1: Builder - Build the Vue application
 # =============================================================================
-FROM node:22-alpine AS builder
+FROM node:26-alpine AS builder
 
 RUN npm install -g pnpm
 ENV PNPM_HOME=/pnpm \
