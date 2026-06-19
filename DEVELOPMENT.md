@@ -12,8 +12,12 @@ This project contains three parts:
 ## Prerequisites
 
 - **Python 3.12+** with [uv](https://docs.astral.sh/uv/)
+  <<<<<<< HEAD
 - **Java 8+** and **Maven 3.x**
-- **Node.js 22+** with [pnpm v11](https://pnpm.io/installation)
+- # **Node.js 22+** with [pnpm v11](https://pnpm.io/installation)
+- **Java 21** and **Maven 3.x** (to build; the resulting JAR runs on Java 8+)
+- **Node.js 22+** with [pnpm](https://pnpm.io/installation)
+  > > > > > > > 657311e (Load MCP via isolated child-first ClassLoader in a single JAR)
 - [just](https://github.com/casey/just) (command runner)
 
 ## Quick start with just
@@ -290,15 +294,26 @@ CopilotJ integrates [Langfuse](https://langfuse.com/) for developers who want to
 
 ### Building the plugin from source
 
-After cloning the repository, build the plugin with:
+The plugin builds as a **single self-contained JAR** with one JDK 21 build: the
+core compiles to Java 8 bytecode, the MCP server to Java 17 bytecode, and the MCP
+code together with its dependencies (Jetty 12, Jackson 2.18, MCP SDK, reactor)
+is bundled into an isolated `lib/mcp-bundle.jar` embedded inside the JAR.
 
 ```bash
 cd plugin
-mvn clean package
-mvn dependency:copy-dependencies -DoutputDirectory=target/deps
+mvn clean package -DskipTests
 ```
 
-Locate the generated `.jar` file in `target/` and copy it along with all JARs from `target/deps/` into Fiji's `jars/` directory. Then restart Fiji.
+The same JAR (`target/CopilotJBridge-<version>.jar`) runs everywhere:
+
+- **Fiji-Stable (Java 8)** — the core works; the MCP tab degrades to "MCP requires
+  Fiji-Latest" because the Java 17 bundle cannot be loaded on a Java 8 JVM.
+- **Fiji-Latest (Java 21)** — the full plugin, including the MCP server, is available.
+
+Install it by copying the **single JAR** into Fiji's `jars/` (or `plugins/`)
+directory and restarting Fiji. No dependency JARs need to be copied separately:
+the MCP stack is isolated inside `lib/mcp-bundle.jar` and loaded via a child-first
+`ClassLoader`, so it never clashes with Fiji's own Jetty/Jackson versions.
 
 Alternatively, Maven can install directly into a Fiji installation:
 
@@ -307,6 +322,7 @@ cd plugin && mvn clean install -Dscijava.app.directory=/path/to/Fiji
 ```
 
 This copies the plugin JAR and all dependency JARs into the specified Fiji installation. Fiji comes bundled with many of CopilotJ's dependencies; the [SciJava infrastructure](https://github.com/scijava/scijava-maven-plugin/) keeps only the newer version of each dependency JAR.
+The MCP dependencies are `provided`-scoped, so they are intentionally **not** installed into Fiji's shared `jars/` — they live only inside the embedded bundle.
 
 **Install into Fiji**:
 

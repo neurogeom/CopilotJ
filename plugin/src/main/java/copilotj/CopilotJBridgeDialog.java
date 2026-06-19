@@ -626,21 +626,34 @@ public class CopilotJBridgeDialog
   // -- MCP panel --
 
   private JPanel createMcpPanel() {
-    try {
-      Class<?> cls = Class.forName("copilotj.mcp.McpPanel");
-      java.lang.reflect.Constructor<?> ctor = cls.getConstructor(EventHandler.class, LogService.class);
-      return (JPanel) ctor.newInstance(service.getEventHandler(), logService);
-    } catch (ClassNotFoundException e) {
-      JLabel label = new JLabel("MCP not available");
-      label.setForeground(Color.GRAY);
-      JPanel p = new JPanel();
-      p.setBorder(BorderFactory.createTitledBorder("MCP Server"));
-      p.add(label);
-      return p;
-    } catch (Exception e) {
-      logService.warn("Failed to load MCP: " + e.getMessage());
-      return new JPanel();
+    // MCP ships as an isolated Java 17 bundle loaded via McpLoader; on Java <17
+    // (or if the bundle is missing/corrupt) it degrades to a static label.
+    final McpLoader loader = new McpLoader(logService);
+    final JPanel panel = loader.createPanel(service.getEventHandler());
+    if (panel != null) {
+      return panel;
     }
+    final String manualUrl = "https://copilotj.chat/#/manual";
+    final JLabel label = new JLabel("<html>MCP can only run with Fiji-Latest "
+        + "(requires Java 17+; current Java version: "
+        + System.getProperty("java.version") + ").<br>"
+        + "See the <a href=\"" + manualUrl + "\">manual FAQ</a> for details.</html>");
+    label.setForeground(Color.GRAY);
+    label.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
+    label.addMouseListener(new java.awt.event.MouseAdapter() {
+      @Override
+      public void mouseClicked(final java.awt.event.MouseEvent e) {
+        try {
+          java.awt.Desktop.getDesktop().browse(java.net.URI.create(manualUrl));
+        } catch (final Exception ex) {
+          logService.warn("copilotj: Could not open manual: " + ex.getMessage());
+        }
+      }
+    });
+    final JPanel p = new JPanel();
+    p.setBorder(BorderFactory.createTitledBorder("MCP Server"));
+    p.add(label);
+    return p;
   }
 
   // -- Connection.ConnectionStateListener --
