@@ -21,7 +21,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from tavily import TavilyClient
 
-from copilotj.core.config import Config
+from copilotj.core.config import ConfigLike, resolve_config
 from copilotj.core.embedding import get_embeddings
 from copilotj.core.kb import (
     DEFAULT_INDEX_DIR,
@@ -254,8 +254,8 @@ def ddg_search(
             time.sleep(1 * attempt)
 
 
-def make_tavily_search(cfg: Config):
-    """Factory: return a ``tavily_search`` callable bound to *cfg*."""
+def make_tavily_search(cfg: ConfigLike):
+    """Factory: return a ``tavily_search`` callable bound to *cfg* (static or live provider)."""
 
     def tavily_search(
         query: Annotated[str, "Search query string describing what information you need"],
@@ -265,10 +265,11 @@ def make_tavily_search(cfg: Config):
         include_raw_content: Annotated[bool, "Whether to include raw content from sources"] = False,
     ) -> str | list[dict[str, str]]:
         try:
-            if not cfg.tavily_api_key:
+            _cfg = resolve_config(cfg)
+            if not _cfg.tavily_api_key:
                 return "Tavily API key not found. Please set COPILOTJ_TAVILY_API_KEY environment variable."
 
-            client = TavilyClient(api_key=cfg.tavily_api_key)
+            client = TavilyClient(api_key=_cfg.tavily_api_key)
 
             response = client.search(
                 query=query,
@@ -589,8 +590,8 @@ async def imagej_retriever(query: Annotated[str, "Search query string describing
 
 
 # deep research tool
-def make_deep_research(cfg: Config):
-    """Factory: return a ``deep_research`` callable bound to *cfg*."""
+def make_deep_research(cfg: ConfigLike):
+    """Factory: return a ``deep_research`` callable bound to *cfg* (static or live provider)."""
     _tavily_search = make_tavily_search(cfg)
 
     async def deep_research(query: Annotated[str, "The research question to investigate thoroughly"]) -> str:
@@ -690,8 +691,8 @@ async def download_resource(code: Annotated[str, "The code to download the resou
 # BioImage Model Zoo tools
 
 
-def make_bioimage_search_models(cfg: Config):
-    """Factory: return a ``bioimage_search_models`` callable bound to *cfg*."""
+def make_bioimage_search_models(cfg: ConfigLike):
+    """Factory: return a ``bioimage_search_models`` callable bound to *cfg* (static or live provider)."""
 
     def bioimage_search_models(
         query: Annotated[str | None, "Free-text search query for model name, description, or keywords"] = None,
@@ -705,9 +706,7 @@ def make_bioimage_search_models(cfg: Config):
         Use this to find models for specific tasks like denoising, segmentation, detection, etc.
         """
         try:
-            from copilotj.core.config import load_config
-
-            _cfg = cfg or load_config()
+            _cfg = resolve_config(cfg)
             # Fetch collection
             models = _fetch_collection(
                 base_url=_cfg.bioimage_model_zoo_url,
@@ -817,8 +816,8 @@ def bioimage_get_model_info(model_id: Annotated[str, "Model ID or name to get de
         return f"Error getting model info: {str(e)}"
 
 
-def make_bioimage_download_model(cfg: Config):
-    """Factory: return a ``bioimage_download_model`` callable bound to *cfg*."""
+def make_bioimage_download_model(cfg: ConfigLike):
+    """Factory: return a ``bioimage_download_model`` callable bound to *cfg* (static or live provider)."""
 
     def bioimage_download_model(
         model_id: Annotated[str, "Model ID or name to download"],
@@ -831,6 +830,7 @@ def make_bioimage_download_model(cfg: Config):
         Returns the local file path where the model was downloaded.
         """
         try:
+            _cfg = resolve_config(cfg)
             if dest_dir:
                 dest_path = Path(dest_dir)
             else:
@@ -839,9 +839,9 @@ def make_bioimage_download_model(cfg: Config):
             dest_path.mkdir(parents=True, exist_ok=True)
 
             models = _fetch_collection(
-                base_url=cfg.bioimage_model_zoo_url,
-                cache_dir=Path(cfg.bioimage_model_zoo_cache).resolve(),
-                ttl_seconds=cfg.bioimage_model_zoo_cache_ttl,
+                base_url=_cfg.bioimage_model_zoo_url,
+                cache_dir=Path(_cfg.bioimage_model_zoo_cache).resolve(),
+                ttl_seconds=_cfg.bioimage_model_zoo_cache_ttl,
                 force_refresh=False,
             )
 
