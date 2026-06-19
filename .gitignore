@@ -49,3 +49,8 @@ coverage*
 *.njsproj
 *.sln
 *.sw?
+
+# agentic tools
+.claude/worktrees/
+.playwright-mcp/
+.gstack/
