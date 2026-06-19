@@ -1,7 +1,17 @@
 # application
+assets/knowledge_base/*.faiss
+assets/knowledge_base/*.pkl
+assets/knowledge_base/*.rebuild.hash
+assets/knowledge_base/rag_manifest.json
+knowledge_bank/index/registry.jsonl
+cache/
+data/
+temp/
 uploads/
 config.json
-cache/
+*.local
+*.log
+*.temp.*
 
 # python
 .venv/
@@ -23,21 +33,11 @@ npm-debug.log*
 pnpm-debug.log*
 
 # misc
-*.local
-*.log
-*.temp.*
 .DS_Store
 .worktrees/
 .direnv/
 .coverage*
 coverage*
-temp/
-knowledge_bank/index/registry.jsonl
-assets/knowledge_base/*.faiss
-assets/knowledge_base/*.pkl
-assets/knowledge_base/rag_manifest.json
-assets/knowledge_base/*.rebuild.hash
-data/
 
 # Editor directories and files
 .vscode/*
