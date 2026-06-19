@@ -6,7 +6,7 @@
 # =============================================================================
 # Stage 1: Builder - Install dependencies
 # =============================================================================
-FROM nvidia/cuda:12.4.0-devel-ubuntu22.04 AS builder
+FROM nvidia/cuda:13.3.0-devel-ubuntu22.04 AS builder
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -48,7 +48,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # =============================================================================
 # Stage 2: Runtime - Final image
 # =============================================================================
-FROM nvidia/cuda:12.4.0-runtime-ubuntu22.04 AS runtime
+FROM nvidia/cuda:13.3.0-runtime-ubuntu22.04 AS runtime
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
