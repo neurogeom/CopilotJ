@@ -1,35 +1,21 @@
 # just is a command runner, Justfile is very similar to Makefile, but simpler.
 #
 # JDK configuration (set via flake.nix env vars):
-#   JAVA_HOME   -> JDK 21 (default, used by dev-plugin / build-plugin)
-#   JAVA8_HOME  -> JDK 8  (fallback, used by dev-plugin-stable / build-plugin-stable)
+#   JAVA_HOME   -> JDK 21 (builds the single JAR: core -> Java 8 bytecode, MCP -> Java 17)
+#   JAVA8_HOME  -> JDK 8  (only for ad-hoc Java 8 downgrade checks; not required to build)
 
 default:
   @just --list
 
-# Dev: MCP plugin (Java 21)
+# Dev: run the plugin in a forked Java 21 JVM (MCP enabled via the embedded bundle)
 dev-plugin:
   @just build-plugin
-  cd plugin && \
-    mvn exec:exec -P mcp
+  cd plugin && mvn exec:exec
 
-# Dev: core ImageJ plugin (Java 8)
-dev-plugin-stable:
-  cd plugin && \
-    JAVA_HOME="$JAVA8_HOME" \
-    mvn compile exec:java -D"exec.mainClass=copilotj.DefaultCopilotJBridgeService" \
-      -D"ij.debug=true" -D"scijava.log.level=debug" -D"copilotj.maxRetryWaitSecond=1" \
-      -D"copilotj.sourcePath={{justfile_directory()}}"
-
-dev-plugin-full-stable: clean-plugin dev-plugin-stable
-
-# Build: MCP fat JAR (Java 21)
+# Build: single self-contained plugin JAR (Java 8 core + embedded Java 17 MCP bundle).
+# The same JAR runs on Java 8 Fiji (core only, MCP degrades) and Java 17+ Fiji (full MCP).
 build-plugin:
-  cd plugin && mvn package -P mcp -DskipTests
-
-# Build: core ImageJ plugin JAR (Java 8)
-build-plugin-stable: clean-plugin
-  cd plugin && JAVA_HOME="$JAVA8_HOME" mvn package
+  cd plugin && mvn package -DskipTests
 
 clean-plugin:
   cd plugin && mvn clean

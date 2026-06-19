@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Assembly descriptor for the isolated MCP bundle (lib/mcp-bundle.jar).
+
+  This bundle holds the Java 17 MCP classes plus all of their provided-scoped
+  dependencies (MCP SDK, Jetty 12, Jackson 2.18, SLF4J, and transitive deps such
+  as reactor-core). It is shipped as a NON-classpath resource inside the core
+  JAR and loaded at runtime by McpLoader via a child-first URLClassLoader, so:
+
+    * On Java 8 Fiji: the bundle is never loaded -> MCP degrades gracefully.
+    * On Java 17+ Fiji: the bundle loads in isolation -> MCP's Jetty 12 / Jackson
+      2.18 never clash with Fiji's own versions.
+
+  Core classes (EventHandler, ...) are intentionally excluded (useProjectArtifact
+  = false + scope=provided keeps them out) so MCP and the core share one class
+  identity via the parent classloader.
+-->
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.2.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.2.0 https://maven.apache.org/xsd/assembly-2.2.0.xsd">
+  <id>mcp-bundle</id>
+  <formats>
+    <format>jar</format>
+  </formats>
+  <includeBaseDirectory>false</includeBaseDirectory>
+
+  <!-- Merge META-INF/services so ServiceLoader-based discovery inside the bundle works. -->
+  <containerDescriptorHandlers>
+    <containerDescriptorHandler>
+      <handlerName>metaInf-services</handlerName>
+    </containerDescriptorHandler>
+  </containerDescriptorHandlers>
+
+  <fileSets>
+    <!-- The Java 17 MCP classes, compiled to target/mcp-classes. -->
+    <fileSet>
+      <directory>${project.build.directory}/mcp-classes</directory>
+      <outputDirectory>/</outputDirectory>
+    </fileSet>
+  </fileSets>
+
+  <dependencySets>
+    <dependencySet>
+      <outputDirectory>/</outputDirectory>
+      <useProjectArtifact>false</useProjectArtifact>
+      <!-- Pull in the provided-scoped MCP stack and its transitive deps. -->
+      <scope>provided</scope>
+      <excludes>
+        <!-- Dev-only (ImageJ1 patcher for the forked dev JVM); not part of MCP. -->
+        <exclude>net.imagej:ij1-patcher</exclude>
+      </excludes>
+      <unpack>true</unpack>
+      <unpackOptions>
+        <excludes>
+          <exclude>META-INF/*.SF</exclude>
+          <exclude>META-INF/*.DSA</exclude>
+          <exclude>META-INF/*.RSA</exclude>
+          <!-- Drop module-info to avoid split-package / automatic-module issues
+               when the bundle is loaded by a plain URLClassLoader. -->
+          <exclude>module-info.class</exclude>
+        </excludes>
+      </unpackOptions>
+    </dependencySet>
+  </dependencySets>
+</assembly>

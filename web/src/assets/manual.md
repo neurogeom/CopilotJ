@@ -304,3 +304,13 @@ If the button doesn't work:
 - **Nothing happens, or you see "Opening a folder is not supported".** Your platform may not support this from Fiji. Open the folder manually at the path above.
 - **The folder is empty, or there is no `temp/` folder.** Subfolders such as `temp/`, `assets/`, and `knowledge_bank/` are created when the Python environment is installed and a session runs. Click **Install** (then **Start**) in the **Managed Server** tab first.
 - **You see a "Failed to open resource directory" error.** Open the path above manually in your file manager.
+
+### Can I use general AI applications to interact with Fiji?
+
+Yes. The CopilotJ Bridge plugin exposes an [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server. Any MCP-compatible AI client — for example Claude Code, Codex, or other tools that speak MCP — can connect to your running Fiji instance and drive ImageJ operations directly, without going through the CopilotJ web frontend.
+
+### Why is my MCP server not available?
+
+MCP only works with **Fiji-Latest**. The MCP libraries require Java 17 or newer; **Fiji-Latest** ships Java 21, while **Fiji-Stable** still ships Java 8. On Fiji-Stable the MCP tab in the CopilotJ dialog shows a "not available" notice, while the rest of CopilotJ keeps working normally. See [fiji#413](https://github.com/fiji/fiji/issues/413) for background on Fiji's Java versions.
+
+To use MCP, upgrade to **Fiji-Latest** — download it from [fiji.sc](https://fiji.sc/).

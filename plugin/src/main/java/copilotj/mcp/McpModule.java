@@ -58,6 +58,12 @@ public class McpModule {
 		.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
 
 	public static void start(EventHandler handler, String host, int port) throws Exception {
+		// Resolve MCP's ServiceLoader (JsonSchemaValidatorSupplier, JSON mapper, ...)
+		// from the isolated bundle rather than the thread's default classloader.
+		// Without this, ServiceLoader.load(Class) uses the TCCL, which holds either a
+		// duplicate of the MCP classes (dev classpath) or none at all (real Fiji),
+		// causing "not a subtype" or "no provider found" failures.
+		Thread.currentThread().setContextClassLoader(McpModule.class.getClassLoader());
 		McpModule.eventHandler = handler;
 
 		var transport = HttpServletStreamableServerTransportProvider.builder()
