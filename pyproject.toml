@@ -8,7 +8,7 @@ authors = [
   { name = "Jack Lu", email = "1033138611@qq.com" },
   { name = "liux75", email = "liux750@chinaunicom.cn" },
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.13"
 dependencies = [
   "appose>=0.5.1",
   "aiohttp[speedups]>=3.11.12",
@@ -34,9 +34,9 @@ dependencies = [
   "selenium>=4.27.1",
   "beautifulsoup4>=4.12.3",
   "faiss-cpu>=1.14.2",
-  "langchain-community>=0.3.21",
-  "langchain-huggingface>=0.3.1",
-  "langchain-text-splitters>=0.3.11",
+  "langchain-community>=0.4.2",
+  "langchain-huggingface>=1.2.2",
+  "langchain-text-splitters>=1.1.2",
   "pymupdf>=1.27.2.3",
   "sentence-transformers>=5.5.1",
   "unstructured>=0.21.5",
@@ -53,8 +53,8 @@ dependencies = [
   "tensorflow>=2.18.1",
   "torchmetrics>=1.7.3",
   "pytorch-msssim>=1.0.0",
-  "langchain-core>=0.3.35",
-  "langchain-google-genai>=2.1.5",
+  "langchain-core>=1.4.0",
+  "langchain-google-genai>=2.1.12",
   "napari-process-points-and-surfaces>=0.5.0",
   "opencv-python>=4.11.0.86",
   "opencv-contrib-python>=4.11.0.86",
