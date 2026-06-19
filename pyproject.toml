@@ -47,7 +47,7 @@ dependencies = [
   "cellpose==3.1.1.2",
   "torch>=2.7.1",
   "csbdeep>=0.8.1",
-  "xarray==2024.11.0",
+  "xarray==2026.4.0",
   "stardist>=0.9.1",
   "timm>=1.0.14",
   "tensorflow>=2.18.1",
