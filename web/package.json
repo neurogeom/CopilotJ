@@ -17,7 +17,7 @@
     "date-fns": "^4.4.0",
     "dayjs": "^1.11.21",
     "highlight.js": "^11.11.1",
-    "marked": "^16.4.2",
+    "marked": "^18.0.5",
     "marked-highlight": "^2.2.4",
     "pinia": "^3.0.4",
     "primevue": "^4.5.5",
