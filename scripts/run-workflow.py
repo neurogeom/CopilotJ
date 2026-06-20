@@ -6,6 +6,7 @@
 import asyncio
 import json
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -13,7 +14,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from copilotj.core.config import load_config  # noqa: E402
+from copilotj.core.config import Config, load_config  # noqa: E402
 import copilotj.multiagent.tools as tools  # noqa: E402
 from copilotj.core import FunctionTool, ToolCall  # noqa: E402
 from copilotj.multiagent.leader_prompts import (  # noqa: E402
@@ -26,9 +27,10 @@ from copilotj.multiagent.leader_prompts import (  # noqa: E402
 from copilotj.plugin.api import HTTPPluginAPI  # noqa: E402
 from copilotj.workflow.contract import parse_interface  # noqa: E402
 from copilotj.workflow.executor import WorkflowExecutor  # noqa: E402
-from copilotj.workflow.manager import BASE_DIR, Workflow, WorkflowMeta, WorkflowStep, read_json  # noqa: E402
+from copilotj.workflow.manager import BASE_DIR, RUNS_DIR, Workflow, WorkflowMeta, WorkflowStep, read_json  # noqa: E402
 
 DEFAULT_SERVER = "http://127.0.0.1:8786"
+OUTPUT_TIMESTAMP_FORMAT = "%Y%m%d-%H%M%S"
 
 
 def main() -> int:
@@ -51,7 +53,7 @@ def prompt_workflow() -> Workflow:
         for index, workflow_path in enumerate(workflows, 1):
             workflow = load_workflow_path(workflow_path)
             print(f"  {index}. {workflow.meta.name} ({workflow.meta.id})")
-    answer = prompt_text("Choose workflow number, id, directory, or workflow.json")
+    answer = prompt_text("Choose workflow number")
     workflow_ref = resolve_workflow_ref(answer, workflows)
     return load_workflow(workflow_ref)
 
@@ -111,13 +113,18 @@ def prompt_inputs(workflow: Workflow) -> dict[str, Any]:
     specs = workflow.interface.inputs if workflow.interface else {}
     inputs.update(prompt_file_inputs(specs))
     if "output_dir" in specs:
-        default_output = str(BASE_DIR / "runs" / workflow.meta.id)
+        default_output = default_output_dir(workflow)
         inputs["output_dir"] = prompt_text("Output directory", default_output)
     print("Optional overrides: enter name=value, blank line to continue.")
     while override := input("> ").strip():
         name, value = parse_override(override)
         inputs[name] = value
     return inputs
+
+
+def default_output_dir(workflow: Workflow) -> str:
+    timestamp = time.strftime(OUTPUT_TIMESTAMP_FORMAT)
+    return str(RUNS_DIR / f"{timestamp}-{workflow.meta.id}")
 
 
 def prompt_file_inputs(specs: dict[str, Any]) -> dict[str, str]:
@@ -143,10 +150,10 @@ def prompt_text(label: str, default: str | None = None) -> str:
 
 
 async def execute_workflow(workflow: Workflow, inputs: dict[str, Any], server: str) -> list[dict[str, Any]]:
-    load_config()
+    cfg = load_config()
     api = HTTPPluginAPI(server)
     try:
-        executor = WorkflowExecutor(ScriptWorkflowAgent(api.attach_single_client()))
+        executor = WorkflowExecutor(ScriptWorkflowAgent(api.attach_single_client(), cfg=cfg))
         return await executor.execute_workflow(workflow, stop_on_error=True, inputs=inputs)
     finally:
         await api.close()
@@ -168,8 +175,8 @@ def format_result(result: dict[str, Any]) -> str:
 
 
 class ScriptWorkflowAgent:
-    def __init__(self, api):
-        self.plugin_tools = tools.PluginTools(api)
+    def __init__(self, api, *, cfg: Config):
+        self.plugin_tools = tools.PluginTools(api, cfg=cfg)
         self.tools = [
             FunctionTool(self.plugin_tools.imagej_perception, PROMPT_TOOL_IMAGEJ_PERCEPTION),
             FunctionTool(self.plugin_tools.run_macro, PROMPT_TOOL_RUN_MACRO),

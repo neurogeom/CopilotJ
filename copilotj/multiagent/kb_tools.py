@@ -14,9 +14,9 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-from copilotj.core.config import get_home, load_config
+from copilotj.core.config import get_home
 from copilotj.core.message import TextMessage
-from copilotj.core.model_client import ModelClient, new_model_client
+from copilotj.core.model_client import ModelClient
 
 _SOURCE_ROOT = Path(__file__).resolve().parent.parent.parent
 _HOME = get_home()
@@ -1032,7 +1032,7 @@ async def kb_build(
     steps: Any = None,
     *,
     question: str | None = None,
-    model_client: ModelClient | None = None,
+    model_client: ModelClient,
 ) -> str:
     _ensure_dirs()
 
@@ -1430,7 +1430,7 @@ async def _llm_extract_with_retry(
     steps: Any,
     question: str | None,
     *,
-    model_client: ModelClient | None = None,
+    model_client: ModelClient,
     max_retries: int = 3,
 ) -> dict[str, Any]:
     """Extract knowledge using LLM with retry mechanism."""
@@ -1439,8 +1439,7 @@ async def _llm_extract_with_retry(
 
     for attempt in range(max_retries):
         try:
-            client = model_client or new_model_client(load_config())
-            llm_response = await client.create([TextMessage(role="user", text=prompt)])
+            llm_response = await model_client.create([TextMessage(role="user", text=prompt)])
 
             if not llm_response.content:
                 last_error = f"Empty response from LLM (attempt {attempt + 1})"

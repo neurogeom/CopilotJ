@@ -103,7 +103,6 @@ class LeaderAgent(ChatAgent):
     ):
         super().__init__(name, description, model_client=model_client)
 
-        self.model_client = model_client
         self.chat_history: list[dict[str, Any]] = []
         self._save_workflow_handler: SaveWorkflowHandler | None = None
 
@@ -143,10 +142,6 @@ class LeaderAgent(ChatAgent):
             ),
         ]
         self.agents = agents if agents else {}
-
-    def set_model_client(self, model_client: ModelClient) -> None:
-        super().set_model_client(model_client)
-        self.model_client = model_client
 
     def set_save_workflow_handler(
         self,
@@ -381,7 +376,7 @@ User prompt to optimize:
         stop_on_error: Annotated[bool, "Whether to stop execution on first error"] = True,
     ) -> str:
         return await workflow_tools.execute_workflow(
-            self,
+            workflow_tools.WorkflowToolRunner(self.tools, self._call_tool),
             workflow_id=workflow_id,
             inputs=inputs,
             stop_on_error=stop_on_error,
@@ -614,7 +609,7 @@ User prompt to optimize:
                 summary=json.dumps(context, ensure_ascii=False, indent=2),
                 steps=dialog_context.get("steps", []),
                 question=dialog_context["task"] if dialog_context.get("task") else None,
-                model_client=self.model_client,
+                model_client=self._client,
             )
             result_data = json.loads(kb_result)
             if result_data.get("status") != "ok":
@@ -659,7 +654,7 @@ User prompt to optimize:
         summary_prompt = make_summary_prompt(dialog_context["task"], steps_text)
 
         try:
-            response = await self.model_client.create([TextMessage(role="user", text=summary_prompt)])
+            response = await self._client.create([TextMessage(role="user", text=summary_prompt)])
         except Exception as e:
             self.log_error(f"[ERROR] Error generating dialog context summary: {e}")
             return None

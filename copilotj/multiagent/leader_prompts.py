@@ -480,9 +480,9 @@ Call this tool directly when the user asks to run an existing workflow.
 Do not call get_workflow first and do not re-plan the workflow.
 
 Examples:
-Action: {"name": "execute_workflow", "args": {"workflow_id": "classic-nuclei-segmentation", "inputs": {"image": "/absolute/input.tif", "output_dir": "/absolute/output"}, "stop_on_error": true}}
+Action: {"name": "execute_workflow", "args": {"workflow_id": "classic-nuclei-segmentation", "inputs": {"image": "/absolute/input.tif"}, "stop_on_error": true}}
 
-Action: {"name": "execute_workflow", "args": {"workflow_id": "batch-cell-count", "inputs": {"image": "/absolute/input-folder", "output_dir": "/absolute/output-folder"}, "stop_on_error": true}}
+Action: {"name": "execute_workflow", "args": {"workflow_id": "batch-cell-count", "inputs": {"image": "/absolute/input-folder"}, "stop_on_error": true}}
 
 Rules:
 - `inputs` must be an object, never true/false.

@@ -68,12 +68,7 @@ class WorkflowExecutor:
         stop_on_error: bool,
         inputs: dict[str, Any],
     ) -> list[dict[str, Any]]:
-        context = bind_workflow_context(
-            workflow.interface,
-            inputs,
-            RUNS_DIR,
-            require_run_dir=self._workflow_steps_use_run_dir(workflow),
-        )
+        context = self._bind_context(workflow, inputs)
         results = []
         for step in workflow.steps:
             action = self._render_action(step, context)
@@ -108,6 +103,16 @@ class WorkflowExecutor:
     @staticmethod
     def _workflow_steps_use_run_dir(workflow: Workflow) -> bool:
         return any(template_uses_run_dir(step.action) for step in workflow.steps)
+
+    @staticmethod
+    def _bind_context(workflow: Workflow, inputs: dict[str, Any]) -> WorkflowExecutionContext:
+        return bind_workflow_context(
+            workflow.interface,
+            inputs,
+            RUNS_DIR,
+            require_run_dir=WorkflowExecutor._workflow_steps_use_run_dir(workflow),
+            run_name=workflow.meta.id,
+        )
 
     @staticmethod
     def _validate_args(step: WorkflowStep, action: dict):
