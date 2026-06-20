@@ -35,11 +35,10 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     Select: typeof import('primevue/select')['default']
-    SettingLLM: typeof import('./src/components/SettingLLM.vue')['default']
     Settings: typeof import('./src/components/Settings.vue')['default']
-    SettingsAdvanced: typeof import('./src/components/SettingsAdvanced.vue')['default']
     SettingsConnection: typeof import('./src/components/SettingsConnection.vue')['default']
-    SettingsLLM: typeof import('./src/components/SettingsLLM.vue')['default']
+    SettingsModel: typeof import('./src/components/SettingsModel.vue')['default']
+    SettingsPreference: typeof import('./src/components/SettingsPreference.vue')['default']
     SettingsSummary: typeof import('./src/components/SettingsSummary.vue')['default']
     SettingsVLM: typeof import('./src/components/SettingsVLM.vue')['default']
     Showcases: typeof import('./src/components/Showcases.vue')['default']
@@ -55,6 +54,7 @@ declare module 'vue' {
     TabPanels: typeof import('primevue/tabpanels')['default']
     Tabs: typeof import('primevue/tabs')['default']
     ToggleSwitch: typeof import('primevue/toggleswitch')['default']
+    Wizard: typeof import('./src/components/Wizard.vue')['default']
   }
   export interface GlobalDirectives {
     Tooltip: typeof import('primevue/tooltip')['default']

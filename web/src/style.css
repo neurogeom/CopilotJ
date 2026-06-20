@@ -15,3 +15,20 @@ body {
   min-width: 320px;
   min-height: 100vh;
 }
+
+/*
+ * Fixed-size Settings / Wizard dialogs: lock the dialog to a fixed height so
+ * switching tabs or toggling conditional content (e.g. the Vision tab) never
+ * resizes the dialog. The content area flexes to fill and scrolls internally.
+ */
+.copilotj-settings-dialog {
+  display: flex;
+  flex-direction: column;
+}
+
+.copilotj-settings-dialog .p-dialog-content {
+  flex: 1 1 0%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
