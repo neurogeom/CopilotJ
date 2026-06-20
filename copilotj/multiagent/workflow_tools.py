@@ -3,15 +3,19 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import json
+from pathlib import Path
 from typing import Annotated, Any, Optional
 
-from copilotj.core import ModelClient, TextMessage
+from copilotj.core import ModelClient, TextMessage, Tool, ToolCall
 from copilotj.multiagent.leader_prompts import make_workflow_definition_prompt
+from copilotj.multiagent.py_tools import get_project_temp_dir
 from copilotj.workflow.converter import DialogToWorkflowConverter
 from copilotj.workflow.executor import WorkflowExecutor
 from copilotj.workflow.manager import WorkflowManager
 
-WORKFLOW_ABOUT_PREVIEW_CHARS = 200
+WORKFLOW_ABOUT_PREVIEW_CHARS = 500
+OUTPUT_DIR_INPUT = "output_dir"
+PROJECT_TEMP_DIR = get_project_temp_dir()
 
 
 def _preview_text(text: str, limit: int) -> str:
@@ -104,6 +108,15 @@ class WorkflowSaveService:
         steps_prompt = make_workflow_definition_prompt(dialog_context["task"], steps_text, summary)
         response = await self.model_client.create([TextMessage(role="user", text=steps_prompt)])
         return response.content.strip() if response.content is not None else None
+
+
+class WorkflowToolRunner:
+    def __init__(self, tools: list[Tool], call_tool: Any) -> None:
+        self.tools = tools
+        self._call_tool_impl = call_tool
+
+    async def _call_tool(self, tool_call: ToolCall) -> Any:
+        return await self._call_tool_impl(tool_call)
 
 
 async def save_workflow_from_steps(
@@ -254,15 +267,15 @@ async def export_workflow(
 
 
 async def execute_workflow(
-    leader_agent: Any,
+    workflow_runner: WorkflowToolRunner,
     workflow_id: Annotated[str, "The ID of the workflow to execute"],
     inputs: Annotated[Optional[dict[str, Any]], "Runtime inputs declared by workflow.interface.inputs"] = None,
     stop_on_error: Annotated[bool, "Whether to stop execution on first error"] = True,
 ) -> str:
     """Execute a workflow with the provided leader agent"""
     try:
-        executor = WorkflowExecutor(leader_agent)
-        results = await executor.execute_workflow_by_id(workflow_id, stop_on_error, inputs)
+        executor = WorkflowExecutor(workflow_runner)
+        results = await executor.execute_workflow_by_id(workflow_id, stop_on_error, _normalized_inputs(inputs))
 
         # Format results for display
         result_lines = ["📋 **Workflow Execution Results:**"]
@@ -290,3 +303,20 @@ async def execute_workflow(
 
     except Exception as e:
         return f"❌ Error executing workflow: {str(e)}"
+
+
+def _normalized_inputs(inputs: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not isinstance(inputs, dict) or not _is_project_temp_dir(inputs.get(OUTPUT_DIR_INPUT)):
+        return inputs
+    normalized = dict(inputs)
+    normalized.pop(OUTPUT_DIR_INPUT)
+    return normalized
+
+
+def _is_project_temp_dir(value: Any) -> bool:
+    if not isinstance(value, str) or not value:
+        return False
+    try:
+        return Path(value).expanduser().resolve() == PROJECT_TEMP_DIR.resolve()
+    except OSError:
+        return False

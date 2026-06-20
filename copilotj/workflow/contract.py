@@ -11,11 +11,24 @@ from typing import Any
 from copilotj.multiagent.py_tools import get_project_temp_dir
 
 SCHEMA_VERSION = "2.0"
-RUN_DIR_PREFIX = "run-"
 RUN_DIR_REF = "run_dir"
+RUN_DIR_TIMESTAMP_FORMAT = "%Y%m%d-%H%M%S"
+RUN_DIR_COLLISION_START = 2
 TEMPLATE_RE = re.compile(r"\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}")
 DEFAULT_FILE_INPUT_NAME = "image"
 OUTPUT_DIR_INPUT_NAME = "output_dir"
+DEFAULT_IMAGE_INPUT_FORMATS = {
+    "bmp",
+    "czi",
+    "jpeg",
+    "jpg",
+    "nd2",
+    "ome.tif",
+    "ome.tiff",
+    "png",
+    "tif",
+    "tiff",
+}
 
 RUNS_DIR = get_project_temp_dir("workflow_runs")
 
@@ -61,9 +74,10 @@ def bind_workflow_context(
     provided_inputs: dict[str, Any] | None,
     base_dir: Path,
     require_run_dir: bool = False,
+    run_name: str | None = None,
 ) -> WorkflowExecutionContext:
     provided = provided_inputs or {}
-    run_dir = _resolve_run_dir(interface, provided, base_dir, require_run_dir)
+    run_dir = _resolve_run_dir(interface, provided, base_dir, require_run_dir, run_name)
     if interface is None:
         return WorkflowExecutionContext(inputs=provided, outputs={}, run_dir=run_dir)
     inputs = _bind_inputs(interface.inputs, provided, run_dir)
@@ -118,10 +132,23 @@ def _dict_or_empty(value: Any) -> dict[str, Any]:
     raise WorkflowContractError(f"Workflow interface section must be an object, got {type(value)}")
 
 
-def _make_run_dir() -> Path:
-    run_dir = RUNS_DIR / f"{RUN_DIR_PREFIX}{int(time.time() * 1000)}"
-    run_dir.mkdir(parents=True, exist_ok=False)
-    return run_dir
+def _make_run_dir(base_dir: Path, run_name: str | None) -> Path:
+    timestamp = time.strftime(RUN_DIR_TIMESTAMP_FORMAT)
+    stem = f"{timestamp}-{_safe_run_name(run_name)}" if run_name else timestamp
+    suffix: int | None = None
+    while True:
+        name = stem if suffix is None else f"{stem}-{suffix}"
+        run_dir = base_dir / name
+        try:
+            run_dir.mkdir(parents=True, exist_ok=False)
+            return run_dir
+        except FileExistsError:
+            suffix = RUN_DIR_COLLISION_START if suffix is None else suffix + 1
+
+
+def _safe_run_name(run_name: str | None) -> str:
+    name = re.sub(r"[^A-Za-z0-9_.-]+", "-", run_name or "").strip("-")
+    return name or "workflow"
 
 
 def _resolve_run_dir(
@@ -129,9 +156,10 @@ def _resolve_run_dir(
     provided: dict[str, Any],
     base_dir: Path,
     require_run_dir: bool,
+    run_name: str | None,
 ) -> str:
     if require_run_dir or _interface_needs_run_dir(interface, provided):
-        return str(_make_run_dir())
+        return str(_make_run_dir(base_dir, run_name))
     return ""
 
 
@@ -209,7 +237,11 @@ def _file_input_names(specs: dict[str, Any]) -> list[str]:
 
 def _matching_files(folder: Path, spec: Any) -> list[Path]:
     formats = _input_formats(spec)
-    files = [path for path in sorted(folder.iterdir()) if path.is_file() and _matches_format(path, formats)]
+    files = [
+        path
+        for path in sorted(folder.iterdir())
+        if path.is_file() and not _is_hidden(path) and _matches_format(path, formats)
+    ]
     if not files:
         suffixes = ", ".join(sorted(formats)) if formats else "any file"
         raise WorkflowContractError(f"No workflow input files found in folder {folder} matching {suffixes}")
@@ -218,15 +250,24 @@ def _matching_files(folder: Path, spec: Any) -> list[Path]:
 
 def _input_formats(spec: Any) -> set[str]:
     if not isinstance(spec, dict):
-        return set()
+        return DEFAULT_IMAGE_INPUT_FORMATS
     formats = spec.get("formats") or spec.get("extensions")
     if not isinstance(formats, list):
-        return set()
+        return DEFAULT_IMAGE_INPUT_FORMATS
     return {str(item).lower().lstrip(".") for item in formats}
 
 
 def _matches_format(path: Path, formats: set[str]) -> bool:
-    return not formats or path.suffix.lower().lstrip(".") in formats
+    return _file_extension(path) in formats
+
+
+def _file_extension(path: Path) -> str:
+    suffixes = "".join(path.suffixes[-2:]).lower().lstrip(".")
+    return suffixes if suffixes in DEFAULT_IMAGE_INPUT_FORMATS else path.suffix.lower().lstrip(".")
+
+
+def _is_hidden(path: Path) -> bool:
+    return any(part.startswith(".") for part in path.parts)
 
 
 def _provided_output_dir(specs: dict[str, Any], inputs: dict[str, Any]) -> Path | None:
