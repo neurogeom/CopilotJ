@@ -6,3 +6,4 @@
 
 export * from "./threads";
 export * from "./models";
+export * from "./version";

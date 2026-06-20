@@ -7,8 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 <script setup lang="ts">
 import { ref, watch } from "vue";
 import { setApiBaseUrl, testApiConnection } from "../apis/base";
-import { getServerConfig } from "../apis";
+import { getServerConfig, API_VERSION } from "../apis";
 import type { ServerConfig } from "../apis";
+import { useSystemState } from "../store";
 
 const props = defineProps<{
   apiBaseUrl: string;
@@ -20,6 +21,8 @@ const emit = defineEmits<{
   (e: "update:connectionStatus", value: "idle" | "testing" | "ok" | "fail"): void;
   (e: "update:serverConfig", value: ServerConfig | null): void;
 }>();
+
+const state = useSystemState();
 
 const apiBaseUrl = ref(props.apiBaseUrl);
 
@@ -44,6 +47,8 @@ async function testConnection() {
     } catch {
       // Server may not return config
     }
+    // Verify frontend <-> server protocol version (issue #68).
+    await state.checkApiVersion();
   }
 }
 </script>
@@ -69,6 +74,27 @@ async function testConnection() {
       </p>
       <p v-else-if="connectionStatus === 'fail'" class="text-sm text-red-600 dark:text-red-400 mt-1">
         Could not reach the server. Please check the URL and try again.
+      </p>
+      <p
+        v-if="connectionStatus === 'ok' && state.apiVersionStatus === 'incompatible'"
+        class="text-sm text-amber-700 dark:text-amber-300 mt-1"
+      >
+        Server API version (v{{ state.serverApiVersion ?? "?" }}) is not compatible with this frontend (expects v{{
+          API_VERSION
+        }}). Please update your CopilotJ server.
+      </p>
+      <p
+        v-else-if="connectionStatus === 'ok' && state.apiVersionStatus === 'unknown'"
+        class="text-sm text-amber-700 dark:text-amber-300 mt-1"
+      >
+        Couldn't verify the server's API version — it may be outdated. Consider updating your CopilotJ server if chat
+        doesn't work.
+      </p>
+      <p
+        v-else-if="connectionStatus === 'ok' && state.apiVersionStatus === 'compatible'"
+        class="text-sm text-slate-400 dark:text-slate-500 mt-1"
+      >
+        Server API v{{ state.serverApiVersion }}
       </p>
     </FormItem>
   </div>
