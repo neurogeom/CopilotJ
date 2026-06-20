@@ -8,9 +8,14 @@ package copilotj;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Desktop;
 import java.awt.FlowLayout;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 
 import javax.swing.BorderFactory;
@@ -62,6 +67,8 @@ public class CopilotJBridgeDialog
   private JButton installButton;
   private JButton uninstallButton;
   private JButton serverToggleButton;
+  private JButton openChatButton;
+  private JButton openResourcesButton;
   private JLabel envStatusLabel;
   private JLabel managedStatusLabel;
   private JTextArea progressArea;
@@ -295,6 +302,21 @@ public class CopilotJBridgeDialog
     serverRow.add(Box.createHorizontalStrut(10));
     serverRow.add(serverToggleButton);
 
+    // -- Links row --
+    openChatButton = new JButton("Open copilotj.chat");
+    openChatButton.setToolTipText("Open the hosted CopilotJ chat in your browser");
+    openChatButton.addActionListener(e -> openInBrowser("https://copilotj.chat/#/chat"));
+
+    openResourcesButton = new JButton("Open Resources");
+    openResourcesButton.setToolTipText("Open the local resource directory ($COPILOTJ_HOME) in your file manager");
+    openResourcesButton.addActionListener(e -> openInFileManager(service.getEnvironmentRoot()));
+
+    final JPanel linksRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+    linksRow.add(new JLabel("Links:"));
+    linksRow.add(Box.createHorizontalStrut(10));
+    linksRow.add(openChatButton);
+    linksRow.add(openResourcesButton);
+
     // -- Progress area --
     progressArea = new JTextArea(6, 40);
     progressArea.setEditable(false);
@@ -308,6 +330,8 @@ public class CopilotJBridgeDialog
     topRows.add(envRow);
     topRows.add(Box.createVerticalStrut(5));
     topRows.add(serverRow);
+    topRows.add(Box.createVerticalStrut(5));
+    topRows.add(linksRow);
 
     panel.add(topRows, BorderLayout.NORTH);
     panel.add(progressScroll, BorderLayout.CENTER);
@@ -483,6 +507,50 @@ public class CopilotJBridgeDialog
       cause = cause.getCause();
     }
     return message != null ? message : t.getClass().getSimpleName();
+  }
+
+  /** Opens {@code url} in the system default browser, if supported. */
+  private void openInBrowser(final String url) {
+    try {
+      if (!Desktop.isDesktopSupported() || !Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+        javax.swing.JOptionPane.showMessageDialog(opened,
+            "Opening a browser from Fiji is not supported on this platform.\n"
+                + "Open this URL manually in your browser:\n" + url,
+            "Cannot Open", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+        return;
+      }
+      Desktop.getDesktop().browse(new URI(url));
+    } catch (final IOException | URISyntaxException ex) {
+      javax.swing.JOptionPane.showMessageDialog(opened,
+          "Could not open the browser automatically (" + getRootCauseMessage(ex) + ").\n"
+              + "Open this URL manually in your browser:\n" + url,
+          "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
+    }
+  }
+
+  /** Opens {@code dir} in the system file manager, creating it if necessary. */
+  private void openInFileManager(final File dir) {
+    try {
+      if (!Desktop.isDesktopSupported() || !Desktop.getDesktop().isSupported(Desktop.Action.OPEN)) {
+        javax.swing.JOptionPane.showMessageDialog(opened,
+            "Opening a folder from Fiji is not supported on this platform.\n"
+                + "Open this folder manually in your file manager:\n" + dir.getAbsolutePath(),
+            "Cannot Open", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+        return;
+      }
+      if (!dir.exists() && !dir.mkdirs()) {
+        javax.swing.JOptionPane.showMessageDialog(opened,
+            "Resource directory does not exist and could not be created:\n" + dir.getAbsolutePath(),
+            "Not Found", javax.swing.JOptionPane.WARNING_MESSAGE);
+        return;
+      }
+      Desktop.getDesktop().open(dir);
+    } catch (final IOException ex) {
+      javax.swing.JOptionPane.showMessageDialog(opened,
+          "Could not open the folder automatically (" + getRootCauseMessage(ex) + ").\n"
+              + "Open this folder manually in your file manager:\n" + dir.getAbsolutePath(),
+          "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
+    }
   }
 
   private boolean serverRunning() {

@@ -39,4 +39,11 @@ public interface CopilotJBridgeService extends SciJavaService {
   public boolean isManaged();
 
   public boolean isServerRunning();
+
+  /**
+   * Resolved on-disk root directory holding extracted Python sources, assets,
+   * knowledge bank, and the virtual environment (a.k.a. {@code $COPILOTJ_HOME}).
+   * Returns a deterministic path even if the directory has not been created yet.
+   */
+  public java.io.File getEnvironmentRoot();
 }

@@ -211,6 +211,11 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
   }
 
   @Override
+  public File getEnvironmentRoot() {
+    return resolveEnvRoot();
+  }
+
+  @Override
   public void startManagedServer() throws IOException, InterruptedException {
     startManagedServer(null);
   }
