@@ -6,33 +6,25 @@ SPDX-License-Identifier: Apache-2.0
 
 <script setup lang="ts">
 import { ref } from "vue";
-import type { ThreadConfigModel, ThreadConfigQuery } from "../apis";
-import { getBaseUrl, isApiBaseConfigurable, setApiBaseUrl, testApiConnection } from "../apis/base";
+import type { ThreadConfigModel } from "../apis";
+import { getBaseUrl } from "../apis/base";
 import { useConfig, useSettings } from "../store";
-import SettingLLM from "./SettingLLM.vue";
+import SettingsConnection from "./SettingsConnection.vue";
+import SettingsModel from "./SettingsModel.vue";
 import SettingsVLM from "./SettingsVLM.vue";
-
-const emit = defineEmits<{
-  (e: "submit", model: ThreadConfigQuery | null): void;
-}>();
+import SettingsPreference from "./SettingsPreference.vue";
 
 const settings = useSettings();
 const config = useConfig();
 
-// --- API Base URL config ---
+// Base URL tab seeds from the current API base URL; the component persists + reloads on connect.
 const apiBaseUrl = ref(getBaseUrl().replace(/\/api$/, ""));
-const connectionStatus = ref<"idle" | "testing" | "ok" | "fail">("idle");
 
-async function testConnection() {
-  connectionStatus.value = "testing";
-  const ok = await testApiConnection(apiBaseUrl.value);
-  connectionStatus.value = ok ? "ok" : "fail";
-}
-
-function saveApiBaseUrl() {
-  setApiBaseUrl(apiBaseUrl.value);
-  window.location.reload();
-}
+const activeTab = ref("base");
+const connectionRef = ref<InstanceType<typeof SettingsConnection> | null>(null);
+const modelRef = ref<InstanceType<typeof SettingsModel> | null>(null);
+const vlmRef = ref<InstanceType<typeof SettingsVLM> | null>(null);
+const prefRef = ref<InstanceType<typeof SettingsPreference> | null>(null);
 
 function submitModel(model: ThreadConfigModel | null) {
   if (model === null) {
@@ -44,7 +36,6 @@ function submitModel(model: ThreadConfigModel | null) {
     config.setDefaultModel(model);
     settings.setModel(model);
   }
-  emit("submit", { model: settings.model });
 }
 
 // --- VLM config ---
@@ -66,108 +57,100 @@ function submitVlm(vlm: {
   config.setVisionEnabled(vlm.visionEnabled);
 }
 
-// --- Integrations ---
-const proxy = ref(config.data.proxy || "");
-const tavilyApiKey = ref(config.data.tavilyApiKey || "");
+// --- Preferences (proxy, Tavily, KB autosave, auto-scroll) ---
+function savePreference(value: {
+  proxy: string | null;
+  tavilyApiKey: string | null;
+  kbAutosave: boolean;
+  autoScroll: boolean;
+}) {
+  config.setProxy(value.proxy);
+  config.setTavilyApiKey(value.tavilyApiKey);
+  config.setKbAutosave(value.kbAutosave);
+  settings.toggleAutoScroll(value.autoScroll);
+}
 
-function saveIntegrations() {
-  config.setProxy(proxy.value || null);
-  config.setTavilyApiKey(tavilyApiKey.value || null);
+function onSubmit() {
+  switch (activeTab.value) {
+    case "base":
+      connectionRef.value?.connect();
+      break;
+    case "model":
+      if (modelRef.value) submitModel(modelRef.value.getModelValue());
+      break;
+    case "vision":
+      if (vlmRef.value) submitVlm(vlmRef.value.getVlmValue());
+      break;
+    case "pref":
+      if (prefRef.value) savePreference(prefRef.value.getValue());
+      break;
+  }
 }
 </script>
 
 <template>
-  <Tabs value="model">
-    <TabList>
-      <Tab value="model">Model</Tab>
-      <Tab value="vision">Vision</Tab>
-      <Tab value="integrations">Integrations</Tab>
-      <Tab value="pref">Preferences</Tab>
-    </TabList>
+  <div class="flex min-h-0 w-full flex-1 flex-col">
+    <Tabs v-model:value="activeTab" class="flex min-h-0 flex-1 flex-col">
+      <TabList>
+        <Tab value="base">Base</Tab>
+        <Tab value="model">Model</Tab>
+        <Tab value="vision">Vision</Tab>
+        <Tab value="pref">Preferences</Tab>
+      </TabList>
 
-    <TabPanels>
-      <!-- Model Tab -->
-      <TabPanel value="model">
-        <SettingLLM
-          :model="settings.model"
-          :server-model-name="config.serverModel?.name ?? null"
-          @update:model="submitModel"
-        />
-      </TabPanel>
+      <TabPanels class="flex-1 overflow-y-auto">
+        <!-- Base Tab -->
+        <TabPanel value="base">
+          <SettingsConnection
+            ref="connectionRef"
+            :api-base-url="apiBaseUrl"
+            :reload-on-connect="true"
+            :show-connect-button="false"
+          />
+        </TabPanel>
 
-      <!-- Vision Tab -->
-      <TabPanel value="vision">
-        <SettingsVLM
-          :model="config.data.vlm.model"
-          :api-key="config.data.vlm.api_key"
-          :base-url="config.data.vlm.base_url"
-          :provider="config.data.vlm.provider"
-          :use-main-model="config.data.vlm.useMainModel"
-          :main-model-name="settings.model?.name ?? null"
-          :vision-enabled="config.data.visionEnabled"
-          :show-submit-button="true"
-          @update="submitVlm"
-        />
-      </TabPanel>
+        <!-- Model Tab -->
+        <TabPanel value="model">
+          <SettingsModel
+            ref="modelRef"
+            :model="settings.model"
+            :server-model-name="config.serverModel?.name ?? null"
+            :show-submit-button="false"
+          />
+        </TabPanel>
 
-      <!-- Integrations Tab -->
-      <TabPanel value="integrations">
-        <div class="space-y-4">
-          <FormItem for="proxy" label="HTTP Proxy">
-            <InputText
-              type="text"
-              v-model="proxy"
-              inputId="proxy"
-              placeholder="http://127.0.0.1:8080 (optional)"
-              class="w-full"
-            />
-          </FormItem>
+        <!-- Vision Tab -->
+        <TabPanel value="vision">
+          <SettingsVLM
+            ref="vlmRef"
+            :model="config.data.vlm.model"
+            :api-key="config.data.vlm.api_key"
+            :base-url="config.data.vlm.base_url"
+            :provider="config.data.vlm.provider"
+            :use-main-model="config.data.vlm.useMainModel"
+            :main-model-name="settings.model?.name ?? null"
+            :vision-enabled="config.data.visionEnabled"
+            :show-submit-button="false"
+          />
+        </TabPanel>
 
-          <FormItem for="tavilyApiKey" label="Tavily API Key">
-            <InputText
-              type="password"
-              v-model="tavilyApiKey"
-              inputId="tavilyApiKey"
-              placeholder="tvly-xxxxxxxx (optional, for web search)"
-              class="w-full"
-            />
-          </FormItem>
+        <!-- Preferences Tab -->
+        <TabPanel value="pref">
+          <SettingsPreference
+            ref="prefRef"
+            :proxy="config.data.proxy"
+            :tavily-api-key="config.data.tavilyApiKey"
+            :kb-autosave="config.data.kbAutosave"
+            :auto-scroll="settings.autoScroll"
+            :show-submit-button="false"
+          />
+        </TabPanel>
+      </TabPanels>
+    </Tabs>
 
-          <Button label="Save Integrations" @click="saveIntegrations" />
-        </div>
-      </TabPanel>
-
-      <!-- Preferences Tab -->
-      <TabPanel value="pref">
-        <div class="space-y-4">
-          <FormItem v-if="isApiBaseConfigurable" for="apiBaseUrl" label="API Server URL">
-            <div class="flex items-center gap-2">
-              <InputText
-                type="text"
-                v-model="apiBaseUrl"
-                inputId="apiBaseUrl"
-                placeholder="http://localhost:8786"
-                class="w-full"
-              />
-              <Button class="w-24" label="Test" :loading="connectionStatus === 'testing'" @click="testConnection" />
-              <Button class="w-24" label="Save" @click="saveApiBaseUrl" />
-            </div>
-            <p v-if="connectionStatus === 'ok'" class="text-sm text-green-600 mt-1">Connection successful</p>
-            <p v-else-if="connectionStatus === 'fail'" class="text-sm text-red-600 mt-1">Connection failed</p>
-            <p v-else class="text-sm text-slate-400 mt-1">
-              Configure the API server URL if it's different from the web server
-            </p>
-          </FormItem>
-
-          <FormItem for="kbAutosave" label="Auto-save to Knowledge Bank" layout="row">
-            <ToggleSwitch v-model="config.data.kbAutosave" inputId="kbAutosave" @change="config.persist()" />
-          </FormItem>
-
-          <FormItem for="autoScroll" label="Auto-scroll to Bottom" layout="row">
-            <ToggleSwitch v-model="settings.autoScroll" inputId="autoScroll" />
-          </FormItem>
-        </div>
-      </TabPanel>
-    </TabPanels>
-  </Tabs>
+    <!-- Pinned submit (per active tab) -->
+    <div class="flex justify-end pt-4">
+      <Button label="Save" @click="onSubmit" />
+    </div>
+  </div>
 </template>

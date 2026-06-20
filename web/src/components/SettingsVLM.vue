@@ -109,7 +109,7 @@ defineExpose({ isValid, getVlmValue });
 </script>
 
 <template>
-  <div class="flex flex-col gap-6 h-full max-w-2xl">
+  <div class="flex flex-col gap-6 h-full w-full">
     <!-- Privacy notice -->
     <div class="flex items-center gap-3 text-amber-500">
       <IconAlertTriangle size="24" />

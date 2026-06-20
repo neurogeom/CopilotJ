@@ -8,7 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 import { computed, onMounted, ref } from "vue";
 import Chatbox from "../components/Chatbox.vue";
 import Settings from "../components/Settings.vue";
-import Setup from "./Setup.vue";
+import Wizard from "../components/Wizard.vue";
 import Sidebar from "../components/Sidebar.vue";
 import { getServerConfig } from "../apis";
 import { useConfig, useSettings, useSystemState } from "../store";
@@ -101,8 +101,13 @@ function clickPost(postId: string) {
     <Chatbox ref="chatbox" :expandSidebar="settings.expandSidebar" @toggleSidebar="settings.toggleAutoScroll" />
 
     <!-- Settings Dialog (Tabs) -->
-    <Dialog v-model:visible="state.showSettings" modal header="Settings" class="min-h-1/2 min-w-2xl">
-      <Settings ref="settingsRef" @submit="state.showSettings = false" />
+    <Dialog
+      v-model:visible="state.showSettings"
+      modal
+      header="Settings"
+      class="copilotj-settings-dialog w-[720px] max-w-[95vw] h-[680px] max-h-[90vh]"
+    >
+      <Settings ref="settingsRef" />
     </Dialog>
 
     <!-- Setup Wizard Dialog (Stepper) -->
@@ -111,9 +116,9 @@ function clickPost(postId: string) {
       modal
       header="Welcome to CopilotJ"
       :closable="false"
-      class="min-h-3/4 min-w-3xl"
+      class="copilotj-settings-dialog w-[720px] max-w-[95vw] h-[680px] max-h-[90vh]"
     >
-      <Setup @complete="onSetupComplete" />
+      <Wizard @complete="onSetupComplete" />
     </Dialog>
 
     <ConfirmPopup />
