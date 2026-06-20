@@ -135,8 +135,10 @@ It can also serve as a server-level default when CopilotJ is hosted for other us
 CopilotJ loads configuration from `.env` and `.env.local` files. In managed mode,
 these files are located in the CopilotJ home directory:
 
-- **macOS / Linux:** `~/.local/state/copilotj/.env.local`
 - **Windows:** `%LOCALAPPDATA%\copilotj\.env.local`
+- **macOS / Linux:** `~/.local/state/copilotj/.env.local`
+
+To open the CopilotJ home directory directly, click **Open Resources** in the dialog's **Managed Server** tab.
 
 For external server mode, place `.env.local` in the repository root. Sensitive information such as API keys must be
 stored locally and should never be committed to version control.

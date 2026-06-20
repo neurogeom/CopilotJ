@@ -179,7 +179,7 @@ Each conversation thread can use a different model from the default. Click the f
    - The server URL (e.g., `http://127.0.0.1:12345`) is shown next to the **Server** label once startup completes. The port is chosen automatically and persisted across restarts.
 
 3. **Open the web interface**
-   - Open a web browser and navigate to [copilotj.chat](https://copilotj.chat), then click **Chat**.
+   - Click **Open copilotj.chat** in the dialog's **Managed Server** tab to open the chat interface in your default browser.
    - On first use, the setup wizard will guide you through connecting to the server and configuring your model and API key (see the [Configuration](#configuration) section above).
    - The web frontend connects to the managed server automatically.
 
@@ -271,6 +271,8 @@ CopilotJ treats each analysis session as a structured workflow that can be execu
 
 All files generated during execution are stored in a designated temporary working directory, referred to as the `<copilotj_home>/temp` folder.
 
+> **Tip:** Click **Open Resources** in the dialog's **Managed Server** tab to open `<copilotj_home>` (the CopilotJ home directory) directly in your file manager — the `temp/` folder lives inside it.
+
 The `<copilotj_home>/temp` folder serves as a centralized location for artifacts generated during an analysis session, including:
 
 - processed images and intermediate image results
@@ -280,3 +282,25 @@ The `<copilotj_home>/temp` folder serves as a centralized location for artifacts
 - optional ZIP bundles containing workflows, data, and metadata
 
 The temporary folder is managed by the CopilotJ core server and updates in real time as workflows execute. Unless explicitly cleaned or overwritten, it preserves outputs from the current session for debugging, validation, and reproducibility.
+
+## FAQ
+
+### The "Open copilotj.chat" button doesn't do anything, or the chat page won't load
+
+The **Open Chat** button launches the hosted CopilotJ web frontend at [copilotj.chat/#/chat](https://copilotj.chat/#/chat) in your default browser. A few things can get in the way:
+
+- **Nothing happens when you click it.** Your platform may not support opening a browser from Fiji (for example, a headless or some Linux environments). Just open [https://copilotj.chat/#/chat](https://copilotj.chat/#/chat) manually in any browser.
+- **The page opens but shows a connection error.** The button opens the _frontend_, which still needs your local server running. In the **Managed Server** tab, make sure the server status is **Running**, then use the setup wizard (or the **Preferences** in the chat UI) to point the frontend at the server URL shown next to **Server** (for example, `http://127.0.0.1:12345`).
+
+### The "Open Resources" button doesn't open the folder
+
+The **Open Resources** button opens the CopilotJ home directory in your file manager:
+
+- **Windows:** `%LOCALAPPDATA%\copilotj\.env.local`
+- **macOS / Linux:** `~/.local/state/copilotj/.env.local`
+
+If the button doesn't work:
+
+- **Nothing happens, or you see "Opening a folder is not supported".** Your platform may not support this from Fiji. Open the folder manually at the path above.
+- **The folder is empty, or there is no `temp/` folder.** Subfolders such as `temp/`, `assets/`, and `knowledge_bank/` are created when the Python environment is installed and a session runs. Click **Install** (then **Start**) in the **Managed Server** tab first.
+- **You see a "Failed to open resource directory" error.** Open the path above manually in your file manager.
