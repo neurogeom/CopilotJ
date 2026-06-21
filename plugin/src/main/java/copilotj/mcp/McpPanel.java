@@ -9,6 +9,8 @@ package copilotj.mcp;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.FlowLayout;
+import java.util.function.BiConsumer;
+import java.util.function.BooleanSupplier;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -22,22 +24,32 @@ import javax.swing.SwingUtilities;
 import org.scijava.log.LogService;
 
 import copilotj.EventHandler;
+import copilotj.McpControl;
 
-public class McpPanel extends JPanel {
+public class McpPanel extends JPanel implements McpControl {
 
 	private final EventHandler handler;
 	private final LogService log;
+	// Core-supplied guard run right before starting MCP; returns false to abort
+	// (e.g. a managed/external server is running and the user declined to stop it).
+	private final BooleanSupplier requireExclusiveControl;
 
 	private JTextField hostField;
 	private JTextField portField;
 	private JButton startButton;
 	private JButton stopButton;
-	private JLabel statusLabel;
+	// Routes MCP status (text + color) to the dialog's shared status bar. Merged
+	// because only one control endpoint is active at a time, so a single status
+	// bar can reflect it. Supplied by the core dialog.
+	private final BiConsumer<String, Color> statusUpdater;
 	private JTextArea logArea;
 
-	public McpPanel(EventHandler handler, LogService log) {
+	public McpPanel(EventHandler handler, LogService log, BooleanSupplier requireExclusiveControl,
+			BiConsumer<String, Color> statusUpdater) {
 		this.handler = handler;
 		this.log = log;
+		this.requireExclusiveControl = requireExclusiveControl;
+		this.statusUpdater = statusUpdater;
 		buildUI();
 	}
 
@@ -47,7 +59,6 @@ public class McpPanel extends JPanel {
 		startButton = new JButton("Start MCP");
 		stopButton = new JButton("Stop MCP");
 		stopButton.setEnabled(false);
-		statusLabel = new JLabel("Stopped");
 
 		startButton.addActionListener(e -> {
 			String host = hostField.getText().trim();
@@ -59,6 +70,12 @@ public class McpPanel extends JPanel {
 				return;
 			}
 			try {
+				// Fiji exposes a single control endpoint at a time. If a managed
+				// or external server is running, the core-supplied guard prompts
+				// the user and stops it; returning false aborts the start.
+				if (requireExclusiveControl != null && !requireExclusiveControl.getAsBoolean()) {
+					return;
+				}
 				McpModule.start(handler, host, port);
 				setStatus("Running on " + host + ":" + port, new Color(0, 128, 0));
 				startButton.setEnabled(false);
@@ -101,7 +118,6 @@ public class McpPanel extends JPanel {
 		JPanel configPanel = new JPanel(new BorderLayout(5, 5));
 		configPanel.add(hostPortPanel, BorderLayout.NORTH);
 		configPanel.add(buttonPanel, BorderLayout.CENTER);
-		configPanel.add(statusLabel, BorderLayout.SOUTH);
 
 		// -- MCP log (mirrors the Managed Server tab's Progress Log) --
 		logArea = new JTextArea(8, 40);
@@ -122,13 +138,24 @@ public class McpPanel extends JPanel {
 	}
 
 	private void setStatus(String text, Color color) {
-		SwingUtilities.invokeLater(() -> {
-			statusLabel.setText(text);
-			statusLabel.setForeground(color);
-		});
+		if (statusUpdater == null) return;
+		// Keep invokeLater: the "already running" path calls setStatus from this
+		// panel's constructor, before the dialog's shared statusLabel exists;
+		// deferring lets the dialog's lambda run after run() has built it.
+		SwingUtilities.invokeLater(() -> statusUpdater.accept(text, color));
 	}
 
 	public void dispose() {
+		stopMcp();
+	}
+
+	@Override
+	public boolean isMcpRunning() {
+		return McpModule.isRunning();
+	}
+
+	@Override
+	public void stopMcp() {
 		if (McpModule.isRunning()) {
 			McpModule.stop();
 		}

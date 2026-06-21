@@ -75,6 +75,9 @@ public class CopilotJBridgeDialog
 
   // -- MCP panel --
   private JPanel mcpPanel;
+  // Typed handle to the bundle's MCP server (null when MCP is unavailable on
+  // this JVM, or before the panel is created). Same object as mcpPanel when set.
+  private McpControl mcpControl;
 
   /**
    * True while the managed server is being started — keeps buttons disabled
@@ -162,11 +165,9 @@ public class CopilotJBridgeDialog
           h.removeListener(CopilotJBridgeDialog.this);
         }
 
-        // Stop MCP server if running
-        if (mcpPanel != null) {
-          try {
-            mcpPanel.getClass().getMethod("dispose").invoke(mcpPanel);
-          } catch (Exception ignored) {}
+        // Stop MCP server if running (typed call via McpControl; no reflection).
+        if (mcpControl != null) {
+          mcpControl.stopMcp();
         }
 
         frame.dispose();
@@ -217,6 +218,21 @@ public class CopilotJBridgeDialog
         if (choice != javax.swing.JOptionPane.YES_OPTION)
           return;
         service.stop();
+      }
+
+      // Warn if MCP server is running — connecting externally will stop it.
+      if (mcpControl != null && mcpControl.isMcpRunning()) {
+        final int choice = javax.swing.JOptionPane.showConfirmDialog(
+            opened,
+            "An MCP server is running.\n"
+                + "Connecting to an external server will stop it.\n"
+                + "Continue?",
+            "MCP Server Running",
+            javax.swing.JOptionPane.YES_NO_OPTION,
+            javax.swing.JOptionPane.WARNING_MESSAGE);
+        if (choice != javax.swing.JOptionPane.YES_OPTION)
+          return;
+        mcpControl.stopMcp();
       }
 
       final String url = urlField.getText().trim();
@@ -307,6 +323,21 @@ public class CopilotJBridgeDialog
             return;
           // Stop the external connection immediately so it stops reconnecting.
           extConn.close();
+        }
+
+        // Warn if MCP server is running — starting managed will stop it.
+        if (mcpControl != null && mcpControl.isMcpRunning()) {
+          final int choice = javax.swing.JOptionPane.showConfirmDialog(
+              opened,
+              "An MCP server is running.\n"
+                  + "Starting the managed server will stop it.\n"
+                  + "Continue?",
+              "MCP Server Running",
+              javax.swing.JOptionPane.YES_NO_OPTION,
+              javax.swing.JOptionPane.WARNING_MESSAGE);
+          if (choice != javax.swing.JOptionPane.YES_OPTION)
+            return;
+          mcpControl.stopMcp();
         }
         runStartWorker();
       }
@@ -629,7 +660,45 @@ public class CopilotJBridgeDialog
     // MCP ships as an isolated Java 17 bundle loaded via McpLoader; on Java <17
     // (or if the bundle is missing/corrupt) it degrades to a static label.
     final McpLoader loader = new McpLoader(logService);
-    final JPanel panel = loader.createPanel(service.getEventHandler());
+    // Forward mutual-exclusion guard, run right before MCP starts: if a managed
+    // or external server is active, prompt the user and stop it so Fiji keeps a
+    // single control endpoint. `opened` is captured into a local so a later
+    // static null (window closed) cannot affect an in-flight start. Kept in the
+    // dialog (not the bundle) so the bundle never depends on CopilotJBridgeService.
+    final JFrame frame = opened;
+    final java.util.function.BooleanSupplier requireExclusiveControl = () -> {
+      if (!service.isServerRunning()) return true;
+      final String what = service.isManaged()
+          ? "managed CopilotJ server"
+          : "external CopilotJ server connection";
+      final int choice = javax.swing.JOptionPane.showConfirmDialog(
+          frame,
+          "A " + what + " is currently active.\n"
+              + "Starting the MCP server requires a single control endpoint and will stop it.\n"
+              + "Continue?",
+          "CopilotJ Server Active",
+          javax.swing.JOptionPane.YES_NO_OPTION,
+          javax.swing.JOptionPane.WARNING_MESSAGE);
+      if (choice != javax.swing.JOptionPane.YES_OPTION) return false;
+      service.stop();
+      return true;
+    };
+    // Merge MCP status into the shared status bar (only one endpoint is active
+    // at a time). Null-guard + rely on McpPanel.setStatus's invokeLater: the
+    // "already running" path fires during the panel's constructor, before this
+    // dialog's statusLabel is built, so the actual accept() is deferred past run().
+    final java.util.function.BiConsumer<String, java.awt.Color> mcpStatusUpdater = (text, color) -> {
+      if (statusLabel != null) {
+        statusLabel.setText("MCP: " + text);
+        statusLabel.setForeground(color);
+      }
+      // Intentionally do NOT touch idLabel: MCP owns no ID, and resetting it
+      // would race onIdChanged during endpoint transitions.
+    };
+    final JPanel panel = loader.createPanel(service.getEventHandler(), requireExclusiveControl, mcpStatusUpdater);
+    if (panel instanceof McpControl) {
+      mcpControl = (McpControl) panel;
+    }
     if (panel != null) {
       return panel;
     }
