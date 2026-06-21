@@ -28,6 +28,17 @@ public interface CopilotJBridgeService extends SciJavaService {
 
   public void uninstallEnvironment() throws java.io.IOException;
 
+  /**
+   * Uninstalls the Python environment.
+   *
+   * @param keepUserData if {@code true}, only regenerable artifacts ({@code .venv},
+   *     lockfiles, {@code python_sources}, {@code assets}, {@code appose.json}) are
+   *     removed; {@code knowledge_bank}, {@code config.json}, {@code .env}, and
+   *     {@code .env.local} are preserved. If {@code false}, behaves exactly like
+   *     {@link #uninstallEnvironment()} (deletes everything under {@code COPILOTJ_HOME}).
+   */
+  public void uninstallEnvironment(boolean keepUserData) throws java.io.IOException;
+
   public boolean isEnvironmentReady();
 
   public boolean isEnvironmentOnDisk();

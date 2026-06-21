@@ -24,6 +24,7 @@ import org.apposed.appose.Appose;
 import org.apposed.appose.BuildException;
 import org.apposed.appose.Environment;
 import org.apposed.appose.builder.Builders;
+import org.apposed.appose.util.FilePaths;
 import org.scijava.Context;
 import org.scijava.Priority;
 import org.scijava.event.EventService;
@@ -347,17 +348,75 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
 
   @Override
   public void uninstallEnvironment() throws IOException {
-    stop();
-    if (apposeEnv != null) {
-      try {
-        apposeEnv.delete();
-      } catch (final BuildException e) {
-        throw new IOException("Failed to delete CopilotJ Python environment", e);
-      }
-    } else if (isEnvironmentOnDisk()) {
-      createEnvBuilder(null).delete();
+    uninstallEnvironment(false);
+  }
+
+  @Override
+  public void uninstallEnvironment(final boolean keepUserData) throws IOException {
+    // Stop the MCP server first so its bundle file is released before we delete
+    // anything under $COPILOTJ_HOME (mirrors onContextDisposing), then tear down
+    // the managed Python side.
+    if (mcpControl != null) {
+      mcpControl.stopMcp();
     }
-    apposeEnv = null;
+    stop();
+    try {
+      if (!keepUserData) {
+        // Full uninstall: wipe the entire CopilotJ home directory.
+        if (apposeEnv != null) {
+          try {
+            apposeEnv.delete();
+          } catch (final BuildException e) {
+            throw new IOException("Failed to delete CopilotJ Python environment", e);
+          }
+        } else if (isEnvironmentOnDisk()) {
+          createEnvBuilder(null).delete();
+        }
+      } else {
+        // Partial uninstall: keep user data, remove only regenerable artifacts.
+        // NB: deliberately do NOT call apposeEnv.delete() here — the builder was
+        // created with .base(envRoot), so it would delete the whole home dir,
+        // including knowledge_bank/config/secrets.
+        deleteRegenerableArtifacts();
+      }
+    } finally {
+      apposeEnv = null; // clear stale handle even on partial failure
+    }
+  }
+
+  /**
+   * Removes regenerable artifacts from the CopilotJ home directory while preserving
+   * user data ({@code knowledge_bank}, {@code config.json}, {@code .env},
+   * {@code .env.local}). Removes the virtualenv ({@code .venv}), the uv-builder
+   * files written to the home root ({@code pyproject.toml}, {@code uv.lock},
+   * {@code .uv.lock.sha256}, {@code pyvenv.cfg}, {@code requirements.txt}), and the
+   * JAR-extracted caches ({@code python_sources}, {@code assets}, {@code appose.json},
+   * {@code mcp}). The {@code mcp} cache holds the released MCP bundle jar and its
+   * version marker, re-extracted from the plugin JAR on next use.
+   * Used by partial uninstall.
+   */
+  private void deleteRegenerableArtifacts() throws IOException {
+    final File envRoot = resolveEnvRoot();
+    // .venv removal is what flips isEnvironmentOnDisk()/UI to "Not installed" — propagate failures.
+    final File venv = new File(envRoot, ".venv");
+    if (venv.exists()) {
+      FilePaths.deleteRecursively(venv);
+    }
+    // Non-critical regenerable artifacts — log and continue on per-file failure.
+    // Includes uv-builder files at the envRoot root (pyproject.toml, uv.lock, etc.)
+    // and JAR-extracted caches. User data is intentionally never in this list.
+    final String[] regenerable = {
+        "python_sources", "assets", "appose.json", "mcp",
+        "pyproject.toml", "uv.lock", ".uv.lock.sha256", "pyvenv.cfg", "requirements.txt"};
+    for (final String name : regenerable) {
+      final File child = new File(envRoot, name);
+      if (!child.exists()) continue;
+      try {
+        FilePaths.deleteRecursively(child);
+      } catch (final IOException e) {
+        log.warn("copilotj: Could not delete " + child.getAbsolutePath(), e);
+      }
+    }
   }
 
   private IOException unwrapBuildException(final String context, final BuildException e) {
