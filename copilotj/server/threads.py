@@ -48,8 +48,15 @@ def _setup_otel_instrumentation() -> None:
     """Initialize OTEL instrumentors for Anthropic and Gemini SDKs.
 
     Safe to call multiple times (idempotent).  Each instrumentor is wrapped
-    in ``try/except ImportError`` so the server starts even if the OTEL
-    packages are not installed.
+    in ``try/except`` so the server starts even if the OTEL packages or their
+    runtime dependencies are unavailable.
+
+    Note: the instrumentors' ``.instrument()`` methods can raise *any*
+    exception, not just ``ImportError`` — e.g. ``openinference`` raises a
+    plain ``Exception`` ("Could not import google-genai. ...") when the
+    installed ``google-genai`` is a version that lacks the submodule the
+    instrumentor wraps.  Tracing is best-effort, so we never let a failure
+    here abort server startup.
     """
     global _otel_instrumented
     if _otel_instrumented:
@@ -61,16 +68,16 @@ def _setup_otel_instrumentation() -> None:
 
         AnthropicInstrumentor().instrument()
         _log.debug("OTEL Anthropic instrumentor enabled")
-    except ImportError:
-        _log.debug("opentelemetry-instrumentation-anthropic not installed, skipping")
+    except Exception:
+        _log.debug("Anthropic OTEL instrumentor unavailable, skipping", exc_info=True)
 
     try:
         from openinference.instrumentation.google_genai import GoogleGenAIInstrumentor
 
         GoogleGenAIInstrumentor().instrument()
         _log.debug("OTEL Google GenAI instrumentor enabled")
-    except ImportError:
-        _log.debug("openinference-instrumentation-google-genai not installed, skipping")
+    except Exception:
+        _log.debug("Google GenAI OTEL instrumentor unavailable, skipping", exc_info=True)
 
 
 dumpable = str | int | float | bool | pydantic.BaseModel
