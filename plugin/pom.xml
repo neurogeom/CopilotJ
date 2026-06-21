@@ -183,6 +183,7 @@
           <include>knowledge_bank/**/*.toml</include>
           <include>assets/**</include>
           <include>pyproject.toml</include>
+          <include>uv.lock</include>
         </includes>
         <excludes>
           <exclude>**/__pycache__/**</exclude>
