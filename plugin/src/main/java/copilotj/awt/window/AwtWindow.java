@@ -6,10 +6,7 @@
 
 package copilotj.awt.window;
 
-import java.util.List;
-
 import copilotj.ImagejListener;
-import copilotj.awt.Action;
 
 public interface AwtWindow {
   public static class Difference {
@@ -36,9 +33,5 @@ public interface AwtWindow {
 
   public Difference compare(final AwtWindow from, final ImagejListener.HistoryResponse history);
 
-  public List<Action> getActions();
-
   public void deactivate();
-
-  public Object runAction(final List<String> path, final String type, final List<Object> parameters);
 }

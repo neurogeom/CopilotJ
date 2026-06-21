@@ -13,6 +13,7 @@ import java.util.Queue;
 import org.scijava.log.LogService;
 
 import copilotj.awt.Action;
+import copilotj.awt.ComponentIdentifier;
 import copilotj.awt.Snapshot;
 import copilotj.awt.WindowIdentifier;
 
@@ -23,8 +24,8 @@ public class SnapshotManager {
   }
 
   public static class ActionRequest {
-    public int snapshotId;
-    public int actionId;
+    public String ref;
+    public String action;
     public List<Object> parameters;
   }
 
@@ -32,6 +33,7 @@ public class SnapshotManager {
   private final LogService log;
   private final ImagejListener listener;
   private final WindowIdentifier identifier;
+  private final ComponentIdentifier componentIdentifier;
 
   private final Queue<Snapshot> snapshots = new ArrayDeque<>(MAX_SNAPSHOTS);
   private int nextId = 1;
@@ -40,6 +42,7 @@ public class SnapshotManager {
     this.log = log;
     this.listener = new ImagejListener(10240, debug);
     this.identifier = new WindowIdentifier();
+    this.componentIdentifier = new ComponentIdentifier();
   }
 
   // FIXME: remove this method
@@ -58,7 +61,7 @@ public class SnapshotManager {
 
   private Snapshot capture(final boolean save) {
     final int id = nextId++;
-    final Snapshot snapshot = new Snapshot(log, identifier, id);
+    final Snapshot snapshot = new Snapshot(log, identifier, componentIdentifier, id);
     if (!save) {
       return snapshot;
     }
@@ -96,14 +99,11 @@ public class SnapshotManager {
   }
 
   public Action.Response runAction(final ActionRequest request) {
-    final Snapshot snapshot = this.get(request.snapshotId);
-    if (snapshot == null) {
-      throw new IllegalArgumentException("Snapshot not found");
-    }
-
-    // TODO: use old snapshot as reference
-    final int id = nextId++;
-    final Snapshot newSnapshot = new Snapshot(log, identifier, id);
-    return newSnapshot.runAction(request.actionId, request.parameters);
+    // Actions always run against a freshly captured snapshot: saved snapshots are
+    // deactivated (their live AWT components are nulled), and refs are stable
+    // identities, so the same ref resolves to the same component on the fresh
+    // snapshot. A missing ref yields a clean "not found" error.
+    final Snapshot fresh = new Snapshot(log, identifier, componentIdentifier, nextId++);
+    return fresh.runAction(request.ref, request.action, request.parameters);
   }
 }

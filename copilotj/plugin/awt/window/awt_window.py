@@ -14,9 +14,19 @@ class AwtWindowBase[T: str](ContainerNodeBase[T]):
     id: int
 
     @override
-    def _describe_one_line(self) -> str:
-        """Provides a single-line description for the AWT window itself."""
-        return f"{self.name}: id={self.id}, type={self.type}"
+    def role(self) -> str:
+        return "window"
+
+    @override
+    def _node_name(self) -> str | None:
+        # Windows usually expose their title via a `title` field (e.g. IjImage,
+        # IjTextWindow); those override _node_name. Others fall back to the AWT
+        # component name, which may be None.
+        return self.name
+
+    @override
+    def _head_extras(self) -> str | None:
+        return f"(id={self.id})"
 
 
 class AwtWindowDifferenceBase[T: str](Response):

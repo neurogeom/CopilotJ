@@ -10,7 +10,7 @@ import java.awt.Dimension;
 import java.awt.Window;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -23,6 +23,8 @@ import ij.Prefs;
 import ij.WindowManager;
 import ij.gui.ImageWindow;
 import copilotj.ImagejListener;
+import copilotj.awt.component.ComponentNode;
+import copilotj.awt.container.ContainerNode;
 import copilotj.awt.window.AbstractAwtWindow;
 import copilotj.awt.window.AwtWindow;
 import copilotj.awt.window.AwtWindowProvider;
@@ -119,7 +121,6 @@ public class Snapshot {
   public final LocalDateTime timestamp;
   public final String currentImage; // Can be null if no window is active
   public final List<AwtWindow> windows;
-  public final List<Action> actions;
 
   // The following fields usually not changed, so we don't capture them in the
   // snapshot. however, we add them as they are useful for LLM.
@@ -128,10 +129,17 @@ public class Snapshot {
   public final String guiScale;
 
   private final WindowIdentifier identifier;
+  private final ComponentIdentifier componentIdentifier;
 
-  public Snapshot(final LogService log, final WindowIdentifier identifier, final int id) {
+  // Ref handle -> node, populated while the AWT components are still live (in the
+  // constructor, before deactivate()). Used to resolve call_action(ref, ...).
+  private final Map<String, ComponentNode> refToNode = new HashMap<>();
+
+  public Snapshot(final LogService log, final WindowIdentifier identifier,
+      final ComponentIdentifier componentIdentifier, final int id) {
     this.id = id;
     this.identifier = identifier;
+    this.componentIdentifier = componentIdentifier;
 
     this.timestamp = LocalDateTime.now();
 
@@ -155,7 +163,7 @@ public class Snapshot {
         log.debug("Invalid window encountered and skipped: " + e.getMessage());
       }
     }
-    this.actions = buildActions();
+    assignRefs();
 
     final Dimension screen = IJ.getScreenSize();
     this.screenWidth = screen.width;
@@ -169,51 +177,63 @@ public class Snapshot {
     }
   }
 
-  public Action.Response runAction(final int actionId, final List<Object> parameters) {
-    if (actionId < 0 || actionId >= actions.size()) {
-      throw new IllegalArgumentException("Invalid action ID: " + actionId);
+  /**
+   * Walks the window/component tree depth-first and assigns stable ref handles
+   * (via the session-scoped {@link ComponentIdentifier}) to every ref-eligible
+   * node, populating {@link #refToNode}. Must run while the AWT components are
+   * still live (i.e. in the constructor, before {@link #deactivate()}).
+   */
+  private void assignRefs() {
+    for (final AwtWindow window : windows) {
+      assignRefs((ComponentNode) window);
     }
-
-    final Action action = actions.get(actionId);
-    if (action == null) {
-      throw new IllegalArgumentException("Action not found: " + actionId);
-    }
-
-    final List<String> path = new ArrayList<>(action.path);
-    Collections.reverse(path);
-
-    final String windowIdStr = path.remove(path.size() - 1); // remove window id from path
-    final int targetWindowId = Integer.parseInt(windowIdStr);
-    AwtWindow window = null;
-    for (final AwtWindow w : this.windows) {
-      if (w.getId() == targetWindowId) {
-        window = w;
-        break;
-      }
-    }
-    if (window == null) {
-      throw new IllegalArgumentException("Window not found with ID: " + targetWindowId);
-    }
-
-    final Object result = window.runAction(path, action.type, parameters);
-    return new Action.Response(action.type, result);
   }
 
-  private List<Action> buildActions() {
-    final List<Action> actions = new ArrayList<>();
-    for (final AwtWindow window : windows) {
-      // window should not be null here as we populate the list carefully
-
-      final List<Action> windowActions = window.getActions();
-      if (windowActions != null && !windowActions.isEmpty()) {
-        for (final Action action : windowActions) {
-          action.path.add(String.valueOf(window.getId())); // Add window ID as string
-          action.description = "Window #" + window.getId() + ": " + action.description; // Add window ID to description
-          Collections.reverse(action.path); // Path is component -> window; reverse to make it window -> component
-          actions.add(action);
+  private void assignRefs(final ComponentNode node) {
+    node.assignRef(componentIdentifier);
+    if (node.getRef() != null) {
+      refToNode.put(node.getRef(), node);
+    }
+    if (node instanceof ContainerNode) {
+      final ContainerNode container = (ContainerNode) node;
+      final List<ComponentNode> children = container.getChildren();
+      if (children != null) {
+        for (final ComponentNode child : children) {
+          assignRefs(child);
         }
       }
     }
-    return actions;
+  }
+
+  /**
+   * Resolves a ref handle to its node in this snapshot, or {@code null} if the
+   * ref is not present (e.g. the element was closed since the snapshot the
+   * caller holds).
+   *
+   * @param ref the ref handle (e.g. {@code "e5"}).
+   * @return the node, or {@code null}.
+   */
+  public ComponentNode nodeByRef(final String ref) {
+    return refToNode.get(ref);
+  }
+
+  /**
+   * Runs an action on the node identified by {@code ref}, dispatching by the
+   * short action id (e.g. {@code click}, {@code selectItem}).
+   *
+   * @param ref the ref handle of the target node.
+   * @param action the short action id.
+   * @param parameters the action parameters, or {@code null}.
+   * @return the action response.
+   * @throws IllegalArgumentException if the ref is not found in this snapshot.
+   */
+  public Action.Response runAction(final String ref, final String action, final List<Object> parameters) {
+    final ComponentNode node = refToNode.get(ref);
+    if (node == null) {
+      throw new IllegalArgumentException(
+          "Ref " + ref + " not found in the current snapshot. Try capturing a new snapshot.");
+    }
+    final Object result = node.runAction(action, parameters);
+    return new Action.Response(action, result);
   }
 }

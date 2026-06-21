@@ -64,14 +64,14 @@ def run(get_api: Callable[[ClientPluginAPI], Callable], ctx, *args, **kwargs):
 
 
 @cli.command()
-@click.option("--snapshot", type=int, help="ID of the snapshot")
-@click.option("--action", type=int, help="Id of the action")
+@click.option("--ref", type=str, required=True, help="Component ref handle, e.g. e9")
+@click.option("--action", type=str, required=True, help="Action short id, e.g. click")
 @click.option("--parameters", type=str, default=None, help="JSON-encoded parameter list")
 @click.pass_context
-def call_action(ctx, snapshot, action, parameters):
-    """Capture the image from ImageJ."""
+def call_action(ctx, ref, action, parameters):
+    """Run an action on a component identified by its ref handle."""
     parsed = json.loads(parameters) if parameters else None
-    run(lambda a: a.call_action, ctx, snapshot, action, parsed)
+    run(lambda a: a.call_action, ctx, ref, action, parsed)
 
 
 @cli.command()

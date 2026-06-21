@@ -6,8 +6,8 @@
 
 package copilotj.awt.component;
 
-import java.awt.Component;
 import java.awt.Checkbox;
+import java.awt.Component;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.util.Collections;
@@ -38,6 +38,10 @@ public class CheckboxNode extends AbstractComponentNode<Checkbox> {
     super(TYPE, component);
     this.label = component.getLabel() != null ? component.getLabel().trim() : null;
     this.state = component.getState();
+    this.actions = Collections.singletonList(Action
+        .builder(TYPE + ".setState", "Set State", "Sets the checkbox to a specific state.")
+        .addBooleanParameter("state", "The desired state (true for checked, false for unchecked)")
+        .build());
   }
 
   @Override
@@ -46,24 +50,13 @@ public class CheckboxNode extends AbstractComponentNode<Checkbox> {
   }
 
   @Override
-  public List<Action> getActions() {
-    final Action setStateAction = Action
-        .builder(TYPE + ".setState", "Set State", "Sets the checkbox to a specific state.")
-        .addBooleanParameter("state", "The desired state (true for checked, false for unchecked)")
-        .build();
-    return Collections.singletonList(setStateAction);
-  }
-
-  @Override
-  public Object runAction(final List<String> path, final String type, final List<Object> parameters) {
+  public Object runAction(final String action, final List<Object> parameters) {
     if (!this.isActivate()) {
       throw new IllegalStateException("Checkbox is not activated");
-    } else if (path.size() != 0) {
-      throw new IllegalArgumentException("Path must be empty for CheckboxNode actions like 'setState'");
     }
 
-    switch (type) {
-      case TYPE + ".setState":
+    switch (action) {
+      case "setState":
         if (parameters == null || parameters.size() != 1) {
           throw new IllegalArgumentException(
               "Action 'setState' requires exactly one boolean 'state' parameter. Found: " +
@@ -80,13 +73,13 @@ public class CheckboxNode extends AbstractComponentNode<Checkbox> {
         return setState((Boolean) param);
 
       default:
-        throw new IllegalArgumentException("Unknown action type: " + type + " for CheckboxNode");
+        throw new IllegalArgumentException("Unknown action: " + action + " for CheckboxNode");
     }
   }
 
   /**
    * Sets the state of the checkbox component and notifies listeners.
-   * 
+   *
    * @param desiredState The desired state (true for checked, false for
    *                     unchecked).
    * @return null

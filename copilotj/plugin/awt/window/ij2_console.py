@@ -14,9 +14,9 @@ type TYPE = Literal["ij.Console"]
 
 class Ij2ConsoleWindow(AwtWindowBase[Literal["ij.Console"]]):
     @override
-    def _describe_one_line(self) -> str:
+    def _node_name(self) -> str | None:
         return "ImageJ Console"
 
     @override
     def _describe(self, *, level: int, verbosity: Verbosity) -> list[str]:
-        return [self._describe_one_line()]
+        return [self._yaml_head()]

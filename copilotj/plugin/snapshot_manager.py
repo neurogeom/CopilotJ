@@ -17,6 +17,6 @@ class CompareSnapshotRequest(Request[SnapshotDifference], event="compare_snapsho
 
 
 class ActionRequest(Request[Any], event="run_action", response_type=TypedActionResponse):
-    snapshot_id: int
-    action_id: int
+    ref: str
+    action: str
     parameters: list[Any] | None

@@ -60,10 +60,8 @@ class ClientPluginAPI:
         self._inner = inner
         self._client_id = client_id
 
-    async def call_action(
-        self, snapshot_id: int, action_id: int, parameters: list[Any] | None = None
-    ) -> TypedActionResponse:
-        return await self._request(ActionRequest(snapshot_id=snapshot_id, action_id=action_id, parameters=parameters))
+    async def call_action(self, ref: str, action: str, parameters: list[Any] | None = None) -> TypedActionResponse:
+        return await self._request(ActionRequest(ref=ref, action=action, parameters=parameters))
 
     async def capture_image(self, title: str | None = None) -> IjImagePreviewWithInfoResponse:
         """Captures the current image."""

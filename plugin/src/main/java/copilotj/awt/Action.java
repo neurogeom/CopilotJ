@@ -9,14 +9,11 @@ package copilotj.awt;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-
 public class Action {
   public static class Builder {
     private final String type;
     private final String name;
     private final String description;
-    private final List<String> path;
     private final List<ParameterSchema> parameters;
 
     public Builder(final String type, final String name, final String description) {
@@ -28,7 +25,6 @@ public class Action {
       this.type = type;
       this.name = name;
       this.description = description;
-      this.path = new ArrayList<>();
       this.parameters = new ArrayList<>();
     }
 
@@ -304,18 +300,22 @@ public class Action {
   public String description;
   public final List<ParameterSchema> parameters;
 
-  @JsonIgnore
-  public final List<String> path;
-
   private Action(final Builder builder) {
     this.type = builder.type;
-    this.path = builder.path;
     this.name = builder.name;
     this.description = builder.description;
     this.parameters = builder.parameters;
   }
 
-  public void addPath(final String path) {
-    this.path.add(path);
+  /**
+   * Returns the short, human-friendly action id: the substring after the last '.'
+   * of {@link #type} (e.g. {@code java.awt.Button.click} -> {@code click}). This
+   * is the identifier callers pass to {@code call_action(ref, action, params)}.
+   *
+   * @return the short action id.
+   */
+  public String shortId() {
+    final int idx = type.lastIndexOf('.');
+    return idx < 0 ? type : type.substring(idx + 1);
   }
 }

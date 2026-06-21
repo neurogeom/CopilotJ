@@ -115,6 +115,15 @@ class Action(Response):
     description: str
     parameters: list[AnyParameterSchema]
 
+    @property
+    def short_id(self) -> str:
+        """Short action id: the substring after the last '.' of type.
+
+        e.g. ``java.awt.Button.click`` -> ``click``. This is the identifier a
+        caller passes to ``call_action(ref, action, params)``.
+        """
+        return self.type.rsplit(".", 1)[-1]
+
     @override
     def _describe(self, *, level: int, verbosity: Verbosity) -> list[str]:
         description = self.description or self.name

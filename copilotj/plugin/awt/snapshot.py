@@ -7,7 +7,6 @@ from datetime import datetime
 from typing import override
 
 from copilotj.plugin._base import FromTo, Request, Response, Verbosity
-from copilotj.plugin.awt.action import Action
 from copilotj.plugin.awt.window import TypedWindow, TypedWindowDifference
 
 __all__ = ["SnapshotSummary", "TakeSnapshotRequest", "SnapshotDifference"]
@@ -17,7 +16,6 @@ class SnapshotSummary(Response):
     id: int
     current_image: str | None
     windows: list[TypedWindow]
-    actions: list[Action] | None
 
     screen_width: int
     screen_height: int
@@ -26,27 +24,17 @@ class SnapshotSummary(Response):
 
     @override
     def _describe(self, *, level: int, verbosity: Verbosity) -> list[str]:
-        heading = "#" * level
-
-        lines = []
-        lines.append(f"{heading} Summary of Snapshot #{self.id}")
-        lines.append(f"Current image: {self.current_image}")
-        lines.append(f"Screen size: {self.screen_width}x{self.screen_height}")
-        lines.append(f"GUI scale: {self.gui_scale}")
-
-        lines.append(f"{heading}# Windows")
-        for x in self.windows:
-            for i, line in enumerate(x._describe(level=level + 1, verbosity=verbosity)):
-                prefix = "- " if i == 0 else "  "
-                lines.append(prefix + line)
+        lines = [
+            f"Snapshot #{self.id} (image: {self.current_image or 'N/A'}, "
+            f"screen: {self.screen_width}x{self.screen_height}, scale: {self.gui_scale})"
+        ]
 
         if len(self.windows) == 0:
-            lines.append("No window opened")
+            lines.append("no window opened")
+            return lines
 
-        # if self.actions is not None and len(self.actions) > 0:
-        #     lines.append(f"{heading}# Actions")
-        #     for i, action in enumerate(self.actions):
-        #         lines.append(f"{i}. {action}")  # TODO: improve description
+        for window in self.windows:
+            lines.extend(window._describe(level=level + 1, verbosity=verbosity))
 
         return lines
 
@@ -80,7 +68,7 @@ class _WindowAndDifference(Response):
             return lines
 
         lines.append("Changes:")
-        lines.extend("- " + line for line in diff_lines)
+        lines.extend("  " + line for line in diff_lines)
         return lines
 
 
@@ -98,35 +86,31 @@ class _WindowSnapshotDifference(Response):
 
     @override
     def _describe(self, *, level: int, verbosity: Verbosity) -> list[str]:
-        heading = "#" * level
+        lines = ["Windows difference:"]
 
-        lines = []
-        lines.append(f"{heading} Windows Difference")
-
-        if not self.any_opened:
-            lines.append("No window opened")
+        if not self.any_opened():
+            lines.append("  no window opened")
             return lines
 
         groups = (
             (self.added, "added", Verbosity.HIGH if verbosity >= Verbosity.NORMAL else verbosity),
             (self.changed, "changed", verbosity),
-            (self.removed, "removed", verbosity.LOW if verbosity <= Verbosity.NORMAL else verbosity),
-            (self.unchanged, "unchanged", verbosity.LOW if verbosity <= Verbosity.NORMAL else verbosity),
+            (self.removed, "removed", Verbosity.LOW if verbosity <= Verbosity.NORMAL else verbosity),
+            (self.unchanged, "unchanged", Verbosity.LOW if verbosity <= Verbosity.NORMAL else verbosity),
         )
 
         for xs, group, verb in groups:
             if len(xs) == 0:
                 continue
 
-            lines.append(f"Following windows was {group}:")
+            lines.append(f"  {group}:")
             for x in xs:
-                for i, line in enumerate(x._describe(level=level + 1, verbosity=verb)):
-                    prefix = "- " if i == 0 else "  "
-                    lines.append(prefix + line)
+                for line in x._describe(level=level + 1, verbosity=verb):
+                    lines.append("  " + line)
 
         no_actions = "/".join(action for xs, action, _ in groups if len(xs) == 0)
         if no_actions:
-            lines.append(f"No windows was {no_actions}.")
+            lines.append(f"  no windows {no_actions}.")
 
         return lines
 
@@ -145,10 +129,7 @@ class SnapshotDifference(Response):
 
     @override
     def _describe(self, *, level: int, verbosity: Verbosity) -> list[str]:
-        heading = "#" * level
-
-        lines = []
-        lines.append(f"{heading} Snapshot Difference")
+        lines = ["Snapshot difference:"]
 
         if self.current_image is not None:
             lines.append(f"Current image changed from {self.current_image.from_} to {self.current_image.to}")

@@ -27,6 +27,14 @@ public class LabelNode extends AbstractComponentNode<Label> {
     this.text = component.getText() != null ? component.getText().trim() : null;
   }
 
+  /**
+   * Labels are purely descriptive and never receive a ref handle.
+   */
+  @Override
+  public boolean isRefEligible() {
+    return false;
+  }
+
   @Override
   public String describe() {
     return "Label: text=" + text;

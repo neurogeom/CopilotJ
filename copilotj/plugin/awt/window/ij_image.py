@@ -78,16 +78,18 @@ class IjImage(AwtWindowBase[TYPE]):
     roi: RectangleRoi | DescribedRoi | None
 
     @override
+    def _node_name(self) -> str | None:
+        return self.title
+
+    @override
     def _describe(self, *, level: int, verbosity: Verbosity) -> list[str]:
-        lines = []
+        lines = [self._yaml_head() + ":"]
         typee = (
             f"{self.bit_depth}-bit {self.image_type}"
             if f"{self.bit_depth}-bit" not in self.image_type
             else self.image_type
         )
-        lines.append(
-            f"Image: {self.title} (id: {self.id}, type: {typee}, size: {self.size}, Path: {self.path or 'N/A'})"
-        )
+        lines.append(f"  type: {typee}, size: {self.size}, path: {self.path or 'N/A'}")
 
         if verbosity < Verbosity.NORMAL:
             return lines
@@ -98,28 +100,28 @@ class IjImage(AwtWindowBase[TYPE]):
             else f"{self.width}x{self.height}x{self.depth} voxels"
         )
         ss, ch, sl, fr = self.stack_size, self.channels, self.slices, self.frames
-        lines.append(f"Image dimension: {dimension}, stack size: {ss} ({ch} channels, {sl} slices, {fr} frames)")
+        lines.append(f"  dimension: {dimension}, stack: {ss} ({ch} channels, {sl} slices, {fr} frames)")
 
         if self.calibrated:
             lines.append(
-                f"Width: {self.calibrated_width:.2f} {self.x_unit}, "
-                f"Height: {self.calibrated_height:.2f} {self.y_unit}, "
-                f"Depth: {self.calibrated_depth:.2f} {self.z_unit}"
+                f"  calibrated: width={self.calibrated_width:.2f} {self.x_unit}, "
+                f"height={self.calibrated_height:.2f} {self.y_unit}, "
+                f"depth={self.calibrated_depth:.2f} {self.z_unit}"
             )
 
         if self.x_resolution == self.y_resolution and self.x_unit == self.y_unit:
-            resolution = f"Resolution: {self.x_resolution} pixels per {self.x_unit}"
+            resolution = f"resolution: {self.x_resolution} pixels per {self.x_unit}"
         else:
             rx, ry = self.x_resolution, self.y_resolution
-            resolution = f"X Resolution: {rx} pixels per {self.x_unit}, Y Resolution: {ry} pixels per {self.y_unit}"
+            resolution = f"resolution: x={rx} per {self.x_unit}, y={ry} per {self.y_unit}"
 
         if self.zoom_factor != 1:
-            lines.append(f"{resolution}, Zoom factor: {self.zoom_factor:.2f}")
+            lines.append(f"  {resolution}, zoom={self.zoom_factor:.2f}")
         else:
-            lines.append(resolution)
+            lines.append(f"  {resolution}")
 
         if self.roi:
-            lines.append(self.roi._describe_one_line(level=level, verbosity=verbosity))
+            lines.append("  " + self.roi._describe_one_line(level=level, verbosity=verbosity))
 
         return lines
 
