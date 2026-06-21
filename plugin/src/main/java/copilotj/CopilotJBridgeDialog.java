@@ -278,17 +278,26 @@ public class CopilotJBridgeDialog
 
     uninstallButton = new JButton("Uninstall");
     uninstallButton.addActionListener(e -> {
-      final int choice = javax.swing.JOptionPane.showConfirmDialog(
+      final Object[] options = {"Keep my data (Recommended)", "Delete everything", "Cancel"};
+      final int choice = javax.swing.JOptionPane.showOptionDialog(
           opened,
-          "This will delete the Python environment and all cached data.\n"
-              + (serverRunning() ? "The running server will be stopped.\n" : "")
-              + "You can reinstall it later.\n\nContinue?",
+          "Choose an uninstall mode:\n\n"
+              + "• Keep my data — removes the Python environment and cached resources, "
+              + "but keeps your Knowledge Bank and Config.\n\n"
+              + "• Delete everything — removes the entire CopilotJ home directory, "
+              + "including Knowledge Bank and Config.\n\n"
+              + (serverRunning() ? "The running server will be stopped.\n\n" : "")
+              + "Continue?",
           "Uninstall Environment",
-          javax.swing.JOptionPane.YES_NO_OPTION,
-          javax.swing.JOptionPane.WARNING_MESSAGE);
-      if (choice != javax.swing.JOptionPane.YES_OPTION)
+          javax.swing.JOptionPane.DEFAULT_OPTION,
+          javax.swing.JOptionPane.WARNING_MESSAGE,
+          null,
+          options,
+          options[0]); // default = Keep my data (recommended, non-destructive)
+      // 0 = keep data, 1 = delete all, 2 / CLOSED_OPTION = cancel
+      if (choice == 2 || choice == javax.swing.JOptionPane.CLOSED_OPTION)
         return;
-      runUninstallWorker();
+      runUninstallWorker(choice == 0);
     });
 
     final JPanel envRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
@@ -464,18 +473,20 @@ public class CopilotJBridgeDialog
     }.execute();
   }
 
-  private void runUninstallWorker() {
+  private void runUninstallWorker(final boolean keepUserData) {
     uninstalling = true;
     syncUIState();
-    envStatusLabel.setText("Uninstalling...");
+    envStatusLabel.setText(keepUserData ? "Removing environment..." : "Uninstalling...");
     progressArea.setText("");
 
     new SwingWorker<Void, String>() {
       @Override
       protected Void doInBackground() throws Exception {
         publish("Stopping server (if running)...\n");
-        publish("Deleting Python environment...\n");
-        service.uninstallEnvironment();
+        publish(keepUserData
+            ? "Removing Python environment (keeping user data)...\n"
+            : "Deleting Python environment and all data...\n");
+        service.uninstallEnvironment(keepUserData);
         return null;
       }
 
@@ -493,7 +504,9 @@ public class CopilotJBridgeDialog
           get();
           envStatusLabel.setText("Not installed");
           managedStatusLabel.setText("Stopped");
-          progressArea.append("Environment uninstalled successfully.\n");
+          progressArea.append(keepUserData
+              ? "Environment removed. Your Knowledge Bank and Config were kept.\n"
+              : "Environment uninstalled successfully.\n");
         } catch (final Exception e) {
           envStatusLabel.setText("Uninstall failed");
           progressArea.append("Uninstall failed: " + getRootCauseMessage(e) + "\n");
