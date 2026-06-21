@@ -240,8 +240,33 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
     log.info("copilotj: Python service created (server started via init script)");
     if (listener != null) listener.onMessage("Python process started. Server initializing...");
 
-    // 3. Query the port via a lightweight task (no heavy imports).
-    // NB: Use task.outputs.update(), not task.export(). The export() method
+    // 3. Verify startup via a dedicated status task. Appose swallows init-script
+    // exceptions into a one-line stderr warning (no traceback), so the init()
+    // call above never fails even when start_server() crashed inside the worker.
+    // We must check explicitly here, on the reliable task/stdout channel.
+    // (Upstream appose issue #25 pitfalls #3 and #8.)
+    final String statusScript =
+        "from copilotj.appose_worker import query_status; task.outputs.update(query_status())";
+    final org.apposed.appose.Service.Task statusTask = pythonService.task(statusScript);
+    log.info("copilotj: Verifying server startup...");
+    if (listener != null) listener.onMessage("Verifying server startup...");
+    try {
+      statusTask.waitFor();
+    } catch (final org.apposed.appose.TaskException e) {
+      logServicePythonOutput(pythonService);
+      if (listener != null) listener.onMessage("Server start failed: " + e.getMessage());
+      throw new IOException("Python server status query failed: " + e.getMessage(), e);
+    }
+    final String startupError = (String) statusTask.outputs.get("startup_error");
+    if (startupError != null) {
+      // start_server() failed; the captured traceback is the real cause.
+      logServicePythonOutput(pythonService);
+      if (listener != null) listener.onMessage("Server start failed:\n" + startupError);
+      throw new IOException("Managed Python server failed to start:\n" + startupError);
+    }
+
+    // 4. Query the port via a lightweight task (no heavy imports).
+    // NOTE: Use task.outputs.update(), not task.export(). The export() method
     // writes to the worker's global exports dict (cross-task persistent
     // variables), while outputs.update() sets the current task's return value
     // that is sent back in the COMPLETION response.
@@ -259,7 +284,7 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
       throw new IOException("Python server port query failed: " + e.getMessage(), e);
     }
 
-    // 4. Extract port from task response.
+    // 5. Extract port from task response.
     final Object portObj = portTask.outputs.get("port");
     if (portObj == null) {
       logServicePythonOutput(pythonService);
@@ -278,7 +303,7 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
           + " to " + port + " (saved port was unavailable)");
     }
 
-    // 5. Connect WebSocket.
+    // 6. Connect WebSocket.
     if (listener != null) listener.onMessage("Connecting WebSocket...");
     this.start(managedServerUrl);
 
