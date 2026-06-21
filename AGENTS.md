@@ -53,6 +53,7 @@ The core agent framework follows a layered architecture:
 - `COPILOTJ_VLM_MODEL`: Vision model for image analysis (requires `COPILOTJ_VISION_ENABLED=1`)
 - `COPILOTJ_VLM_API_KEY`: API key for the vision model
 - `COPILOTJ_LLM_PROXY`: HTTP proxy
+- `CIJ_PROXY`: Global download proxy for all backend downloads (HuggingFace, model DB, bioimage model zoo, research/Tavily/DDGS, cellpose/stardist); also the fallback proxy for the LLM/VLM clients when their own proxy is unset. Passed explicitly to each download client (no global proxy env vars are set)
 - `COPILOTJ_KB_AUTOSAVE`: Set `1` to auto-ingest dialog summaries into knowledge bank
 - `LANGFUSE_SECRET_KEY`/`LANGFUSE_PUBLIC_KEY`: Optional Langfuse observability
 

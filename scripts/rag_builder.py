@@ -111,6 +111,10 @@ def build_rag(data_dir: Path = DEFAULT_DATA_DIR, index_dir: Path = DEFAULT_INDEX
         raise ValueError(f"No text chunks created from {data_dir}")
 
     index_dir.mkdir(parents=True, exist_ok=True)
+    from copilotj.core.config import load_config
+    from copilotj.core.embedding import configure_download_proxy
+
+    configure_download_proxy(load_config())
     vector_store = FAISS.from_documents(chunks, get_embeddings())
     vector_store.save_local(str(index_dir), index_name=INDEX_NAME)
     jsonl_path = index_dir / f"{INDEX_NAME}.jsonl.gz"

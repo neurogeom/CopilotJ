@@ -133,7 +133,7 @@ Use this tool for specialized tools fail or need debugging. **ERROR RECOVERY ONL
 """
 
 [[tools]]
-function = "copilotj.multiagent.py_tools.cellpose_segmentation"
+factory = "copilotj.multiagent.py_tools.make_cellpose_segmentation"
 description = """
 Deep learning-based cell segmentation using Cellpose. Supports nuclei, cytoplasm models with GPU \
 acceleration. Optimized with native cellpose image loading for maximum compatibility.
@@ -161,7 +161,7 @@ signals.
 
 [[tools]]
 display_name = "StarDist Segmentation"
-function = "copilotj.multiagent.py_tools.stardist_segmentation"
+factory = "copilotj.multiagent.py_tools.make_stardist_segmentation"
 description = """
 StarDist instance segmentation for cells and nuclei.
 

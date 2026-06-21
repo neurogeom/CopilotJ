@@ -21,7 +21,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from tavily import TavilyClient
 
-from copilotj.core.config import Config
+from copilotj.core.config import Config, load_config
 from copilotj.core.embedding import get_embeddings
 from copilotj.core.kb import (
     DEFAULT_INDEX_DIR,
@@ -30,9 +30,10 @@ from copilotj.core.kb import (
 )
 from copilotj.multiagent.py_tools import get_project_temp_dir
 from copilotj.multiagent.tools import execute_python_script
+from copilotj.util import proxy_dict
 
 __all__ = [
-    "ddg_search",
+    "make_ddg_search",
     "wikipedia_search",
     "imagesc_search",
     "biii_search",
@@ -107,6 +108,7 @@ def _fetch_collection(
     ttl_seconds: int,
     force_refresh: bool = False,
     session: requests.Session | None = None,
+    proxies: dict[str, str] | None = None,
 ) -> list[Mapping]:
     """Return the BioImage Model Zoo collection as a list of resource dicts."""
 
@@ -127,6 +129,8 @@ def _fetch_collection(
 
     last_error: Exception | None = None
     sess = session or requests.Session()
+    if proxies:
+        sess.proxies.update(proxies)
     for url in urls:
         try:
             resp = sess.get(url, timeout=30)
@@ -207,51 +211,61 @@ def _extract_download_urls(entry: Mapping) -> list[str]:
 
 
 # search tool
-def ddg_search(
-    query: Annotated[str, "Search query string describing what information you need"],
-    *,
-    max_results: Annotated[int, "Maximum number of results to return"] = 3,
-    timeout: Annotated[int, "Timeout for search request (s)"] = 10,
-    retries: Annotated[int, "Number of retry attempts"] = 2,
-    images: Annotated[bool, "Set True to return image results instead of text"] = False,
-    public_only: Annotated[bool, "Bias towards Wikimedia/Flickr/Unsplash if True"] = False,
-    safesearch: Annotated[str, "DuckDuckGo safesearch: off | moderate | strict"] = "moderate",
-) -> str:
-    attempt = 0
-    while attempt <= retries:
-        try:
-            with DDGS(timeout=timeout) as ddgs:
-                if images:
-                    sites = [
-                        "site:commons.wikimedia.org",
-                        "site:upload.wikimedia.org",
-                        "site:wikimedia.org",
-                        "site:flickr.com",
-                        "site:unsplash.com",
-                        "site:staticflickr.com",
-                    ]
-                    q = f"{query} (photo OR image) {' '.join(sites)}" if public_only else f"{query} (photo OR image)"
-                    items = list(ddgs.images(q, max_results=max_results, safesearch=safesearch))
-                    if not items:
-                        return "No image results."
-                    out = []
-                    for i, it in enumerate(items, 1):
-                        img = it.get("image") or it.get("thumbnail")
-                        out.append(f"{i}. {it.get('title')}\nPage: {it.get('url')}\nImage: {img}")
-                    return "\n\n".join(out)
-                else:
-                    results = ddgs.text(query, max_results=max_results)
-                    if not results:
-                        return "No text results."
-                    out = []
-                    for i, r in enumerate(results, 1):
-                        out.append(f"{i}. {r.get('title')}\n{r.get('body')}\nSource: {r.get('href')}")
-                    return "\n\n".join(out)
-        except Exception as e:
-            attempt += 1
-            if attempt > retries:
-                return f"DDG search failed: {e}"
-            time.sleep(1 * attempt)
+def make_ddg_search(cfg: Config):
+    """Factory: return a ``ddg_search`` callable bound to *cfg*."""
+    proxy = cfg.cij_proxy
+
+    def ddg_search(
+        query: Annotated[str, "Search query string describing what information you need"],
+        *,
+        max_results: Annotated[int, "Maximum number of results to return"] = 3,
+        timeout: Annotated[int, "Timeout for search request (s)"] = 10,
+        retries: Annotated[int, "Number of retry attempts"] = 2,
+        images: Annotated[bool, "Set True to return image results instead of text"] = False,
+        public_only: Annotated[bool, "Bias towards Wikimedia/Flickr/Unsplash if True"] = False,
+        safesearch: Annotated[str, "DuckDuckGo safesearch: off | moderate | strict"] = "moderate",
+    ) -> str:
+        attempt = 0
+        while attempt <= retries:
+            try:
+                with DDGS(proxy=proxy, timeout=timeout) as ddgs:
+                    if images:
+                        sites = [
+                            "site:commons.wikimedia.org",
+                            "site:upload.wikimedia.org",
+                            "site:wikimedia.org",
+                            "site:flickr.com",
+                            "site:unsplash.com",
+                            "site:staticflickr.com",
+                        ]
+                        q = (
+                            f"{query} (photo OR image) {' '.join(sites)}"
+                            if public_only
+                            else f"{query} (photo OR image)"
+                        )
+                        items = list(ddgs.images(q, max_results=max_results, safesearch=safesearch))
+                        if not items:
+                            return "No image results."
+                        out = []
+                        for i, it in enumerate(items, 1):
+                            img = it.get("image") or it.get("thumbnail")
+                            out.append(f"{i}. {it.get('title')}\nPage: {it.get('url')}\nImage: {img}")
+                        return "\n\n".join(out)
+                    else:
+                        results = ddgs.text(query, max_results=max_results)
+                        if not results:
+                            return "No text results."
+                        out = []
+                        for i, r in enumerate(results, 1):
+                            out.append(f"{i}. {r.get('title')}\n{r.get('body')}\nSource: {r.get('href')}")
+                        return "\n\n".join(out)
+            except Exception as e:
+                attempt += 1
+                if attempt > retries:
+                    return f"DDG search failed: {e}"
+                time.sleep(1 * attempt)
+
+    return ddg_search
 
 
 def make_tavily_search(cfg: Config):
@@ -268,7 +282,7 @@ def make_tavily_search(cfg: Config):
             if not cfg.tavily_api_key:
                 return "Tavily API key not found. Please set COPILOTJ_TAVILY_API_KEY environment variable."
 
-            client = TavilyClient(api_key=cfg.tavily_api_key)
+            client = TavilyClient(api_key=cfg.tavily_api_key, proxies=proxy_dict(cfg))
 
             response = client.search(
                 query=query,
@@ -592,6 +606,7 @@ async def imagej_retriever(query: Annotated[str, "Search query string describing
 def make_deep_research(cfg: Config):
     """Factory: return a ``deep_research`` callable bound to *cfg*."""
     _tavily_search = make_tavily_search(cfg)
+    _ddg_search = make_ddg_search(cfg)
 
     async def deep_research(query: Annotated[str, "The research question to investigate thoroughly"]) -> str:
         research_report = {
@@ -620,7 +635,7 @@ def make_deep_research(cfg: Config):
             research_report["sources_consulted"].append("Wikipedia")
             research_report["findings"]["reference"] = wiki_results
 
-            ddg_results = ddg_search(query, max_results=5)
+            ddg_results = _ddg_search(query, max_results=5)
             research_report["sources_consulted"].append("DuckDuckGo Search")
             research_report["findings"]["web_alternative"] = ddg_results
 
@@ -714,6 +729,7 @@ def make_bioimage_search_models(cfg: Config):
                 cache_dir=Path(_cfg.bioimage_model_zoo_cache).resolve(),
                 ttl_seconds=_cfg.bioimage_model_zoo_cache_ttl,
                 force_refresh=False,
+                proxies=proxy_dict(_cfg),
             )
 
             query_text = query.lower().strip() if query else None
@@ -843,6 +859,7 @@ def make_bioimage_download_model(cfg: Config):
                 cache_dir=Path(cfg.bioimage_model_zoo_cache).resolve(),
                 ttl_seconds=cfg.bioimage_model_zoo_cache_ttl,
                 force_refresh=False,
+                proxies=proxy_dict(cfg),
             )
 
             entry = _get_model(models, model_id)
@@ -858,6 +875,9 @@ def make_bioimage_download_model(cfg: Config):
             result_path = dest_path / filename_guess
 
             sess = requests.Session()
+            _proxies = proxy_dict(cfg)
+            if _proxies:
+                sess.proxies.update(_proxies)
             with sess.get(chosen, stream=True, timeout=60) as resp:
                 resp.raise_for_status()
                 with result_path.open("wb") as handle:
@@ -876,7 +896,7 @@ def make_bioimage_download_model(cfg: Config):
 if __name__ == "__main__":
     from copilotj.core import load_config
 
-    load_config()
+    cfg = load_config()
 
-    result = ddg_search("images of albert einstein", images=True)
+    result = make_ddg_search(cfg)("images of albert einstein", images=True)
     print(result)

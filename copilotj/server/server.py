@@ -12,6 +12,8 @@ import aiohttp_cors
 from copilotj.core.config import Config
 from copilotj.core.kb import ensure_faiss_index_async
 from copilotj.core.lifecycle import run_cleanup
+from copilotj.core.model_info import get_model_capabilities
+from copilotj.core.model_listing import list_provider_models
 from copilotj.server.bridge import Bridge
 from copilotj.server.threads import Threads
 
@@ -114,6 +116,9 @@ class Server:
         app.on_shutdown.append(on_shutdown)
 
         async def _ensure_kb(app: web.Application):
+            from copilotj.core.embedding import configure_download_proxy
+
+            configure_download_proxy(self._cfg)
             asyncio.ensure_future(ensure_faiss_index_async())
             yield
 
@@ -124,7 +129,7 @@ class Server:
             from copilotj.core.model_info import ensure_model_db_async
 
             async def _download_and_resolve():
-                await ensure_model_db_async()
+                await ensure_model_db_async(self._cfg)
                 new_cfg = resolve_vision_config(self._cfg)
                 self._cfg = new_cfg
                 self._threads.update_cfg(new_cfg)
@@ -180,12 +185,11 @@ class Server:
         model name.  Without the parameter, returns info for the server's
         configured LLM and VLM.
         """
-        from copilotj.core.model_info import get_model_capabilities
 
         # Check arbitrary model via query parameter
         model_param = request.query.get("model")
         if model_param:
-            caps = await asyncio.to_thread(get_model_capabilities, model_param)
+            caps = await asyncio.to_thread(get_model_capabilities, model_param, self._cfg)
             return web.json_response(
                 {
                     "model": model_param,
@@ -200,7 +204,7 @@ class Server:
         def _caps_dict(model: str) -> dict | None:
             if not model:
                 return None
-            caps = get_model_capabilities(model)
+            caps = get_model_capabilities(model, cfg)
             return {
                 "supports_vision": caps.supports_vision,
                 "supports_function_calling": caps.supports_function_calling,
@@ -237,20 +241,19 @@ class Server:
         live.  Never returns 5xx — Ollama being unreachable surfaces as
         ``source: "unreachable"`` with an empty model list.
         """
-        from copilotj.core.model_listing import list_provider_models
 
         provider = request.query.get("provider")
         base_url = request.query.get("base_url")
 
         if provider:
-            result = await list_provider_models(provider, base_url=base_url)
+            result = await list_provider_models(provider, base_url=base_url, cfg=self._cfg)
             return web.json_response(result)
 
         # Grouped: resolve all supported providers concurrently. Catalog-backed
         # cloud providers (incl. DeepSeek / OpenRouter) are listed so the model
         # picker can offer autocomplete for them; Ollama is queried live.
         providers = ["openai", "anthropic", "gemini", "deepseek", "openrouter", "ollama"]
-        results = await asyncio.gather(*(list_provider_models(p, base_url=base_url) for p in providers))
+        results = await asyncio.gather(*(list_provider_models(p, base_url=base_url, cfg=self._cfg) for p in providers))
         return web.json_response({"providers": {r["provider"]: r for r in results}})
 
 

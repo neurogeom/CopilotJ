@@ -217,24 +217,25 @@ Note: Ollama models generally do not support image input. If image understanding
 
 ### All configuration variables
 
-| Variable                  | Description                                                                     |
-| ------------------------- | ------------------------------------------------------------------------------- |
-| `COPILOTJ_LLM_MODEL`      | Main LLM model name (required)                                                  |
-| `COPILOTJ_LLM_API_KEY`    | API key for the main model (required)                                           |
-| `COPILOTJ_LLM_BASE_URL`   | Override API endpoint for the main model                                        |
-| `COPILOTJ_LLM_PROVIDER`   | Explicit LLM provider selection (optional; auto-detected if not set)            |
-| `COPILOTJ_VLM_MODEL`      | Vision-language model name (optional)                                           |
-| `COPILOTJ_VLM_API_KEY`    | API key for the VLM (falls back to `COPILOTJ_LLM_API_KEY`)                      |
-| `COPILOTJ_VLM_BASE_URL`   | Override API endpoint for the VLM (falls back to `COPILOTJ_LLM_BASE_URL`)       |
-| `COPILOTJ_VLM_PROVIDER`   | Explicit VLM provider (optional; falls back to `COPILOTJ_LLM_PROVIDER`)         |
-| `COPILOTJ_LLM_PROXY`      | HTTP/HTTPS proxy for LLM outbound API requests                                  |
-| `COPILOTJ_VLM_PROXY`      | HTTP/HTTPS proxy for VLM outbound requests (falls back to `COPILOTJ_LLM_PROXY`) |
-| `COPILOTJ_TAVILY_API_KEY` | Tavily API key for live web search                                              |
-| `COPILOTJ_KB_AUTOSAVE`    | Set `1` to auto-ingest dialog summaries into the knowledge bank                 |
-| `COPILOTJ_DEV`            | Development mode (presence-based flag)                                          |
-| `LANGFUSE_SECRET_KEY`     | Langfuse secret key for observability                                           |
-| `LANGFUSE_PUBLIC_KEY`     | Langfuse public key for observability                                           |
-| `LANGFUSE_HOST`           | Langfuse host URL (e.g. `https://us.cloud.langfuse.com`)                        |
+| Variable                  | Description                                                                                                                              |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `COPILOTJ_LLM_MODEL`      | Main LLM model name (required)                                                                                                           |
+| `COPILOTJ_LLM_API_KEY`    | API key for the main model (required)                                                                                                    |
+| `COPILOTJ_LLM_BASE_URL`   | Override API endpoint for the main model                                                                                                 |
+| `COPILOTJ_LLM_PROVIDER`   | Explicit LLM provider selection (optional; auto-detected if not set)                                                                     |
+| `COPILOTJ_VLM_MODEL`      | Vision-language model name (optional)                                                                                                    |
+| `COPILOTJ_VLM_API_KEY`    | API key for the VLM (falls back to `COPILOTJ_LLM_API_KEY`)                                                                               |
+| `COPILOTJ_VLM_BASE_URL`   | Override API endpoint for the VLM (falls back to `COPILOTJ_LLM_BASE_URL`)                                                                |
+| `COPILOTJ_VLM_PROVIDER`   | Explicit VLM provider (optional; falls back to `COPILOTJ_LLM_PROVIDER`)                                                                  |
+| `COPILOTJ_LLM_PROXY`      | HTTP/HTTPS proxy for LLM outbound API requests                                                                                           |
+| `COPILOTJ_VLM_PROXY`      | HTTP/HTTPS proxy for VLM outbound requests (falls back to `COPILOTJ_LLM_PROXY`)                                                          |
+| `CIJ_PROXY`               | Global download proxy for HuggingFace, model DB, bioimage zoo, research/Tavily/DDGS, cellpose/stardist; fallback for the LLM/VLM proxies |
+| `COPILOTJ_TAVILY_API_KEY` | Tavily API key for live web search                                                                                                       |
+| `COPILOTJ_KB_AUTOSAVE`    | Set `1` to auto-ingest dialog summaries into the knowledge bank                                                                          |
+| `COPILOTJ_DEV`            | Development mode (presence-based flag)                                                                                                   |
+| `LANGFUSE_SECRET_KEY`     | Langfuse secret key for observability                                                                                                    |
+| `LANGFUSE_PUBLIC_KEY`     | Langfuse public key for observability                                                                                                    |
+| `LANGFUSE_HOST`           | Langfuse host URL (e.g. `https://us.cloud.langfuse.com`)                                                                                 |
 
 A complete `.env.local` template:
 
@@ -245,6 +246,10 @@ COPILOTJ_LLM_API_KEY=sk-xxxxxxxx
 #COPILOTJ_LLM_BASE_URL=http://localhost:11434
 #COPILOTJ_LLM_PROXY=http://PATH_TO_YOUR_PROXY
 #COPILOTJ_LLM_PROVIDER=openai
+
+# Global download proxy (HuggingFace, model DB, bioimage, web research, cellpose/stardist).
+# Also the fallback for the LLM/VLM API proxies above. Passed explicitly — no global proxy env vars.
+#CIJ_PROXY=http://127.0.0.1:8080
 
 # Vision-language model (image understanding) — optional, choose one provider
 #COPILOTJ_VLM_MODEL=gemini-2.5-flash

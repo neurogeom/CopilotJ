@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import asyncio
+import functools
 import logging
 import os
 from pathlib import Path
@@ -15,11 +16,12 @@ from skimage import io
 from skimage.util import img_as_float32, img_as_ubyte
 from stardist.models import StarDist2D
 
-from copilotj.core.config import get_home
+from copilotj.core.config import Config, get_home, load_config
+from copilotj.util import temporary_proxy
 
 __all__ = [
-    "cellpose_segmentation",
-    "stardist_segmentation",
+    "make_cellpose_segmentation",
+    "make_stardist_segmentation",
     "biapy_tool",
     # Segmentation tools
     "gauss_otsu_labeling_tool",
@@ -52,6 +54,7 @@ def get_project_templates_dir() -> Path:
 
 
 async def cellpose_segmentation(
+    cfg: Config,
     image_path: Annotated[str | None, "Path to the input image or directory (use forward slashes)"] = None,
     model_type: Annotated[str, "Type of model to use (nuclei, cyto, cyto2)"] = "nuclei",
     diameter: Annotated[int | None, "Expected cell diameter (if None, will be estimated)"] = None,
@@ -111,7 +114,10 @@ async def cellpose_segmentation(
 
         # Run Cellpose
         logger.info(f"Running Cellpose model: {model_type}")
-        model = models.CellposeModel(gpu=gpu, model_type=model_type)
+        # cellpose downloads pretrained weights via raw urllib (no proxy param) on first
+        # use, so temporarily expose CIJ_PROXY through env vars for this call only.
+        with temporary_proxy(cfg):
+            model = models.CellposeModel(gpu=gpu, model_type=model_type)
 
         # Run model evaluation in a thread pool to avoid blocking
         masks, flows, styles = await asyncio.to_thread(
@@ -178,6 +184,7 @@ async def cellpose_segmentation(
 
 
 async def stardist_segmentation(
+    cfg: Config,
     image_path: Annotated[str | None, "Path to the input image (use forward slashes)"] = None,
     image_array: Annotated[Any | None, "Optional in-memory image; overrides image_path if provided"] = None,
     image_type: Annotated[str, "fluorescence | he | tissue | brightfield | phase | dapi | unknown"] = "fluorescence",
@@ -228,7 +235,10 @@ async def stardist_segmentation(
         # Lazy: download the standard pretrained model on first use and cache it
         # under ~/.stardist/models/<name> (mirrors how cellpose fetches its
         # weights). Keeps the plugin JAR free of bundled model weights.
-        model_instance = StarDist2D.from_pretrained(model_name)
+        # stardist/csbdeep fetch weights via raw urllib (no proxy param); expose
+        # CIJ_PROXY through env vars for the model load only.
+        with temporary_proxy(cfg):
+            model_instance = StarDist2D.from_pretrained(model_name)
 
         kwargs = {}
         if prob_thresh is not None:
@@ -263,6 +273,16 @@ async def stardist_segmentation(
     except Exception as e:
         logger.error(f"Error in stardist_segmentation: {e}")
         raise
+
+
+def make_cellpose_segmentation(cfg: Config):
+    """Factory: return a ``cellpose_segmentation`` callable bound to *cfg*."""
+    return functools.partial(cellpose_segmentation, cfg)
+
+
+def make_stardist_segmentation(cfg: Config):
+    """Factory: return a ``stardist_segmentation`` callable bound to *cfg*."""
+    return functools.partial(stardist_segmentation, cfg)
 
 
 # <BiaPy>
@@ -1466,4 +1486,4 @@ def create_colored_masks(masks: np.ndarray) -> np.ndarray:
 
 
 if __name__ == "__main__":
-    asyncio.run(cellpose_segmentation())
+    asyncio.run(make_cellpose_segmentation(load_config())())
