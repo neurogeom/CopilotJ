@@ -97,12 +97,8 @@ def test_vlm_client_prefers_vlm_proxy(monkeypatch):
     assert captured["proxy"] == "http://vlm:1"
 
 
-def test_vlm_client_prefers_cij_over_llm(monkeypatch):
-    """VLM proxy prefers ``cij_proxy`` over ``llm_proxy``.
-
-    Effective chain: ``vlm_proxy > cij_proxy > llm_proxy`` (``llm_proxy`` remains a
-    last-resort fallback via ``_new_model_client``).
-    """
+def test_vlm_client_excludes_llm_proxy(monkeypatch):
+    """VLM proxy precedence is ``vlm_proxy > cij_proxy`` — ``llm_proxy`` is never used."""
     captured: dict = {}
     _capture_resolve(monkeypatch, captured)
     # vlm_proxy unset, both llm_proxy and cij_proxy set → cij_proxy wins
@@ -113,7 +109,7 @@ def test_vlm_client_prefers_cij_over_llm(monkeypatch):
     assert captured["proxy"] == "http://cij:1"
 
     captured.clear()
-    # vlm_proxy and cij_proxy unset, llm_proxy set → llm_proxy as last resort
+    # vlm_proxy and cij_proxy unset, llm_proxy set → no proxy (llm_proxy excluded)
     cfg = Config(llm_model="llm", vlm_model="gpt-4o", vlm_provider="openai", llm_proxy="http://llm:1")
     new_vlm_model_client(cfg)
-    assert captured["proxy"] == "http://llm:1"
+    assert captured["proxy"] is None

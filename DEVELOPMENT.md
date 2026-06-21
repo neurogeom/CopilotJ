@@ -228,7 +228,7 @@ Note: Ollama models generally do not support image input. If image understanding
 | `COPILOTJ_VLM_BASE_URL`   | Override API endpoint for the VLM (falls back to `COPILOTJ_LLM_BASE_URL`)                                                                |
 | `COPILOTJ_VLM_PROVIDER`   | Explicit VLM provider (optional; falls back to `COPILOTJ_LLM_PROVIDER`)                                                                  |
 | `COPILOTJ_LLM_PROXY`      | HTTP/HTTPS proxy for LLM outbound API requests                                                                                           |
-| `COPILOTJ_VLM_PROXY`      | HTTP/HTTPS proxy for VLM outbound requests (falls back to `COPILOTJ_LLM_PROXY`)                                                          |
+| `COPILOTJ_VLM_PROXY`      | HTTP/HTTPS proxy for VLM outbound requests (falls back to `CIJ_PROXY`)                                                                   |
 | `CIJ_PROXY`               | Global download proxy for HuggingFace, model DB, bioimage zoo, research/Tavily/DDGS, cellpose/stardist; fallback for the LLM/VLM proxies |
 | `COPILOTJ_TAVILY_API_KEY` | Tavily API key for live web search                                                                                                       |
 | `COPILOTJ_KB_AUTOSAVE`    | Set `1` to auto-ingest dialog summaries into the knowledge bank                                                                          |
