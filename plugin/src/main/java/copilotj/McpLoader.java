@@ -15,6 +15,7 @@ import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.function.BooleanSupplier;
 
 import javax.swing.JPanel;
 
@@ -64,14 +65,26 @@ public final class McpLoader {
   /**
    * Reflectively creates the MCP control panel, or {@code null} if MCP is
    * unavailable on this JVM.
+   *
+   * @param handler forwarded into the bundle as the shared event channel
+   * @param requireExclusiveControl invoked by the panel right before starting
+   *        the MCP server; returns {@code true} to proceed. The core dialog
+   *        supplies this so it can detect/stop a running managed or external
+   *        server (and prompt the user) without the bundle depending on
+   *        {@link CopilotJBridgeService}.
+   * @param statusUpdater invoked by the panel on MCP status changes (text +
+   *        color); the core dialog routes it to the shared status bar, merging
+   *        MCP state into the single endpoint-status display.
    */
-  public JPanel createPanel(final EventHandler handler) {
+  public JPanel createPanel(final EventHandler handler, final BooleanSupplier requireExclusiveControl,
+      final java.util.function.BiConsumer<String, java.awt.Color> statusUpdater) {
     if (!isAvailable()) return null;
     try {
       final Class<?> cls = Class.forName(PANEL_CLASS, true, bundleLoader);
       final java.lang.reflect.Constructor<?> ctor =
-          cls.getConstructor(EventHandler.class, LogService.class);
-      return (JPanel) ctor.newInstance(handler, log);
+          cls.getConstructor(EventHandler.class, LogService.class, BooleanSupplier.class,
+              java.util.function.BiConsumer.class);
+      return (JPanel) ctor.newInstance(handler, log, requireExclusiveControl, statusUpdater);
     } catch (final Throwable t) {
       log.warn("copilotj: Failed to create MCP panel: " + t.getMessage(), t);
       return null;
