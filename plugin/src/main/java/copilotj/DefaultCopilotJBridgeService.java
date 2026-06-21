@@ -9,10 +9,13 @@ package copilotj;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Enumeration;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -367,6 +370,24 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
     }
     final String pyprojectContent = new String(java.nio.file.Files.readAllBytes(pyprojectFile.toPath()), "UTF-8");
 
+    // Stage uv.lock into envRoot so `uv sync` honors the locked dependency
+    // versions. UvBuilder writes pyproject.toml to envRoot and runs `uv sync`
+    // with cwd=envRoot, so uv.lock must live at envRoot/uv.lock to be
+    // discovered. Workaround for apposed/appose#33 (Appose has no lock API yet).
+    final File lockSource = new File(sourceDir, "uv.lock");
+    final String lockContent;
+    if (lockSource.isFile()) {
+      lockContent = new String(java.nio.file.Files.readAllBytes(lockSource.toPath()), "UTF-8");
+      invalidateIfLockChanged(envRoot, lockContent);
+      final File stagedLock = new File(envRoot, "uv.lock");
+      stagedLock.getParentFile().mkdirs();
+      Files.write(stagedLock.toPath(), lockContent.getBytes("UTF-8"));
+    } else {
+      lockContent = null;
+      log.warn("copilotj: uv.lock not found at " + lockSource.getAbsolutePath()
+          + " — managed env will NOT be reproducible");
+    }
+
     // In dev mode (copilotj.sourcePath set), point COPILOTJ_HOME to the source
     // tree so Python skips bootstrapping — resources are already there.
     // Otherwise (JAR-extracted sources), use envRoot where Java extracted resources.
@@ -374,6 +395,13 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
         ? sourceDir
         : envRoot;
 
+    // NOTE: We intentionally do NOT pass `--frozen` here. Appose's `.flags(...)`
+    // are emitted BEFORE the subcommand (uv --frozen sync ...), but uv only
+    // accepts `--frozen` AFTER `sync` (uv sync --frozen), so it would error.
+    // Instead we rely on staging uv.lock into envRoot above: plain `uv sync`
+    // honors a lock that is consistent with pyproject.toml and installs the
+    // exact pinned versions. True strict `--frozen` needs upstream
+    // apposed/appose#33 (post-subcommand arg injection). See plan caveats.
     final org.apposed.appose.Builder builder = Appose.uv()
         .content(pyprojectContent)
         .scheme("pyproject.toml")
@@ -550,6 +578,40 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
       Files.write(file.toPath(), fingerprint.getBytes("UTF-8"));
     } catch (final IOException e) {
       log.warn("copilotj: Could not write version marker to " + file.getAbsolutePath(), e);
+    }
+  }
+
+  /**
+   * Forces a managed-env rebuild when the bundled uv.lock content changes, even
+   * if pyproject.toml is unchanged. Appose's {@code appose.json} state has no
+   * lock-file hash (apposed/appose#33), so without this a uv.lock-only change
+   * would be considered up-to-date and never applied to the existing venv.
+   */
+  private void invalidateIfLockChanged(final File envRoot, final String lockContent) {
+    final String fingerprint = sha256(lockContent);
+    final File marker = new File(envRoot, ".uv.lock.sha256");
+    if (!fingerprint.equals(readVersionMarker(marker))) {
+      final File apposeJson = new File(envRoot, "appose.json");
+      if (apposeJson.isFile() && !apposeJson.delete()) {
+        log.warn("copilotj: could not delete stale " + apposeJson.getAbsolutePath());
+      }
+      writeVersionMarker(marker, fingerprint);
+    }
+  }
+
+  /** Hex-encoded SHA-256 of the given UTF-8 string. */
+  private static String sha256(final String s) {
+    try {
+      final MessageDigest md = MessageDigest.getInstance("SHA-256");
+      final byte[] digest = md.digest(s.getBytes("UTF-8"));
+      final StringBuilder hex = new StringBuilder(digest.length * 2);
+      for (final byte b : digest) {
+        hex.append(String.format("%02x", b & 0xff));
+      }
+      return hex.toString();
+    } catch (final NoSuchAlgorithmException | UnsupportedEncodingException e) {
+      // SHA-256 and UTF-8 are mandated by the Java platform spec — unreachable.
+      throw new RuntimeException(e);
     }
   }
 
