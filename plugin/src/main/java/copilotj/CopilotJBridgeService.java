@@ -32,6 +32,13 @@ public interface CopilotJBridgeService extends SciJavaService {
 
   public boolean isEnvironmentOnDisk();
 
+  /**
+   * Resolved on-disk root directory holding extracted Python sources, assets,
+   * knowledge bank, and the virtual environment (a.k.a. {@code $COPILOTJ_HOME}).
+   * Returns a deterministic path even if the directory has not been created yet.
+   */
+  public java.io.File getEnvironmentRoot();
+
   public void startManagedServer() throws java.io.IOException, InterruptedException;
 
   public void startManagedServer(ProgressListener listener) throws java.io.IOException, InterruptedException;
@@ -41,9 +48,9 @@ public interface CopilotJBridgeService extends SciJavaService {
   public boolean isServerRunning();
 
   /**
-   * Resolved on-disk root directory holding extracted Python sources, assets,
-   * knowledge bank, and the virtual environment (a.k.a. {@code $COPILOTJ_HOME}).
-   * Returns a deterministic path even if the directory has not been created yet.
+   * Registers the MCP control handle so the service can stop the MCP server on
+   * context disposal (Fiji Quit), mirroring how it stops the managed Python
+   * server. Optional; pass {@code null} when MCP is unavailable on this JVM.
    */
-  public java.io.File getEnvironmentRoot();
+  public void setMcpControl(McpControl control);
 }

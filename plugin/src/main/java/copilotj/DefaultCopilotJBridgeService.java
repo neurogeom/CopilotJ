@@ -88,6 +88,9 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
   private volatile String managedServerUrl;
   private volatile boolean managed = false;
 
+  /** Optional MCP control handle, registered by the dialog, stopped on dispose. */
+  private volatile McpControl mcpControl;
+
   public DefaultCopilotJBridgeService() {
   }
 
@@ -662,8 +665,20 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
     installActionTool();
   }
 
+  @Override
+  public void setMcpControl(final McpControl control) {
+    this.mcpControl = control;
+  }
+
   @org.scijava.event.EventHandler
   private void onContextDisposing(final ContextDisposingEvent e) {
+    // Stop the MCP server alongside the managed Python server so Fiji quits
+    // with a single control endpoint torn down. ContextDisposingEvent fires
+    // before any service's dispose(), so this still runs even if a later
+    // dispose() throws (e.g. the ij1-patcher _hooks issue in dev mode).
+    if (mcpControl != null) {
+      mcpControl.stopMcp();
+    }
     stop();
   }
 

@@ -698,6 +698,9 @@ public class CopilotJBridgeDialog
     final JPanel panel = loader.createPanel(service.getEventHandler(), requireExclusiveControl, mcpStatusUpdater);
     if (panel instanceof McpControl) {
       mcpControl = (McpControl) panel;
+      // Register with the service so Fiji Quit (ContextDisposingEvent) stops MCP
+      // too, mirroring the managed Python server's shutdown path.
+      service.setMcpControl(mcpControl);
     }
     if (panel != null) {
       return panel;
