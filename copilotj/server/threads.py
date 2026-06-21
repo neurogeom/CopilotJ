@@ -159,7 +159,7 @@ class _Thread(UI):
         cfg: Config,
         *,
         config: _ConfigQuery | None = None,
-        trace_context: langfuse.Langfuse,
+        trace_context: langfuse.Langfuse | None,
         bridge: "Bridge",
     ):
         self.thread_id = thread_id
@@ -280,11 +280,16 @@ class _Thread(UI):
     async def _run_agent(self, prompt: str, done_event: asyncio.Event) -> None:
         """Run the chat with the agent."""
         try:
-            with propagate_attributes(session_id=self.thread_id):
-                with self._trace_ctx.start_as_current_observation(
-                    as_type="span", name="thread", metadata={"thread_id": self.thread_id}, input=prompt
-                ):
-                    await self._agent.run(prompt, trace_ctx=self._trace_ctx)
+            if self._trace_ctx is None:
+                # Tracing disabled (e.g. langfuse failed to initialize): run the
+                # agent directly, skipping the Langfuse/OTEL context managers.
+                await self._agent.run(prompt, trace_ctx=None)
+            else:
+                with propagate_attributes(session_id=self.thread_id):
+                    with self._trace_ctx.start_as_current_observation(
+                        as_type="span", name="thread", metadata={"thread_id": self.thread_id}, input=prompt
+                    ):
+                        await self._agent.run(prompt, trace_ctx=self._trace_ctx)
 
         except Exception:
             _log.exception("Agent run failed for thread %s", self.thread_id)
@@ -348,8 +353,16 @@ class Threads:
         self._bridge = bridge
         self._threads: dict[str, tuple[_Thread, threading.Lock]] = {}
         self._threads_lock = threading.Lock()
-        self._trace_ctx = langfuse.Langfuse()
-        _setup_otel_instrumentation()
+        # langfuse.Langfuse() validates keys/network at construction time and is
+        # the most likely single point to take down Server(cfg) on a misconfigured
+        # machine. Degrade to running without tracing instead of crashing the whole
+        # server; _run_agent skips the context managers when _trace_ctx is None.
+        try:
+            self._trace_ctx = langfuse.Langfuse()
+            _setup_otel_instrumentation()
+        except Exception:
+            _log.exception("Langfuse tracing initialization failed; continuing without tracing")
+            self._trace_ctx = None
 
     def update_cfg(self, cfg: Config) -> None:
         """Update the stored config (e.g. after async vision resolution)."""
