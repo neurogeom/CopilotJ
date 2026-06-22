@@ -29,6 +29,7 @@ declare module 'vue' {
     HeroPattern: typeof import('./src/components/HeroPattern.vue')['default']
     InputText: typeof import('primevue/inputtext')['default']
     Logo: typeof import('./src/components/Logo.vue')['default']
+    ManualTabs: typeof import('./src/components/ManualTabs.vue')['default']
     ModelAutoComplete: typeof import('./src/components/ModelAutoComplete.vue')['default']
     Navbar: typeof import('./src/components/Navbar.vue')['default']
     ProgressSpinner: typeof import('primevue/progressspinner')['default']
