@@ -54,6 +54,7 @@ declare module 'vue' {
     TabPanels: typeof import('primevue/tabpanels')['default']
     Tabs: typeof import('primevue/tabs')['default']
     ToggleSwitch: typeof import('primevue/toggleswitch')['default']
+    UsageNotice: typeof import('./src/components/UsageNotice.vue')['default']
     Wizard: typeof import('./src/components/Wizard.vue')['default']
   }
   export interface GlobalDirectives {

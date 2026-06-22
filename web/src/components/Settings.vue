@@ -10,6 +10,7 @@ import type { ThreadConfigModel } from "../apis";
 import { getBaseUrl } from "../apis/base";
 import { useConfig, useSettings } from "../store";
 import SettingsConnection from "./SettingsConnection.vue";
+import UsageNotice from "./UsageNotice.vue";
 import SettingsModel from "./SettingsModel.vue";
 import SettingsVLM from "./SettingsVLM.vue";
 import SettingsPreference from "./SettingsPreference.vue";
@@ -20,7 +21,11 @@ const config = useConfig();
 // Base URL tab seeds from the current API base URL; the component persists + reloads on connect.
 const apiBaseUrl = ref(getBaseUrl().replace(/\/api$/, ""));
 
-const activeTab = ref("base");
+// Notice tab (User Agreement + Vision opt-in) — edit-then-save, like the other tabs.
+const userAgreement = ref(config.data.userAgreement);
+const visionEnabled = ref(config.data.visionEnabled);
+
+const activeTab = ref("notice");
 const connectionRef = ref<InstanceType<typeof SettingsConnection> | null>(null);
 const modelRef = ref<InstanceType<typeof SettingsModel> | null>(null);
 const vlmRef = ref<InstanceType<typeof SettingsVLM> | null>(null);
@@ -39,7 +44,6 @@ function submitVlm(vlm: {
   baseUrl: string | null;
   provider: string | null;
   useMainModel: boolean;
-  visionEnabled: boolean;
 }) {
   config.setVlm({
     model: vlm.model,
@@ -48,7 +52,6 @@ function submitVlm(vlm: {
     provider: vlm.provider,
     useMainModel: vlm.useMainModel,
   });
-  config.setVisionEnabled(vlm.visionEnabled);
 }
 
 // --- Preferences (proxy, Tavily, KB autosave, auto-scroll) ---
@@ -66,6 +69,10 @@ function savePreference(value: {
 
 function onSubmit() {
   switch (activeTab.value) {
+    case "notice":
+      config.setUserAgreement(userAgreement.value);
+      config.setVisionEnabled(visionEnabled.value);
+      break;
     case "base":
       connectionRef.value?.connect();
       break;
@@ -86,6 +93,7 @@ function onSubmit() {
   <div class="flex min-h-0 w-full flex-1 flex-col">
     <Tabs v-model:value="activeTab" class="flex min-h-0 flex-1 flex-col">
       <TabList>
+        <Tab value="notice">Notice</Tab>
         <Tab value="base">Base</Tab>
         <Tab value="model">Model</Tab>
         <Tab value="vision">Vision</Tab>
@@ -93,6 +101,11 @@ function onSubmit() {
       </TabList>
 
       <TabPanels class="flex-1 overflow-y-auto">
+        <!-- Notice Tab (User Agreement + Vision opt-in; auto-persists, no Save footer) -->
+        <TabPanel value="notice">
+          <UsageNotice v-model:userAgreement="userAgreement" v-model:visionEnabled="visionEnabled" />
+        </TabPanel>
+
         <!-- Base Tab -->
         <TabPanel value="base">
           <SettingsConnection
@@ -113,9 +126,10 @@ function onSubmit() {
           />
         </TabPanel>
 
-        <!-- Vision Tab -->
+        <!-- Vision Tab (configurable only when Vision is enabled on the Notice tab) -->
         <TabPanel value="vision">
           <SettingsVLM
+            v-if="config.data.visionEnabled"
             ref="vlmRef"
             :model="config.data.vlm.model"
             :api-key="config.data.vlm.api_key"
@@ -123,9 +137,11 @@ function onSubmit() {
             :provider="config.data.vlm.provider"
             :use-main-model="config.data.vlm.useMainModel"
             :main-model-name="settings.effectiveModel?.name ?? null"
-            :vision-enabled="config.data.visionEnabled"
             :show-submit-button="false"
           />
+          <p v-else class="text-sm text-slate-500 dark:text-slate-400">
+            Vision is currently disabled. Enable it on the <strong>Notice</strong> tab to configure a vision model.
+          </p>
         </TabPanel>
 
         <!-- Preferences Tab -->
@@ -142,7 +158,7 @@ function onSubmit() {
       </TabPanels>
     </Tabs>
 
-    <!-- Pinned submit (per active tab) -->
+    <!-- Pinned submit (per active tab). -->
     <div class="flex justify-end pt-4">
       <Button label="Save" @click="onSubmit" />
     </div>

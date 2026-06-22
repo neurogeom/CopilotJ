@@ -25,6 +25,7 @@ export interface ConfigData {
   tavilyApiKey: string | null;
   kbAutosave: boolean;
   visionEnabled: boolean;
+  userAgreement: boolean;
 }
 
 function defaultConfig(): ConfigData {
@@ -35,6 +36,7 @@ function defaultConfig(): ConfigData {
     tavilyApiKey: null,
     kbAutosave: false,
     visionEnabled: false,
+    userAgreement: false,
   };
 }
 
@@ -124,6 +126,11 @@ export const useConfig = defineStore("config", () => {
     persist();
   }
 
+  function setUserAgreement(accepted: boolean) {
+    data.value.userAgreement = accepted;
+    persist();
+  }
+
   function reset() {
     data.value = defaultConfig();
     localStorage.removeItem(STORAGE_KEY);
@@ -139,6 +146,7 @@ export const useConfig = defineStore("config", () => {
     setTavilyApiKey,
     setKbAutosave,
     setVisionEnabled,
+    setUserAgreement,
     reset,
     persist,
   };
