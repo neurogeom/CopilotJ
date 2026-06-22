@@ -674,12 +674,21 @@ public class DefaultCopilotJBridgeService extends AbstractService implements Cop
   private void onContextDisposing(final ContextDisposingEvent e) {
     // Stop the MCP server alongside the managed Python server so Fiji quits
     // with a single control endpoint torn down. ContextDisposingEvent fires
-    // before any service's dispose(), so this still runs even if a later
-    // dispose() throws (e.g. the ij1-patcher _hooks issue in dev mode).
+    // before any service's dispose(), so this runs even if a later dispose()
+    // throws. Each step is isolated so one failing teardown cannot skip the
+    // other nor disturb the Quit thread.
     if (mcpControl != null) {
-      mcpControl.stopMcp();
+      try {
+        mcpControl.stopMcp();
+      } catch (final Throwable t) {
+        log.warn("copilotj: Failed to stop MCP server on quit", t);
+      }
     }
-    stop();
+    try {
+      stop();
+    } catch (final Throwable t) {
+      log.warn("copilotj: Failed to stop managed server on quit", t);
+    }
   }
 
   void installActionTool() {
