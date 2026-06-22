@@ -12,13 +12,9 @@ This project contains three parts:
 ## Prerequisites
 
 - **Python 3.12+** with [uv](https://docs.astral.sh/uv/)
-  <<<<<<< HEAD
-- **Java 8+** and **Maven 3.x**
-- # **Node.js 22+** with [pnpm v11](https://pnpm.io/installation)
 - **Java 21** and **Maven 3.x** (to build; the resulting JAR runs on Java 8+)
 - **Node.js 22+** with [pnpm](https://pnpm.io/installation)
-  > > > > > > > 657311e (Load MCP via isolated child-first ClassLoader in a single JAR)
-- [just](https://github.com/casey/just) (command runner)
+- [just](https://github.com/casey/just) (optional, command runner)
 
 ## Quick start with just
 

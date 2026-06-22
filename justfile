@@ -7,6 +7,9 @@
 default:
   @just --list
 
+dev-server:
+  python -m copilotj.server
+
 # Dev: run the plugin in a forked Java 21 JVM (MCP enabled via the embedded bundle)
 dev-plugin:
   @just build-plugin
