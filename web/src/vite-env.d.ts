@@ -12,7 +12,13 @@ declare module "*/assets/manual.md" {
     text: string;
     id: string;
   }
-  export const html: string;
+  export interface ManualTab {
+    id: string;
+    name: string;
+    html: string;
+  }
+  export type ManualBlock = { type: "html"; html: string } | { type: "tabs"; tabs: ManualTab[] };
+  export const blocks: ManualBlock[];
   export const toc: ManualTocItem[];
 }
 

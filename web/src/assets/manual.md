@@ -62,7 +62,9 @@ Models are provided by **AI providers** — companies that operate the model ser
 | Google    | [Google API keys](https://aistudio.google.com/api-keys)                       | [Google AI Billing](https://aistudio.google.com/billing)                             | `gemini-2.5-flash` (fast), `gemini-2.5-pro` (stronger reasoning) |
 | Ollama    | n/a (local)                                                                   | free                                                                                 | See [Ollama model library](https://ollama.com/library)           |
 
-#### OpenAI
+::: tabs
+
+=== OpenAI
 
 OpenAI's GPT models work reliably with CopilotJ. `gpt-5.4` is the current flagship; `gpt-5.4-mini` costs less but may produce weaker results on complex workflows.
 
@@ -70,7 +72,7 @@ OpenAI's GPT models work reliably with CopilotJ. `gpt-5.4` is the current flagsh
 2. Add credits via [OpenAI Billing](https://platform.openai.com/settings/organization/billing/overview).
 3. Create an API key at [OpenAI API keys](https://platform.openai.com/settings/organization/api-keys).
 
-#### Anthropic (Claude)
+=== Anthropic (Claude)
 
 Claude models are recommended for their strong multi-step reasoning and tool use. `claude-sonnet-4-6` offers a good balance of capability and cost; `claude-opus-4-6` is the most capable option.
 
@@ -78,7 +80,7 @@ Claude models are recommended for their strong multi-step reasoning and tool use
 2. Add credits via [Anthropic Billing](https://platform.claude.com/settings/billing).
 3. Create an API key at [Anthropic API keys](https://platform.claude.com/settings/keys).
 
-#### Google Gemini
+=== Google Gemini
 
 Gemini models are well-supported and competitively priced. `gemini-2.5-flash` is fast and inexpensive; `gemini-2.5-pro` provides stronger reasoning.
 
@@ -86,7 +88,7 @@ Gemini models are well-supported and competitively priced. `gemini-2.5-flash` is
 2. Enable billing if required via [Google AI Billing](https://aistudio.google.com/billing).
 3. Create an API key at [Google API keys](https://aistudio.google.com/api-keys).
 
-#### Ollama (local, offline)
+=== Ollama (local, offline)
 
 [Ollama](https://ollama.com) runs models locally on your own hardware, with no data sent to external servers and no per-request cost.
 
@@ -104,6 +106,8 @@ ollama pull qwen3:30b   # or whichever model you want to use
 ```
 
 Note: Ollama models generally do not support image input. If image understanding is needed, configure a separate vision model using a cloud provider from the options above.
+
+:::
 
 ### First-time setup wizard
 
@@ -285,14 +289,18 @@ The temporary folder is managed by the CopilotJ core server and updates in real 
 
 ## FAQ
 
-### The "Open copilotj.chat" button doesn't do anything, or the chat page won't load
+<details id="faq-open-chat-button">
+<summary>The "Open copilotj.chat" button doesn't do anything, or the chat page won't load</summary>
 
 The **Open Chat** button launches the hosted CopilotJ web frontend at [copilotj.chat/#/chat](https://copilotj.chat/#/chat) in your default browser. A few things can get in the way:
 
 - **Nothing happens when you click it.** Your platform may not support opening a browser from Fiji (for example, a headless or some Linux environments). Just open [https://copilotj.chat/#/chat](https://copilotj.chat/#/chat) manually in any browser.
 - **The page opens but shows a connection error.** The button opens the _frontend_, which still needs your local server running. In the **Managed Server** tab, make sure the server status is **Running**, then use the setup wizard (or the **Preferences** in the chat UI) to point the frontend at the server URL shown next to **Server** (for example, `http://127.0.0.1:12345`).
 
-### The "Open Resources" button doesn't open the folder
+</details>
+
+<details id="faq-open-resources">
+<summary>The "Open Resources" button doesn't open the folder</summary>
 
 The **Open Resources** button opens the CopilotJ home directory in your file manager:
 
@@ -305,12 +313,20 @@ If the button doesn't work:
 - **The folder is empty, or there is no `temp/` folder.** Subfolders such as `temp/`, `assets/`, and `knowledge_bank/` are created when the Python environment is installed and a session runs. Click **Install** (then **Start**) in the **Managed Server** tab first.
 - **You see a "Failed to open resource directory" error.** Open the path above manually in your file manager.
 
-### Can I use general AI applications to interact with Fiji?
+</details>
+
+<details id="faq-general-ai">
+<summary>Can I use general AI applications to interact with Fiji?</summary>
 
 Yes. The CopilotJ Bridge plugin exposes an [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server. Any MCP-compatible AI client — for example Claude Code, Codex, or other tools that speak MCP — can connect to your running Fiji instance and drive ImageJ operations directly, without going through the CopilotJ web frontend.
 
-### Why is my MCP server not available?
+</details>
+
+<details id="why-is-my-mcp-server-not-available">
+<summary>Why is my MCP server not available?</summary>
 
 MCP only works with **Fiji-Latest**. The MCP libraries require Java 17 or newer; **Fiji-Latest** ships Java 21, while **Fiji-Stable** still ships Java 8. On Fiji-Stable the MCP tab in the CopilotJ dialog shows a "not available" notice, while the rest of CopilotJ keeps working normally. See [fiji#413](https://github.com/fiji/fiji/issues/413) for background on Fiji's Java versions.
 
 To use MCP, upgrade to **Fiji-Latest** — download it from [fiji.sc](https://fiji.sc/).
+
+</details>
