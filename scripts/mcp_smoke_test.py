@@ -316,12 +316,17 @@ def call_tool_quiet(client: McpClient, name: str, args: dict) -> str:
     return first_text(res or {}).strip()
 
 
-def find_action_index(snap_text: str, type_suffix: str) -> tuple[int | None, int | None]:
-    """Parse a take_snapshot result and locate the first action whose ``type``
-    ends with ``type_suffix``.
+def find_action_ref(snap_text: str, type_suffix: str) -> tuple[str | None, str | None]:
+    """Parse a take_snapshot result and locate the first component action whose
+    action ``type`` ends with ``type_suffix``.
 
-    Returns ``(snapshot_id, action_index)``, or ``(None, None)`` if the snapshot
-    can't be parsed, or ``(snapshot_id, None)`` if it has no matching action.
+    The ref-model snapshot has no top-level action list; actions live per
+    component (``component.actions``) and are addressed by the component's ``ref``
+    plus the action's short id. Returns ``(ref, action_short_id)``, where
+    ``action_short_id`` is the substring after the last dot of the action type
+    (e.g. ``java.awt.Checkbox.setState`` -> ``setState``). Returns ``(None, None)``
+    if the snapshot can't be parsed or has no matching action on a ref-eligible
+    component.
     """
     if not snap_text:
         return None, None
@@ -329,11 +334,26 @@ def find_action_index(snap_text: str, type_suffix: str) -> tuple[int | None, int
         snap = json.loads(snap_text)
     except json.JSONDecodeError:
         return None, None
-    snap_id = snap.get("id")
-    for i, action in enumerate(snap.get("actions") or []):
-        if isinstance(action, dict) and str(action.get("type", "")).endswith(type_suffix):
-            return snap_id, i
-    return snap_id, None
+
+    def walk(node):
+        if not isinstance(node, dict):
+            return None
+        ref = node.get("ref")
+        for action in node.get("actions") or []:
+            if isinstance(action, dict) and str(action.get("type", "")).endswith(type_suffix):
+                if ref is not None:
+                    return ref, str(action.get("type", "")).rsplit(".", 1)[-1]
+        for child in node.get("children") or []:
+            found = walk(child)
+            if found is not None:
+                return found
+        return None
+
+    for window in snap.get("windows") or []:
+        found = walk(window)
+        if found is not None:
+            return found
+    return None, None
 
 
 # --------------------------------------------------------------------------- #
@@ -476,18 +496,16 @@ def main() -> int:
     call_tool(client, "run_macro", {"script": 'print("smoke test");'}, results)
     call_tool(client, "run_script", {"language": "macro", "script": 'print("py smoke");'}, results)
     call_tool(client, "take_snapshot", {}, results)
-    # call_action needs a real snapshot_id + action_id pointing at an interactable
-    # widget. A bare Fiji has none, so open ROI Manager (non-modal; its "Show All"/
+    # call_action needs a real ref + action pointing at an interactable widget.
+    # A bare Fiji has none, so open ROI Manager (non-modal; its "Show All"/
     # "Labels" checkboxes expose a safe, side-effect-free checkbox.setState action),
     # re-snapshot, then toggle it. SKIP if no such action is discoverable.
     call_tool_quiet(client, "run_macro", {"script": 'run("ROI Manager...");'})
-    snap_id, action_idx = find_action_index(call_tool_quiet(client, "take_snapshot", {}), ".setState")
-    if snap_id is None or action_idx is None:
+    ref, action_name = find_action_ref(call_tool_quiet(client, "take_snapshot", {}), ".setState")
+    if ref is None or action_name is None:
         results.add("call_action", "SKIP", "no checkbox action in snapshot (ROI Manager unavailable?)")
     else:
-        call_tool(
-            client, "call_action", {"snapshot_id": snap_id, "action_id": action_idx, "parameters": [False]}, results
-        )
+        call_tool(client, "call_action", {"ref": ref, "action": action_name, "parameters": [False]}, results)
     since = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
     call_tool(client, "list_operations", {"since": since}, results)
     call_tool(client, "capture_image", {}, results)

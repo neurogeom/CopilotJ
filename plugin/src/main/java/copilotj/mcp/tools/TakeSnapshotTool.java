@@ -27,7 +27,9 @@ public class TakeSnapshotTool {
 		return McpSchema.Tool.builder()
 			.name("take_snapshot")
 			.description("Get a structured snapshot of the current Fiji UI state. "
-				+ "Returns open windows, available actions, current image name, and screen dimensions. "
+				+ "Returns open windows and their component trees; each actionable component carries "
+				+ "a ref handle and a per-component actions list (use call_action with the ref and an "
+				+ "action name). Also returns the current image name and screen dimensions. "
 				+ "Use this to understand what's open before running commands.")
 			.inputSchema(new McpSchema.JsonSchema("object", Map.of(), null, true, null, null))
 			.build();
