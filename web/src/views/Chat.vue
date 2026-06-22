@@ -59,10 +59,9 @@ onMounted(async () => {
       config.setKbAutosave(serverConfig.kb_autosave);
     }
 
-    // Vision enabled
-    if (serverConfig.vision_enabled !== undefined) {
-      config.setVisionEnabled(serverConfig.vision_enabled);
-    }
+    // Vision: store the server's default for display only. The user's explicit
+    // choice (visionEnabled) is authoritative; null defers to this server value.
+    config.setServerVisionEnabled(serverConfig.vision_enabled);
   } catch {
     // Server may not be reachable yet; warning will show and resolve on retry.
   }

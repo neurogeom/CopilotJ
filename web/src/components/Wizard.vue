@@ -39,7 +39,7 @@ const wizard = reactive({
   },
   // Notice step state (committed in completeSetup); seeded from any existing config.
   userAgreement: config.data.userAgreement,
-  visionEnabled: config.data.visionEnabled,
+  visionEnabled: config.data.visionEnabled ?? config.serverVisionEnabled ?? false,
   proxy: null as string | null,
   tavilyApiKey: null as string | null,
   kbAutosave: false,

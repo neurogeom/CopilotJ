@@ -24,7 +24,9 @@ export interface ConfigData {
   proxy: string | null;
   tavilyApiKey: string | null;
   kbAutosave: boolean;
-  visionEnabled: boolean;
+  // null = user hasn't chosen — defer to the server's COPILOTJ_VISION_ENABLED.
+  // true/false = explicit user choice (Settings Save / Wizard), authoritative.
+  visionEnabled: boolean | null;
   userAgreement: boolean;
 }
 
@@ -35,7 +37,7 @@ function defaultConfig(): ConfigData {
     proxy: null,
     tavilyApiKey: null,
     kbAutosave: false,
-    visionEnabled: false,
+    visionEnabled: null,
     userAgreement: false,
   };
 }
@@ -44,7 +46,16 @@ function loadFromStorage(): ConfigData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      const config = { ...defaultConfig(), ...JSON.parse(raw) };
+      const parsed = JSON.parse(raw);
+      const source = typeof parsed === "object" && parsed !== null ? parsed : {};
+      // Drop the short-lived legacy `visionPrefSet` key (it never shipped to
+      // main). A chosen value (true) is kept; an unchosen one (false) becomes
+      // null (defer to server). Configs without it keep visionEnabled as-is.
+      const { visionPrefSet: legacyPrefSet, ...rest } = source as Record<string, unknown>;
+      const config = { ...defaultConfig(), ...(rest as Partial<ConfigData>) };
+      if (legacyPrefSet !== undefined) {
+        config.visionEnabled = legacyPrefSet ? config.visionEnabled : null;
+      }
       return migrateConfig(config);
     }
   } catch {
@@ -92,6 +103,15 @@ export const useConfig = defineStore("config", () => {
     serverModel.value = model;
   }
 
+  // Server's vision_enabled from /api/config — NOT persisted. Display-only: lets
+  // the UI render the effective Vision state when visionEnabled is null (user
+  // hasn't chosen). Never sent back as a payload.
+  const serverVisionEnabled = ref<boolean | null>(null);
+
+  function setServerVisionEnabled(enabled: boolean | null) {
+    serverVisionEnabled.value = enabled;
+  }
+
   function persist() {
     saveToStorage(data.value);
   }
@@ -122,6 +142,8 @@ export const useConfig = defineStore("config", () => {
   }
 
   function setVisionEnabled(enabled: boolean) {
+    // Explicit user choice (Settings Save / Wizard). Afterwards the value is
+    // authoritative; reloads never flip it. null (defer) is restored by reset().
     data.value.visionEnabled = enabled;
     persist();
   }
@@ -139,7 +161,9 @@ export const useConfig = defineStore("config", () => {
   return {
     data,
     serverModel,
+    serverVisionEnabled,
     setServerModel,
+    setServerVisionEnabled,
     setDefaultModel,
     setVlm,
     setProxy,
