@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { IconChevronDown, IconChevronRight } from "@tabler/icons-vue";
+import { isExplicit } from "../apis";
 import type { ServerConfig, ThreadConfigModel } from "../apis";
 import {
   PROVIDER_OPTIONS,
@@ -35,7 +36,7 @@ const props = withDefaults(
 );
 
 const emit = defineEmits<{
-  (e: "update:model", value: ThreadConfigModel | null): void;
+  (e: "update:model", value: ThreadConfigModel): void;
 }>();
 
 const useDefaultModel = ref(false);
@@ -54,25 +55,25 @@ const isOllamaModel = computed(() => model.value.startsWith("ollama/"));
 // Valid when a default is in use or a model name is entered.
 const isValid = computed(() => useDefaultModel.value || !!model.value);
 
-// Pre-fill from server config (wizard) or the existing model prop (settings).
+// Model name surfaced when "Use Default Model" is on: the settings prop, or
+// the wizard's server-config model.
+const activeModelName = computed(() => props.serverModelName ?? props.serverConfig?.model?.name ?? null);
+
+// Pre-fill only from the user's configured model. The server's default is never
+// written into the fields — "Use Default Model" (on) represents using it.
 watch(
   [() => props.serverConfig, () => props.model],
-  ([cfg, existingModel]) => {
+  ([, existingModel]) => {
     let stored = "";
     let name = "";
-    if (cfg?.model) {
-      name = cfg.model.name || "";
-      provider.value = cfg.model.provider || inferProvider(name);
-      apiKey.value = cfg.model.api_key || "";
-      stored = cfg.model.base_url || "";
-      useDefaultModel.value = false;
-    } else if (existingModel) {
+    if (existingModel && isExplicit(existingModel)) {
       name = existingModel.name || "";
       provider.value = existingModel.provider || inferProvider(name);
       apiKey.value = existingModel.api_key || "";
       stored = existingModel.base_url || "";
-      useDefaultModel.value = existingModel.api_key == null;
+      useDefaultModel.value = false;
     } else {
+      // null or {use_server:true} → use the server's model.
       useDefaultModel.value = true;
     }
     model.value = name;
@@ -91,9 +92,9 @@ function onProviderChange() {
   baseUrl.value = getDefaultBaseUrl(provider.value);
 }
 
-function getModelValue(): ThreadConfigModel | null {
+function getModelValue(): ThreadConfigModel {
   if (useDefaultModel.value) {
-    return null;
+    return { use_server: true };
   }
   return {
     name: model.value,
@@ -118,8 +119,8 @@ defineExpose({ isValid, getModelValue });
       <ToggleSwitch v-model="useDefaultModel" inputId="defaultModel" />
     </FormItem>
 
-    <p v-if="useDefaultModel && serverModelName" class="text-sm text-slate-500 dark:text-slate-400 -mt-4">
-      Active model: <span class="font-mono">{{ serverModelName }}</span>
+    <p v-if="useDefaultModel && activeModelName" class="text-sm text-slate-500 dark:text-slate-400 -mt-4">
+      Active model: <span class="font-mono">{{ activeModelName }}</span>
     </p>
 
     <FormItem for="provider" label="Provider" :required="!useDefaultModel">

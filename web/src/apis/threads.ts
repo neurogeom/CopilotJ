@@ -70,15 +70,32 @@ export type NewThread = {
   config: ThreadConfig;
 };
 
-export interface ThreadConfigModel {
+/** An explicit, user-configured model. Also the resolved shape returned by the server. */
+export interface ExplicitModel {
   name: string;
   api_key: string | null;
   base_url: string | null;
   provider: string | null;
 }
 
+/** "Use the server's env-configured model" — sent instead of an ExplicitModel. */
+export interface UseServerModel {
+  use_server: true;
+}
+
+/** A model in a config query: either an explicit model or "use the server's". */
+export type ThreadConfigModel = UseServerModel | ExplicitModel;
+
+export function isUseServer(m: ThreadConfigModel | null | undefined): m is UseServerModel {
+  return m != null && (m as UseServerModel).use_server === true;
+}
+
+export function isExplicit(m: ThreadConfigModel | null | undefined): m is ExplicitModel {
+  return m != null && !isUseServer(m);
+}
+
 export interface ThreadConfig {
-  model: ThreadConfigModel;
+  model: ExplicitModel;
 }
 
 export interface ThreadConfigQuery {
@@ -100,8 +117,8 @@ export interface OptimizePromptResponse {
 }
 
 export interface ServerConfig {
-  model: ThreadConfigModel | null;
-  vlm: ThreadConfigModel | null;
+  model: ExplicitModel | null;
+  vlm: ExplicitModel | null;
   proxy: string | null;
   kb_autosave: boolean;
   vision_enabled: boolean;

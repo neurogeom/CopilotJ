@@ -26,16 +26,10 @@ const modelRef = ref<InstanceType<typeof SettingsModel> | null>(null);
 const vlmRef = ref<InstanceType<typeof SettingsVLM> | null>(null);
 const prefRef = ref<InstanceType<typeof SettingsPreference> | null>(null);
 
-function submitModel(model: ThreadConfigModel | null) {
-  if (model === null) {
-    // useDefaultModel = true: don't persist, use server model for this session
-    config.setDefaultModel(null);
-    settings.setModel(config.serverModel);
-  } else {
-    // User-configured model: persist to localStorage
-    config.setDefaultModel(model);
-    settings.setModel(model);
-  }
+function submitModel(model: ThreadConfigModel) {
+  // Persists the choice: {use_server:true} or an explicit model.
+  config.setDefaultModel(model);
+  settings.setModel(model);
 }
 
 // --- VLM config ---
@@ -128,7 +122,7 @@ function onSubmit() {
             :base-url="config.data.vlm.base_url"
             :provider="config.data.vlm.provider"
             :use-main-model="config.data.vlm.useMainModel"
-            :main-model-name="settings.model?.name ?? null"
+            :main-model-name="settings.effectiveModel?.name ?? null"
             :vision-enabled="config.data.visionEnabled"
             :show-submit-button="false"
           />

@@ -5,6 +5,8 @@ SPDX-License-Identifier: Apache-2.0
 -->
 
 <script setup lang="ts">
+import { computed } from "vue";
+import { isExplicit } from "../apis";
 import type { ThreadConfigModel } from "../apis";
 
 interface WizardData {
@@ -23,7 +25,7 @@ interface WizardData {
   autoScroll: boolean;
 }
 
-defineProps<{
+const props = defineProps<{
   wizardData: WizardData;
 }>();
 
@@ -31,6 +33,12 @@ const emit = defineEmits<{
   (e: "complete"): void;
   (e: "back"): void;
 }>();
+
+// The explicit model chosen, or null when "use the server's model" / unconfigured.
+const modelExplicit = computed(() => {
+  const m = props.wizardData.model;
+  return m && isExplicit(m) ? m : null;
+});
 
 function maskKey(key: string | null): string {
   if (!key) return "—";
@@ -53,29 +61,31 @@ function maskKey(key: string | null): string {
       <!-- Model -->
       <div class="flex justify-between border-b border-gray-200 dark:border-gray-700 pb-2">
         <span class="text-slate-500 dark:text-slate-400">Model</span>
-        <span class="font-mono">{{ wizardData.model?.name ?? "—" }}</span>
+        <span class="font-mono">{{ modelExplicit ? modelExplicit.name : "Server default" }}</span>
       </div>
-      <div
-        v-if="wizardData.model?.api_key"
-        class="flex justify-between border-b border-gray-200 dark:border-gray-700 pb-2"
-      >
-        <span class="text-slate-500 dark:text-slate-400">API Key</span>
-        <span class="font-mono">{{ maskKey(wizardData.model.api_key) }}</span>
-      </div>
-      <div
-        v-if="wizardData.model?.base_url"
-        class="flex justify-between border-b border-gray-200 dark:border-gray-700 pb-2"
-      >
-        <span class="text-slate-500 dark:text-slate-400">Base URL</span>
-        <span class="font-mono">{{ wizardData.model.base_url }}</span>
-      </div>
-      <div
-        v-if="wizardData.model?.provider"
-        class="flex justify-between border-b border-gray-200 dark:border-gray-700 pb-2"
-      >
-        <span class="text-slate-500 dark:text-slate-400">Provider</span>
-        <span class="font-mono">{{ wizardData.model.provider }}</span>
-      </div>
+      <template v-if="modelExplicit">
+        <div
+          v-if="modelExplicit.api_key"
+          class="flex justify-between border-b border-gray-200 dark:border-gray-700 pb-2"
+        >
+          <span class="text-slate-500 dark:text-slate-400">API Key</span>
+          <span class="font-mono">{{ maskKey(modelExplicit.api_key) }}</span>
+        </div>
+        <div
+          v-if="modelExplicit.base_url"
+          class="flex justify-between border-b border-gray-200 dark:border-gray-700 pb-2"
+        >
+          <span class="text-slate-500 dark:text-slate-400">Base URL</span>
+          <span class="font-mono">{{ modelExplicit.base_url }}</span>
+        </div>
+        <div
+          v-if="modelExplicit.provider"
+          class="flex justify-between border-b border-gray-200 dark:border-gray-700 pb-2"
+        >
+          <span class="text-slate-500 dark:text-slate-400">Provider</span>
+          <span class="font-mono">{{ modelExplicit.provider }}</span>
+        </div>
+      </template>
 
       <!-- VLM -->
       <div class="flex justify-between border-b border-gray-200 dark:border-gray-700 pb-2">

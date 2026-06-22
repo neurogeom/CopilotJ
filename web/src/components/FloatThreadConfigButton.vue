@@ -31,7 +31,7 @@ async function onClick() {
   }
 }
 
-async function submitModel(newModel: ThreadConfigModel | null) {
+async function submitModel(newModel: ThreadConfigModel) {
   await props.thread.updateConfig({ model: newModel });
   showConfig.value = false;
 }

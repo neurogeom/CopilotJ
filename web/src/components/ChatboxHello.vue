@@ -42,7 +42,7 @@ function usePromptSuggestion(suggestion: string) {
     <p class="text-sm max-w-md">Ask questions or give tasks for the Leader Agent to process.</p>
 
     <div
-      v-if="settings.model === null"
+      v-if="settings.effectiveModel === null"
       class="mt-6 px-4 py-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-sm text-amber-800 dark:text-amber-300 max-w-md"
     >
       No model configured. Click

@@ -6,7 +6,8 @@
 
 import { acceptHMRUpdate, defineStore } from "pinia";
 import { ref } from "vue";
-import type { ThreadConfigModel } from "../apis";
+import { isExplicit } from "../apis";
+import type { ExplicitModel, ThreadConfigModel } from "../apis";
 import { inferProvider } from "../composables";
 
 const STORAGE_KEY = "copilotj_config";
@@ -52,12 +53,15 @@ function loadFromStorage(): ConfigData {
 
 /** Migrate legacy provider values and infer missing providers from model names. */
 function migrateConfig(config: ConfigData): ConfigData {
-  if (config.defaultModel) {
-    if (config.defaultModel.provider === "google") {
-      config.defaultModel.provider = "gemini";
-    }
-    if (!config.defaultModel.provider && config.defaultModel.name) {
-      config.defaultModel.provider = inferProvider(config.defaultModel.name);
+  const dm = config.defaultModel;
+  if (dm && isExplicit(dm)) {
+    if (dm.api_key === null && !dm.name.startsWith("ollama/")) {
+      // Legacy "null api_key → borrow the server's key" hack: convert to the
+      // explicit "use the server's model" choice.
+      config.defaultModel = { use_server: true };
+    } else {
+      if (dm.provider === "google") dm.provider = "gemini";
+      if (!dm.provider && dm.name) dm.provider = inferProvider(dm.name);
     }
   }
   if (config.vlm) {
@@ -78,11 +82,11 @@ function saveToStorage(config: ConfigData) {
 export const useConfig = defineStore("config", () => {
   const data = ref<ConfigData>(loadFromStorage());
 
-  // Server model from /api/config — NOT persisted to localStorage.
-  // Refreshed on every app load so it always reflects the backend's actual model.
-  const serverModel = ref<ThreadConfigModel | null>(null);
+  // Server model from /api/config — NOT persisted to localStorage. Display-only
+  // (resolved name/endpoint); never sent back as a payload.
+  const serverModel = ref<ExplicitModel | null>(null);
 
-  function setServerModel(model: ThreadConfigModel | null) {
+  function setServerModel(model: ExplicitModel | null) {
     serverModel.value = model;
   }
 
