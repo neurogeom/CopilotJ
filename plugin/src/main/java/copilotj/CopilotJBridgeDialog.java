@@ -109,6 +109,9 @@ public class CopilotJBridgeDialog
     opened = frame;
     frame.setMinimumSize(new java.awt.Dimension(520, 320));
     frame.setLayout(new BorderLayout(10, 10));
+    // DO_NOTHING_ON_CLOSE: windowClosing decides whether to dispose, so the
+    // user can cancel the close when a service is running (see windowClosing).
+    frame.setDefaultCloseOperation(javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE);
 
     // -- Tabbed pane --
     tabbedPane = new JTabbedPane();
@@ -119,11 +122,18 @@ public class CopilotJBridgeDialog
     mcpPanel = createMcpPanel();
     tabbedPane.addTab("MCP Server", mcpPanel);
 
-    // Default to the Managed Server tab. In debug mode the plugin auto-connects
-    // to a standalone dev server, so open the Standalone Server tab instead.
-    if (Boolean.getBoolean("ij.debug")) {
-      tabbedPane.setSelectedIndex(1);
+    // Open on the tab of whichever endpoint is currently active, so reopening
+    // the window after a close lands the user on the running service. Falls
+    // back to the Managed Server tab (index 0) when nothing is active. In
+    // debug mode initialize() auto-connects a standalone dev server, so the
+    // isServerRunning() branch already lands on the Standalone tab — no special
+    // debug case needed here.
+    if (mcpControl != null && mcpControl.isMcpRunning()) {
+      tabbedPane.setSelectedIndex(2); // MCP Server
+    } else if (service.isServerRunning()) {
+      tabbedPane.setSelectedIndex(service.isManaged() ? 0 : 1); // Managed / Standalone
     }
+    // else: default index 0 (Managed Server)
 
     // -- Shared status panel (below tabs) --
     statusLabel = new JLabel("Status: disconnected");
@@ -154,21 +164,49 @@ public class CopilotJBridgeDialog
     frame.addWindowListener(new WindowAdapter() {
       @Override
       public void windowClosing(final WindowEvent e) {
+        // The window is a transient view. Services live in the Service layer
+        // (the WebSocket Connection and managed Python process in
+        // DefaultCopilotJBridgeService; the MCP HTTP server in the static
+        // McpModule). When a service is running, ask whether to keep it in the
+        // background or stop it; otherwise just close. Full teardown also
+        // happens on Fiji Quit (DefaultCopilotJBridgeService.onContextDisposing).
+        if (anyEndpointActive()) {
+          try {
+            final Object[] options = {"Keep running", "Stop and close", "Cancel"};
+            final int choice = javax.swing.JOptionPane.showOptionDialog(
+                frame,
+                "CopilotJ is still running.\n"
+                    + "Keep it running in the background, or stop it before closing?",
+                "Close Window",
+                javax.swing.JOptionPane.DEFAULT_OPTION,
+                javax.swing.JOptionPane.QUESTION_MESSAGE,
+                null, options, options[0]); // default = Keep running
+            // Cancel (2) or dialog closed (CLOSED_OPTION): abort the close,
+            // leaving the window and the running service untouched.
+            if (choice == 2 || choice == javax.swing.JOptionPane.CLOSED_OPTION) {
+              return;
+            }
+            // Stop and close (1): tear down the active endpoint. Keep running (0)
+            // leaves the services untouched.
+            if (choice == 1) {
+              stopActiveEndpoints();
+            }
+          } catch (final Exception ex) {
+            // DO_NOTHING_ON_CLOSE means a throw here would strand an immortal
+            // window. Fall through to close (leaving any service running) so the
+            // user can always dismiss the window; teardown is best-effort and
+            // also happens on Fiji Quit (onContextDisposing).
+            logService.warn("copilotj: close dialog failed, closing window anyway", ex);
+          }
+        }
+
+        // Unhook this dialog's own listeners; the services themselves stay.
         if (listenedConnection != null) {
           listenedConnection.removeStateListener(CopilotJBridgeDialog.this);
-        }
-        final Connection conn = service.getConnection();
-        if (conn != null && !service.isManaged()) {
-          conn.close();
         }
         final EventHandler h = service.getEventHandler();
         if (h != null) {
           h.removeListener(CopilotJBridgeDialog.this);
-        }
-
-        // Stop MCP server if running (typed call via McpControl; no reflection).
-        if (mcpControl != null) {
-          mcpControl.stopMcp();
         }
 
         frame.dispose();
@@ -318,9 +356,12 @@ public class CopilotJBridgeDialog
         progressArea.append("Server stopped.\n");
         syncUIState();
       } else {
-        // Warn if standalone connection exists — starting managed will replace it.
-        final Connection extConn = service.getConnection();
-        if (extConn != null && !service.isManaged()) {
+        // Warn if a standalone connection is ACTIVE — starting managed will
+        // replace it. Must check live state, not getConnection() != null: a
+        // manually-disconnected standalone connection lingers as a closed object
+        // in service.connection (Disconnect only calls close(), it never nulls
+        // the field), so existence alone would false-positive here.
+        if (service.isServerRunning() && !service.isManaged()) {
           final int choice = javax.swing.JOptionPane.showConfirmDialog(
               opened,
               "A standalone server connection exists.\n"
@@ -332,7 +373,10 @@ public class CopilotJBridgeDialog
           if (choice != javax.swing.JOptionPane.YES_OPTION)
             return;
           // Stop the standalone connection immediately so it stops reconnecting.
-          extConn.close();
+          final Connection extConn = service.getConnection();
+          if (extConn != null) {
+            extConn.close();
+          }
         }
 
         // Warn if MCP server is running — starting managed will stop it.
@@ -618,6 +662,30 @@ public class CopilotJBridgeDialog
     return service.isServerRunning() && service.isManaged();
   }
 
+  /** True if any control endpoint (standalone / managed / MCP) is currently active. */
+  private boolean anyEndpointActive() {
+    if (mcpControl != null && mcpControl.isMcpRunning()) {
+      return true;
+    }
+    return service.isServerRunning();
+  }
+
+  /**
+   * Tears down whichever single endpoint is currently active. The three modes
+   * are mutually exclusive, so at most one runs; each branch is idempotent.
+   * {@code service.stop()} handles both the standalone WebSocket connection and
+   * the managed Python process.
+   */
+  private void stopActiveEndpoints() {
+    if (mcpControl != null && mcpControl.isMcpRunning()) {
+      mcpControl.stopMcp();
+      return;
+    }
+    if (service.isServerRunning()) {
+      service.stop();
+    }
+  }
+
   private void syncUIState() {
     SwingUtilities.invokeLater(() -> {
       // Managed tab button states.
@@ -639,6 +707,13 @@ public class CopilotJBridgeDialog
       if (!running && !serverStarting && !"Stopped".equals(managedStatusLabel.getText()) &&
           !"Failed".equals(managedStatusLabel.getText())) {
         managedStatusLabel.setText("Stopped");
+      } else if (running && !serverStarting &&
+          ("Stopped".equals(managedStatusLabel.getText()) ||
+              "Failed".equals(managedStatusLabel.getText()))) {
+        // Reopen case: the server is running but the label still holds its
+        // construction-time "Stopped" (or a stale "Failed"). Reflect the live
+        // state so the label matches the "Stop" button.
+        managedStatusLabel.setText("Running at " + service.getServerUrl());
       }
 
       // Standalone tab button state.
