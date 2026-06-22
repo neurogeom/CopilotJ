@@ -119,8 +119,9 @@ public class CopilotJBridgeDialog
     mcpPanel = createMcpPanel();
     tabbedPane.addTab("MCP Server", mcpPanel);
 
-    // Select External tab if currently connected externally.
-    if (!service.isManaged()) {
+    // Default to the Managed Server tab. In debug mode the plugin auto-connects
+    // to an external dev server, so open the External Server tab instead.
+    if (Boolean.getBoolean("ij.debug")) {
       tabbedPane.setSelectedIndex(1);
     }
 
