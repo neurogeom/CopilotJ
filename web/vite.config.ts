@@ -9,6 +9,7 @@ import tailwindcss from "@tailwindcss/vite";
 import vue from "@vitejs/plugin-vue";
 import Components from "unplugin-vue-components/vite";
 import { defineConfig, loadEnv } from "vite";
+import { manualMarkdownPlugin } from "./vite-plugins/manual-markdown";
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -16,6 +17,6 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: env.VITE_BASE_PATH || "/",
-    plugins: [vue(), tailwindcss(), Components({ resolvers: PrimeVueResolver() })],
+    plugins: [vue(), tailwindcss(), Components({ resolvers: PrimeVueResolver() }), manualMarkdownPlugin()],
   };
 });

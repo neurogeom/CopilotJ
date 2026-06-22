@@ -6,6 +6,16 @@
 
 /// <reference types="vite/client" />
 
+declare module "*/assets/manual.md" {
+  export interface ManualTocItem {
+    level: number;
+    text: string;
+    id: string;
+  }
+  export const html: string;
+  export const toc: ManualTocItem[];
+}
+
 interface ImportMetaEnv {
   readonly VITE_DEFAULT_ROUTE?: string;
   readonly VITE_API_BASE_URL?: string;

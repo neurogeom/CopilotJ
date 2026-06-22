@@ -719,7 +719,7 @@ public class CopilotJBridgeDialog
     if (panel != null) {
       return panel;
     }
-    final String manualUrl = "https://copilotj.chat/#/manual";
+    final String manualUrl = "https://copilotj.chat/#/manual#why-is-my-mcp-server-not-available";
     final JLabel label = new JLabel("<html>MCP can only run with Fiji-Latest "
         + "(requires Java 17+; current Java version: "
         + System.getProperty("java.version") + ").<br>"

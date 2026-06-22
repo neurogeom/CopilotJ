@@ -6,116 +6,41 @@ SPDX-License-Identifier: Apache-2.0
 
 <script setup lang="ts">
 import "highlight.js/styles/github-dark.css";
-import { computed, nextTick, onMounted, ref } from "vue";
-import { createMarkdownRenderer } from "../lib/markdown";
+import { nextTick, onMounted, shallowRef } from "vue";
+import { useRoute } from "vue-router";
+import { html as initialHtml, toc as initialToc, type ManualTocItem } from "../assets/manual.md";
 
-type TocItem = { level: number; text: string; id: string };
+type TocItem = ManualTocItem;
 
-function slugify(input: string, counts: Map<string, number>) {
-  let s = input
-    .toLowerCase()
-    .trim()
-    .replace(/[`*_~]/g, "")
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-");
-  if (!s) s = "section";
-  const n = counts.get(s) || 0;
-  counts.set(s, n + 1);
-  return n ? `${s}-${n}` : s;
+// The markdown is parsed, rendered (with header IDs + syntax highlighting), and
+// turned into a TOC at build time by the manual-markdown Vite plugin. Here we only
+// consume the result.
+const html = shallowRef(initialHtml);
+const toc = shallowRef<TocItem[]>(initialToc);
+const route = useRoute();
+
+// HMR: update the content in place without remounting the component, so onMounted
+// does not re-run and the scroll position is preserved (no jump on every edit).
+if (import.meta.hot) {
+  import.meta.hot.accept("../assets/manual.md", (mod) => {
+    if (!mod) return;
+    html.value = mod.html;
+    toc.value = mod.toc;
+  });
 }
-
-function getHeadingText(token: any): string {
-  if (token.type === "text") return token.text;
-  if (token.tokens) {
-    return token.tokens.map(getHeadingText).join(" ");
-  }
-  return "";
-}
-
-const headingCounts = new Map<string, number>();
-
-const renderer = {
-  heading({ tokens, depth }: { tokens: any[]; depth: number }) {
-    const text = tokens.map(getHeadingText).join(" ");
-    const id = slugify(text, headingCounts);
-    const tag = `h${depth}`;
-    return `<${tag} id="${id}">${text}</${tag}>\n`;
-  },
-};
-
-const markdown = createMarkdownRenderer(renderer);
-const loadManualModule = () => import("../assets/manual.md?raw");
-
-const manualSrc = ref("");
-const isLoading = ref(true);
-const loadError = ref("");
-const pendingScrollY = ref<number | null>(import.meta.hot?.data.manualScrollY ?? null);
-
-const toc = computed<TocItem[]>(() => {
-  if (!manualSrc.value) return [];
-
-  const tokens = markdown.lexer(manualSrc.value);
-  const tocCounts = new Map<string, number>();
-  const items: TocItem[] = [];
-
-  for (const token of tokens) {
-    if (token.type === "heading" && (token.depth === 2 || token.depth === 3)) {
-      const text = token.tokens?.map(getHeadingText).join(" ") || "";
-      const id = slugify(text, tocCounts);
-      items.push({ level: token.depth, text, id });
-    }
-  }
-
-  return items;
-});
-
-const html = computed(() => {
-  if (!manualSrc.value) return "";
-  headingCounts.clear();
-  return markdown.parse(manualSrc.value) as string;
-});
-
-async function loadManual() {
-  isLoading.value = true;
-  loadError.value = "";
-
-  try {
-    const module = await loadManualModule();
-    manualSrc.value = module.default;
-  } catch (error) {
-    loadError.value = error instanceof Error ? error.message : "Failed to load the manual.";
-  } finally {
-    isLoading.value = false;
-    if (pendingScrollY.value != null) {
-      const scrollY = pendingScrollY.value;
-      pendingScrollY.value = null;
-      await nextTick();
-      requestAnimationFrame(() => {
-        window.scrollTo({ top: scrollY, behavior: "auto" });
-      });
-    }
-  }
-}
-
-onMounted(() => {
-  void loadManual();
-});
 
 function scrollToSection(id: string) {
-  const node = document.getElementById(id);
-  if (!node) return;
-  node.scrollIntoView({ behavior: "smooth", block: "start" });
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-if (import.meta.hot) {
-  import.meta.hot.dispose((data) => {
-    data.manualScrollY = window.scrollY;
-  });
-
-  import.meta.hot.accept(() => {
-    // Let the remounted component restore the previous viewport position.
-  });
-}
+// Deep-link scroll: run exactly once on first mount (e.g. opening the plugin's FAQ
+// link in a fresh tab). HMR edits do not remount, so this never fires repeatedly.
+onMounted(async () => {
+  const hash = route.hash;
+  if (!hash) return;
+  await nextTick();
+  scrollToSection(decodeURIComponent(hash.slice(1)));
+});
 </script>
 
 <template>
@@ -150,13 +75,7 @@ if (import.meta.hot) {
         </aside>
 
         <div class="rounded-4xl border border-zinc-200/60 bg-white/85 p-6 shadow-sm ring-1 ring-black/5 md:p-8 xl:p-10">
-          <p v-if="isLoading" class="text-sm text-zinc-500">Loading manual...</p>
-          <p v-else-if="loadError" class="text-sm text-red-600">{{ loadError }}</p>
-          <article
-            v-else
-            class="prose dark:prose-invert prose-emerald max-w-none prose-headings:scroll-mt-28"
-            v-html="html"
-          />
+          <article class="prose dark:prose-invert prose-emerald max-w-none prose-headings:scroll-mt-28" v-html="html" />
         </div>
       </div>
     </div>
