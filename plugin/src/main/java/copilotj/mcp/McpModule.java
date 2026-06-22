@@ -6,13 +6,14 @@
 
 package copilotj.mcp;
 
-import java.net.InetSocketAddress;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.eclipse.jetty.ee10.servlet.ServletContextHandler;
 import org.eclipse.jetty.ee10.servlet.ServletHolder;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,7 +64,24 @@ public class McpModule {
 		// Without this, ServiceLoader.load(Class) uses the TCCL, which holds either a
 		// duplicate of the MCP classes (dev classpath) or none at all (real Fiji),
 		// causing "not a subtype" or "no provider found" failures.
-		Thread.currentThread().setContextClassLoader(McpModule.class.getClassLoader());
+		//
+		// start() runs on the EDT (McpPanel start button), so the TCCL swap is scoped
+		// to the build and restored afterwards. Otherwise the EDT's TCCL is left
+		// pointing at the isolated MCP bundle loader, which corrupts later EDT
+		// classloading — including Context.dispose() during Quit. Jetty worker threads
+		// created inside startInternal capture the MCP loader at construction, so
+		// restoring the EDT's TCCL afterwards does not affect request handling.
+		final Thread currentThread = Thread.currentThread();
+		final ClassLoader savedTccl = currentThread.getContextClassLoader();
+		currentThread.setContextClassLoader(McpModule.class.getClassLoader());
+		try {
+			startInternal(handler, host, port);
+		} finally {
+			currentThread.setContextClassLoader(savedTccl);
+		}
+	}
+
+	private static void startInternal(EventHandler handler, String host, int port) throws Exception {
 		McpModule.eventHandler = handler;
 
 		var transport = HttpServletStreamableServerTransportProvider.builder()
@@ -120,10 +138,25 @@ public class McpModule {
 					DebugMacroPrompt.definition(), debugPrompt::handle))
 			.build();
 
-		jettyServer = new Server(new InetSocketAddress(host, port));
+		// Daemon, bounded thread pool so Jetty workers never pin the JVM on Quit.
+		// (The default QueuedThreadPool from new Server(InetSocketAddress) uses
+		// non-daemon threads, which keep the process alive after Fiji quits.)
+		final QueuedThreadPool pool = new QueuedThreadPool();
+		pool.setDaemon(true);
+		pool.setName("copilotj-mcp");
+		pool.setStopTimeout(5_000L);
+
+		jettyServer = new Server(pool);
+		final ServerConnector connector = new ServerConnector(jettyServer);
+		connector.setHost(host);
+		connector.setPort(port);
+		connector.setIdleTimeout(60_000L);
+		jettyServer.addConnector(connector);
+
 		var ctx = new ServletContextHandler();
 		ctx.addServlet(new ServletHolder(transport), "/mcp");
 		jettyServer.setHandler(ctx);
+		jettyServer.setStopTimeout(5_000L);
 		jettyServer.start();
 
 		log.info("MCP server started on {}:{}", host, port);
