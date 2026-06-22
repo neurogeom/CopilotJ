@@ -5,8 +5,7 @@ description = "Chat ImageJ with LLM"
 readme = "README.md"
 authors = [
   { name = "Zexin Yuan", email = "pypi@yzx9.xyz" },
-  { name = "Jack Lu", email = "1033138611@qq.com" },
-  { name = "liux75", email = "liux750@chinaunicom.cn" },
+  { name = "Jack Lu", email = "00jacklu@gmail.com" },
 ]
 requires-python = ">=3.12,<3.13"
 dependencies = [
