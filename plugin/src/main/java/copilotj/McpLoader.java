@@ -69,7 +69,7 @@ public final class McpLoader {
    * @param handler forwarded into the bundle as the shared event channel
    * @param requireExclusiveControl invoked by the panel right before starting
    *        the MCP server; returns {@code true} to proceed. The core dialog
-   *        supplies this so it can detect/stop a running managed or external
+   *        supplies this so it can detect/stop a running managed or standalone
    *        server (and prompt the user) without the bundle depending on
    *        {@link CopilotJBridgeService}.
    * @param statusUpdater invoked by the panel on MCP status changes (text +

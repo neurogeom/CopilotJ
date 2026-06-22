@@ -9,7 +9,7 @@ CopilotJ consists of three components:
 - **CopilotJ Web Frontend** — a Vue-based web application that provides the conversational interface for users to interact with CopilotJ.
 
 For the convenience of end users, the CopilotJ Bridge plugin supports a **managed server** mode where the Core Server is installed, configured, and launched automatically in the background.
-This provides a seamless experience with minimal setup. For advanced users, an **external server** mode allows connecting to a manually managed Core Server instance, for example running on a remote machine or in a Docker container.
+This provides a seamless experience with minimal setup. For advanced users, a **standalone server** mode allows connecting to a manually managed Core Server instance, for example running on a remote machine or in a Docker container.
 We also provide a hosted version of the web frontend for users who prefer not to run it locally, accessible at [copilotj.chat](https://copilotj.chat).
 
 **System requirements**:
@@ -62,7 +62,7 @@ The ImageJ Updater is the recommended way to install and update the CopilotJ plu
    - Use Fiji to open the image or image stack to be analyzed.
    - Example datasets used in the study can be found in supplementary data for testing and reproducibility.
 
-> **Advanced:** To connect to an externally running server instead, switch to the **External Server** tab in the dialog, enter the server URL, and click **(Re)Connect**. For advanced usage such as Docker deployment, local development servers, and building the plugin from source, see the [development documentation](https://github.com/neurogeom/CopilotJ/blob/main/DEVELOPMENT.md).
+> **Advanced:** To connect to a standalone server instead, switch to the **Standalone Server** tab in the dialog, enter the server URL, and click **(Re)Connect**. For advanced usage such as Docker deployment, local development servers, and building the plugin from source, see the [development documentation](https://github.com/neurogeom/CopilotJ/blob/main/DEVELOPMENT.md).
 
 ### Models, providers, and API keys
 
@@ -166,7 +166,7 @@ Before anything else, CopilotJ shows a **Privacy & Data Handling notice**. It ex
 Enter the URL of your CopilotJ server and click **Connect**.
 
 - In managed mode, this is the server URL shown in the Fiji plugin dialog (e.g. `http://127.0.0.1:12345`).
-- If you are using an external server, enter its URL (e.g. `http://localhost:8786`).
+- If you are using a standalone server, enter its URL (e.g. `http://localhost:8786`).
 
 The wizard tests the connection and shows a success or error message. You must connect successfully before proceeding.
 

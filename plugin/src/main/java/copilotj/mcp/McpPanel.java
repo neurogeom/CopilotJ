@@ -31,7 +31,7 @@ public class McpPanel extends JPanel implements McpControl {
 	private final EventHandler handler;
 	private final LogService log;
 	// Core-supplied guard run right before starting MCP; returns false to abort
-	// (e.g. a managed/external server is running and the user declined to stop it).
+	// (e.g. a managed/standalone server is running and the user declined to stop it).
 	private final BooleanSupplier requireExclusiveControl;
 
 	private JTextField hostField;
@@ -71,7 +71,7 @@ public class McpPanel extends JPanel implements McpControl {
 			}
 			try {
 				// Fiji exposes a single control endpoint at a time. If a managed
-				// or external server is running, the core-supplied guard prompts
+				// or standalone server is running, the core-supplied guard prompts
 				// the user and stops it; returning false aborts the start.
 				if (requireExclusiveControl != null && !requireExclusiveControl.getAsBoolean()) {
 					return;
