@@ -101,7 +101,7 @@ export interface ThreadConfig {
 export interface ThreadConfigQuery {
   model?: ThreadConfigModel | null;
   vlm?: ThreadConfigModel | null;
-  vision_enabled?: boolean;
+  vision_enabled?: boolean | null;
   proxy?: string | null;
   tavily_api_key?: string | null;
   kb_autosave?: boolean;

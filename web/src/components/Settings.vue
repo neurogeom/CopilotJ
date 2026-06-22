@@ -23,7 +23,7 @@ const apiBaseUrl = ref(getBaseUrl().replace(/\/api$/, ""));
 
 // Notice tab (User Agreement + Vision opt-in) — edit-then-save, like the other tabs.
 const userAgreement = ref(config.data.userAgreement);
-const visionEnabled = ref(config.data.visionEnabled);
+const visionEnabled = ref(config.data.visionEnabled ?? config.serverVisionEnabled ?? false);
 
 const activeTab = ref("notice");
 const connectionRef = ref<InstanceType<typeof SettingsConnection> | null>(null);
