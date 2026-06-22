@@ -85,15 +85,27 @@ dumpable = str | int | float | bool | pydantic.BaseModel
 ROLE_SYSTEM = "system"
 
 
-class _ConfigModel(pydantic.BaseModel):
+class _UseServerModel(pydantic.BaseModel):
+    """Sent by the client to mean "use the server's env-configured model"."""
+
+    use_server: Literal[True]
+
+
+class _ExplicitModel(pydantic.BaseModel):
+    """An explicit, user-configured model. Also the resolved shape returned to the UI."""
+
     name: str
     api_key: str | None
     base_url: str | None = None
     provider: str | None = None
 
 
+# A model slot in a config query: either explicit, or "use the server's".
+_ConfigModel = _UseServerModel | _ExplicitModel
+
+
 class _Config(pydantic.BaseModel):
-    model: _ConfigModel
+    model: _ExplicitModel
 
 
 class _ConfigQuery(pydantic.BaseModel):
@@ -103,6 +115,12 @@ class _ConfigQuery(pydantic.BaseModel):
     proxy: str | None = None
     tavily_api_key: str | None = None
     kb_autosave: bool = False
+
+
+class _ThreadConfigUpdate(pydantic.BaseModel):
+    """Body of POST /threads/{id}/config — a single model slot (union)."""
+
+    model: _ConfigModel | None = None
 
 
 class _NewThread(pydantic.BaseModel):
@@ -119,25 +137,30 @@ class _OptimizePrompt(pydantic.BaseModel):
 
 
 def _resolve_config(cfg: Config, config: _ConfigQuery | None) -> Config:
-    """Merge runtime overrides from the web UI into server-wide Config."""
+    """Merge runtime overrides from the web UI into server-wide Config.
+
+    A ``use_server`` slot leaves the server's env config untouched; an explicit
+    model is applied VERBATIM (a null ``api_key`` means "no key", e.g. Ollama — it
+    no longer silently borrows the server's key).
+    """
     if config is None:
         return cfg
 
     overrides: dict = {}
-    if config.model is not None:
-        m = config.model
-        overrides["llm_model"] = m.name or cfg.llm_model
-        overrides["llm_api_key"] = m.api_key if m.api_key is not None else cfg.llm_api_key
-        overrides["llm_base_url"] = m.base_url if m.base_url is not None else cfg.llm_base_url
+
+    def _apply(m: _ConfigModel, *, prefix: str) -> None:
+        if isinstance(m, _UseServerModel):
+            return  # use the server's env config for this slot → no overrides
+        overrides[f"{prefix}_model"] = m.name
+        overrides[f"{prefix}_api_key"] = m.api_key
+        overrides[f"{prefix}_base_url"] = m.base_url
         if m.provider is not None:
-            overrides["llm_provider"] = m.provider
+            overrides[f"{prefix}_provider"] = m.provider
+
+    if config.model is not None:
+        _apply(config.model, prefix="llm")
     if config.vlm is not None:
-        v = config.vlm
-        overrides["vlm_model"] = v.name or cfg.vlm_model
-        overrides["vlm_api_key"] = v.api_key if v.api_key is not None else cfg.vlm_api_key
-        overrides["vlm_base_url"] = v.base_url if v.base_url is not None else cfg.vlm_base_url
-        if v.provider is not None:
-            overrides["vlm_provider"] = v.provider
+        _apply(config.vlm, prefix="vlm")
     if config.proxy is not None:
         overrides["llm_proxy"] = config.proxy
     if config.tavily_api_key is not None:
@@ -190,7 +213,7 @@ class _Thread(UI):
         self._task_future: Future[str | None] | None = None
         self._confirmation_future: Future[bool] | None = None
 
-        self._config = _Config(model=_ConfigModel(name=self._agent.model_client.get_model(), api_key=None))
+        self._config = _Config(model=_ExplicitModel(name=self._agent.model_client.get_model(), api_key=None))
 
     async def on_post(self, prompt: str | bool) -> AsyncGenerator[UIEvent, None]:
         """Handle incoming chat messages."""
@@ -276,11 +299,28 @@ class _Thread(UI):
     ) -> None:
         self._agent.update_config(model=model, api_key=api_key, base_url=base_url, provider=provider)
         self._config = _Config(
-            model=_ConfigModel(
+            model=_ExplicitModel(
                 name=self._agent.model_client.get_model(),
                 api_key=self._agent.model_client.get_api_key(),
                 base_url=base_url,
                 provider=provider,
+            )
+        )
+
+    def reset_config(self, base_cfg: Config) -> None:
+        """Reset this thread's model to the server's env-configured model ("use server")."""
+        self._agent.update_config(
+            model=base_cfg.llm_model,
+            api_key=base_cfg.llm_api_key,
+            base_url=base_cfg.llm_base_url,
+            provider=base_cfg.llm_provider,
+        )
+        self._config = _Config(
+            model=_ExplicitModel(
+                name=self._agent.model_client.get_model(),
+                api_key=None,
+                base_url=base_cfg.llm_base_url,
+                provider=base_cfg.llm_provider,
             )
         )
 
@@ -467,11 +507,14 @@ class Threads:
             except Exception as e:
                 return web.Response(status=500, text=f"Error processing request: {e}")
 
-            config = _Config.model_validate(data)
+            config = _ThreadConfigUpdate.model_validate(data)
             if (model := config.model) is not None:
-                thread.update_config(
-                    model=model.name, api_key=model.api_key, base_url=model.base_url, provider=model.provider
-                )
+                if isinstance(model, _UseServerModel):
+                    thread.reset_config(self._cfg)
+                else:
+                    thread.update_config(
+                        model=model.name, api_key=model.api_key, base_url=model.base_url, provider=model.provider
+                    )
 
             return web.Response(status=200, text=thread.get_config().model_dump_json())
 

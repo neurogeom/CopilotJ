@@ -5,7 +5,8 @@ SPDX-License-Identifier: Apache-2.0
 -->
 
 <script setup lang="ts">
-import { reactive, ref } from "vue";
+import { computed, reactive, ref } from "vue";
+import { isExplicit } from "../apis";
 import type { ServerConfig, ThreadConfigModel } from "../apis";
 import { setApiBaseUrl } from "../apis/base";
 import { useConfig, useSettings } from "../store";
@@ -26,7 +27,7 @@ const wizard = reactive({
   apiBaseUrl: "",
   connectionStatus: "idle" as "idle" | "testing" | "ok" | "fail",
   serverConfig: null as ServerConfig | null,
-  model: null as ThreadConfigModel | null,
+  model: { use_server: true } as ThreadConfigModel,
   vlm: {
     useMainModel: true,
     model: null as string | null,
@@ -47,9 +48,18 @@ const llmRef = ref<InstanceType<typeof SettingsModel> | null>(null);
 const vlmRef = ref<InstanceType<typeof SettingsVLM> | null>(null);
 const advancedRef = ref<InstanceType<typeof SettingsPreference> | null>(null);
 
+// Effective main model name for the Vision capability check: the explicit
+// choice, or the server's model name when "use server" is selected.
+const mainModelName = computed(() => {
+  const m = wizard.model;
+  return m && isExplicit(m) ? m.name : (wizard.serverConfig?.model?.name ?? null);
+});
+
 function completeSetup() {
   setApiBaseUrl(wizard.apiBaseUrl);
   config.setDefaultModel(wizard.model);
+  // Populate the runtime server model (Chat.vue skips its onMounted fetch during the wizard).
+  config.setServerModel(wizard.serverConfig?.model ?? null);
   config.setVlm({
     model: wizard.vlm.model,
     api_key: wizard.vlm.apiKey,
@@ -61,6 +71,7 @@ function completeSetup() {
   config.setProxy(wizard.proxy);
   config.setTavilyApiKey(wizard.tavilyApiKey);
   config.setKbAutosave(wizard.kbAutosave);
+  // Active model: the user's choice ({use_server:true} or an explicit model).
   settings.setModel(wizard.model);
   settings.toggleAutoScroll(wizard.autoScroll);
   emit("complete");
@@ -114,7 +125,7 @@ function completeSetup() {
               label="Next"
               :disabled="!llmRef?.isValid"
               @click="
-                wizard.model = llmRef?.getModelValue() ?? null;
+                wizard.model = llmRef?.getModelValue() ?? { use_server: true };
                 activateCallback('3');
               "
             />
@@ -133,7 +144,7 @@ function completeSetup() {
               :api-key="wizard.vlm.apiKey"
               :base-url="wizard.vlm.baseUrl"
               :provider="wizard.vlm.provider"
-              :main-model-name="wizard.model?.name ?? null"
+              :main-model-name="mainModelName"
               :vision-enabled="wizard.vlm.visionEnabled"
               @update="wizard.vlm = { ...wizard.vlm, ...$event }"
             />

@@ -11,6 +11,7 @@ import Settings from "../components/Settings.vue";
 import Wizard from "../components/Wizard.vue";
 import Sidebar from "../components/Sidebar.vue";
 import { getServerConfig } from "../apis";
+import type { ThreadConfigModel } from "../apis";
 import { useConfig, useSettings, useSystemState } from "../store";
 
 const settings = useSettings();
@@ -40,20 +41,12 @@ onMounted(async () => {
     // Store server model for runtime use (not persisted to localStorage)
     config.setServerModel(serverConfig.model);
 
-    // Model — use server config when no user-configured model
+    // Model — if nothing is configured yet but the server has a model, default
+    // to "use the server's model" (an explicit, persisted choice).
     if (settings.model === null && serverConfig.model !== null) {
-      settings.setModel(serverConfig.model);
-    }
-
-    // VLM — only apply if no local VLM model configured
-    if (config.data.vlm.model === null && serverConfig.vlm !== null) {
-      config.setVlm({
-        model: serverConfig.vlm.name,
-        api_key: null,
-        base_url: serverConfig.vlm.base_url,
-        provider: serverConfig.vlm.provider,
-        useMainModel: false,
-      });
+      const useServer: ThreadConfigModel = { use_server: true };
+      settings.setModel(useServer);
+      config.setDefaultModel(useServer);
     }
 
     // Proxy

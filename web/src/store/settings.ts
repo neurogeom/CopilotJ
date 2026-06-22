@@ -6,7 +6,8 @@
 
 import { acceptHMRUpdate, defineStore } from "pinia";
 import { computed, ref } from "vue";
-import type { ThreadConfigModel, ThreadConfigQuery } from "../apis";
+import { isUseServer } from "../apis";
+import type { ExplicitModel, ThreadConfigModel, ThreadConfigQuery } from "../apis";
 import { useConfig } from "./config";
 
 export const useSettings = defineStore("settings", () => {
@@ -14,23 +15,19 @@ export const useSettings = defineStore("settings", () => {
   const autoScroll = ref(true);
 
   const model = ref<ThreadConfigModel | null>(null);
+
+  // The model slot sent to the backend. `model` is the union ({use_server:true}
+  // or explicit); the VLM mirrors the main slot when "use main model" is on.
   const value = computed<ThreadConfigQuery>(() => {
     const cfg = useConfig();
     const vlm = cfg.data.vlm;
     let resolvedVlm: ThreadConfigModel | null = null;
 
     if (cfg.data.visionEnabled) {
-      // When useMainModel, resolve the active model (user's or server's) as VLM
-      const activeModel = model.value ?? cfg.serverModel;
       if (vlm.useMainModel) {
-        resolvedVlm = activeModel
-          ? {
-              name: activeModel.name,
-              api_key: activeModel.api_key,
-              base_url: activeModel.base_url,
-              provider: activeModel.provider,
-            }
-          : null;
+        // VLM mirrors the main slot: use_server if main is use_server, else the
+        // explicit main model (or null when no main model is chosen).
+        resolvedVlm = model.value;
       } else if (vlm.model) {
         resolvedVlm = { name: vlm.model, api_key: vlm.api_key, base_url: vlm.base_url, provider: vlm.provider };
       }
@@ -44,6 +41,15 @@ export const useSettings = defineStore("settings", () => {
       tavily_api_key: cfg.data.tavilyApiKey,
       kb_autosave: cfg.data.kbAutosave,
     };
+  });
+
+  // Concrete model for DISPLAY / "is a model configured?" checks: resolves a
+  // {use_server:true} choice to the server's actual model (or null if the server
+  // has none).
+  const effectiveModel = computed<ExplicitModel | null>(() => {
+    const cfg = useConfig();
+    const m = model.value;
+    return m && isUseServer(m) ? cfg.serverModel : m;
   });
 
   function toggleExpandSidebar(enable?: boolean) {
@@ -63,7 +69,17 @@ export const useSettings = defineStore("settings", () => {
     autoScroll.value = false;
   }
 
-  return { expandSidebar, autoScroll, value, model, toggleAutoScroll, toggleExpandSidebar, setModel, reset };
+  return {
+    expandSidebar,
+    autoScroll,
+    value,
+    model,
+    effectiveModel,
+    toggleAutoScroll,
+    toggleExpandSidebar,
+    setModel,
+    reset,
+  };
 });
 
 if (import.meta.hot) {
