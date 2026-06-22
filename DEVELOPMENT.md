@@ -65,9 +65,9 @@ confirm that the connection is active.
 
 For production deployment, we strongly recommend using the provided Docker-based setup, which includes a preconfigured frontend build and reverse proxy.
 
-## External server mode
+## Standalone server mode
 
-By default, the CopilotJ plugin manages the Python backend automatically via the Managed Server tab. For development or advanced setups, you can run the backend server separately and connect via the External Server tab.
+By default, the CopilotJ plugin manages the Python backend automatically via the Managed Server tab. For development or advanced setups, you can run the backend server separately and connect via the Standalone Server tab.
 
 ### Docker deployment
 
@@ -120,7 +120,7 @@ uv run python -m copilotj.server --host 127.0.0.1 --port 8786
 ### Connecting from the plugin
 
 1. Open the CopilotJ dialog (**Plugins -> CopilotJ**).
-2. Switch to the **External Server** tab.
+2. Switch to the **Standalone Server** tab.
 3. Enter the server URL (e.g., `http://localhost:8786`).
 4. Click **(Re)Connect**.
 
@@ -140,7 +140,7 @@ these files are located in the CopilotJ home directory:
 
 To open the CopilotJ home directory directly, click **Open Resources** in the dialog's **Managed Server** tab.
 
-For external server mode, place `.env.local` in the repository root. Sensitive information such as API keys must be
+For standalone server mode, place `.env.local` in the repository root. Sensitive information such as API keys must be
 stored locally and should never be committed to version control.
 
 ### Background: models, providers, and API keys
@@ -332,4 +332,4 @@ Install the CopilotJ Bridge plugin by placing the required JAR files in the appr
 
 1. Restart Fiji.
 2. Confirm that **Plugins -> CopilotJ** appears in the menu.
-3. Click it and verify that the configuration dialog opens with **Managed Server** and **External Server** tabs.
+3. Click it and verify that the configuration dialog opens with **Managed Server** and **Standalone Server** tabs.

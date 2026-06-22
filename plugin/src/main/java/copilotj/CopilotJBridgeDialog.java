@@ -59,7 +59,7 @@ public class CopilotJBridgeDialog
   private JLabel idLabel;
   private JTabbedPane tabbedPane;
 
-  // -- External server tab components --
+  // -- Standalone server tab components --
   private JTextField urlField;
   private JButton connectButton;
 
@@ -113,14 +113,14 @@ public class CopilotJBridgeDialog
     // -- Tabbed pane --
     tabbedPane = new JTabbedPane();
     tabbedPane.addTab("Managed Server", buildManagedTab());
-    tabbedPane.addTab("External Server", buildExternalTab());
+    tabbedPane.addTab("Standalone Server", buildStandaloneTab());
 
     // MCP panel tab (loaded dynamically)
     mcpPanel = createMcpPanel();
     tabbedPane.addTab("MCP Server", mcpPanel);
 
     // Default to the Managed Server tab. In debug mode the plugin auto-connects
-    // to an external dev server, so open the External Server tab instead.
+    // to a standalone dev server, so open the Standalone Server tab instead.
     if (Boolean.getBoolean("ij.debug")) {
       tabbedPane.setSelectedIndex(1);
     }
@@ -184,7 +184,7 @@ public class CopilotJBridgeDialog
 
   // -- Tab builders --
 
-  private JPanel buildExternalTab() {
+  private JPanel buildStandaloneTab() {
     final JPanel panel = new JPanel(new BorderLayout(10, 10));
     panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
@@ -206,12 +206,12 @@ public class CopilotJBridgeDialog
         return;
       }
 
-      // Warn if managed server is running — connecting externally will stop it.
+      // Warn if managed server is running — connecting to a standalone server will stop it.
       if (service.isServerRunning() && service.isManaged()) {
         final int choice = javax.swing.JOptionPane.showConfirmDialog(
             opened,
             "A managed server is currently running.\n"
-                + "Connecting to an external server will stop it.\n"
+                + "Connecting to a standalone server will stop it.\n"
                 + "Continue?",
             "Managed Server Running",
             javax.swing.JOptionPane.YES_NO_OPTION,
@@ -221,12 +221,12 @@ public class CopilotJBridgeDialog
         service.stop();
       }
 
-      // Warn if MCP server is running — connecting externally will stop it.
+      // Warn if MCP server is running — connecting to a standalone server will stop it.
       if (mcpControl != null && mcpControl.isMcpRunning()) {
         final int choice = javax.swing.JOptionPane.showConfirmDialog(
             opened,
             "An MCP server is running.\n"
-                + "Connecting to an external server will stop it.\n"
+                + "Connecting to a standalone server will stop it.\n"
                 + "Continue?",
             "MCP Server Running",
             javax.swing.JOptionPane.YES_NO_OPTION,
@@ -254,7 +254,7 @@ public class CopilotJBridgeDialog
     inputRow.add(urlField, BorderLayout.CENTER);
     inputRow.add(connectButton, BorderLayout.EAST);
 
-    final JLabel hint = new JLabel("Connect to an externally running CopilotJ server.");
+    final JLabel hint = new JLabel("Connect to a standalone CopilotJ server.");
     hint.setForeground(Color.GRAY);
 
     panel.add(inputRow, BorderLayout.NORTH);
@@ -318,20 +318,20 @@ public class CopilotJBridgeDialog
         progressArea.append("Server stopped.\n");
         syncUIState();
       } else {
-        // Warn if external connection exists — starting managed will replace it.
+        // Warn if standalone connection exists — starting managed will replace it.
         final Connection extConn = service.getConnection();
         if (extConn != null && !service.isManaged()) {
           final int choice = javax.swing.JOptionPane.showConfirmDialog(
               opened,
-              "An external server connection exists.\n"
+              "A standalone server connection exists.\n"
                   + "Starting the managed server will disconnect it.\n"
                   + "Continue?",
-              "External Connection Active",
+              "Standalone Connection Active",
               javax.swing.JOptionPane.YES_NO_OPTION,
               javax.swing.JOptionPane.WARNING_MESSAGE);
           if (choice != javax.swing.JOptionPane.YES_OPTION)
             return;
-          // Stop the external connection immediately so it stops reconnecting.
+          // Stop the standalone connection immediately so it stops reconnecting.
           extConn.close();
         }
 
@@ -641,7 +641,7 @@ public class CopilotJBridgeDialog
         managedStatusLabel.setText("Stopped");
       }
 
-      // External tab button state.
+      // Standalone tab button state.
       if (connectButton != null) {
         if (serverStarting) {
           connectButton.setEnabled(false);
@@ -675,7 +675,7 @@ public class CopilotJBridgeDialog
     // (or if the bundle is missing/corrupt) it degrades to a static label.
     final McpLoader loader = new McpLoader(logService);
     // Forward mutual-exclusion guard, run right before MCP starts: if a managed
-    // or external server is active, prompt the user and stop it so Fiji keeps a
+    // or standalone server is active, prompt the user and stop it so Fiji keeps a
     // single control endpoint. `opened` is captured into a local so a later
     // static null (window closed) cannot affect an in-flight start. Kept in the
     // dialog (not the bundle) so the bundle never depends on CopilotJBridgeService.
@@ -684,7 +684,7 @@ public class CopilotJBridgeDialog
       if (!service.isServerRunning()) return true;
       final String what = service.isManaged()
           ? "managed CopilotJ server"
-          : "external CopilotJ server connection";
+          : "standalone CopilotJ server connection";
       final int choice = javax.swing.JOptionPane.showConfirmDialog(
           frame,
           "A " + what + " is currently active.\n"
