@@ -38,40 +38,42 @@ const enableVision = computed({
 
     <div class="space-y-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
       <p>
-        CopilotJ uses large language models (LLMs) to plan and execute your image-analysis workflows. Before you
-        proceed, please read and acknowledge the following:
+        CopilotJ uses large language models (LLMs) to plan bioimage-analysis tasks and coordinate their execution within
+        the ImageJ environment. Before proceeding, please review the following information:
       </p>
       <ol class="list-decimal list-inside space-y-2 pl-2">
         <li>
           <strong>Text data is sent to model providers.</strong> Your task descriptions and processing instructions are
-          transmitted to an LLM. When the model is hosted by an external provider (e.g. OpenAI, Anthropic, Google, or
-          another third-party service), these requests are sent over the internet to that provider.
+          transmitted to the configured LLM. When the model is hosted by an external provider (e.g., OpenAI, Anthropic,
+          Google, or other third-party providers), these requests are sent over the internet to the corresponding
+          service.
         </li>
         <li>
-          <strong>Vision data is opt-in.</strong> When Vision is enabled, CopilotJ may additionally transmit image
-          snapshots (e.g. screenshots of the ImageJ interface — including displayed image content and incidental
-          on-screen metadata such as file paths, window titles, or identifiers) to the model. Vision is
-          <strong>disabled by default</strong>.
+          <strong>Visual data is transmitted to model providers on an opt-in basis.</strong> When Vision is enabled,
+          CopilotJ may additionally transmit image snapshots (e.g. screenshots of the ImageJ interface, displayed image
+          content, and on-screen metadata such as file paths, window titles, or identifiers) to the model. Vision is
+          disabled by default.
         </li>
         <li>
-          <strong>Third-party handling is beyond CopilotJ's control.</strong> Confidentiality is governed solely by the
-          provider's data-handling and retention policies.
+          <strong>Data handling depends on the selected provider.</strong> Information transmitted to a cloud-hosted
+          model is subject to the data-handling, security, and retention policies of the corresponding provider. Users
+          should review and evaluate these policies before using external services.
         </li>
         <li>
-          <strong>You can reduce the risk.</strong> Keep Vision disabled, or configure a
-          <strong>locally deployed model</strong> to avoid sending sensitive data to any third party.
+          <strong>Local deployment can reduce privacy risks.</strong> Users can use locally deployed models to avoid
+          transmitting sensitive data to third-party providers.
         </li>
       </ol>
       <p class="text-slate-500 dark:text-slate-400">
-        If your work involves confidential, proprietary, or personally identifiable data, consult your organization's
-        data-governance policy before using online model providers.
+        If your work involves confidential, proprietary, protected, or personally identifiable information, consult your
+        organization's data-governance policy before using cloud-hosted AI services.
       </p>
     </div>
 
     <div class="flex items-center gap-2">
       <Checkbox v-model="agreed" binary inputId="userAgreement" />
       <label for="userAgreement" class="cursor-pointer select-none text-sm">
-        I have read and understood the above and wish to use CopilotJ.
+        I have read and understood the above information and agree to use CopilotJ under these conditions.
       </label>
     </div>
 
@@ -79,10 +81,11 @@ const enableVision = computed({
       <div class="flex items-center gap-2">
         <Checkbox v-model="enableVision" binary inputId="enableVision" />
         <label for="enableVision" class="cursor-pointer select-none text-sm">
-          Enable Vision — send image snapshots to the model when image interpretation is needed.
+          I choose to enable Vision support and allow CopilotJ to send image snapshots to the configured model when
+          image interpretation is required.
         </label>
       </div>
-      <p class="pl-6 text-xs text-slate-500 dark:text-slate-400">Recommended to enable.</p>
+      <p class="pl-6 text-xs text-slate-500 dark:text-slate-400">Optional but recommended.</p>
     </div>
 
     <hr class="border-slate-200 dark:border-slate-700" />
