@@ -316,44 +316,99 @@ def call_tool_quiet(client: McpClient, name: str, args: dict) -> str:
     return first_text(res or {}).strip()
 
 
-def find_action_ref(snap_text: str, type_suffix: str) -> tuple[str | None, str | None]:
-    """Parse a take_snapshot result and locate the first component action whose
-    action ``type`` ends with ``type_suffix``.
+def _walk_components(snap_text: str):
+    """Yield ``(node, window)`` for every component dict in a take_snapshot tree.
 
-    The ref-model snapshot has no top-level action list; actions live per
-    component (``component.actions``) and are addressed by the component's ``ref``
-    plus the action's short id. Returns ``(ref, action_short_id)``, where
-    ``action_short_id`` is the substring after the last dot of the action type
-    (e.g. ``java.awt.Checkbox.setState`` -> ``setState``). Returns ``(None, None)``
-    if the snapshot can't be parsed or has no matching action on a ref-eligible
-    component.
+    ``window`` is the top-level window node containing ``node`` (the window node
+    itself on the first yield of each window). All snapshot-parsing helpers build
+    on this single traversal (DRY) rather than each re-walking the tree.
     """
     if not snap_text:
-        return None, None
+        return
     try:
         snap = json.loads(snap_text)
     except json.JSONDecodeError:
-        return None, None
+        return
 
     def walk(node):
-        if not isinstance(node, dict):
-            return None
-        ref = node.get("ref")
-        for action in node.get("actions") or []:
-            if isinstance(action, dict) and str(action.get("type", "")).endswith(type_suffix):
-                if ref is not None:
-                    return ref, str(action.get("type", "")).rsplit(".", 1)[-1]
-        for child in node.get("children") or []:
-            found = walk(child)
-            if found is not None:
-                return found
-        return None
+        if isinstance(node, dict):
+            yield node
+            for child in node.get("children") or []:
+                yield from walk(child)
 
     for window in snap.get("windows") or []:
-        found = walk(window)
-        if found is not None:
-            return found
+        for node in walk(window):
+            yield node, window
+
+
+def find_action_ref(
+    snap_text: str,
+    type_suffix: str,
+    *,
+    window_title: str | None = None,
+    label: str | None = None,
+) -> tuple[str | None, str | None]:
+    """Locate the first component whose action ``type`` ends with ``type_suffix``.
+
+    Returns ``(ref, action_short_id)``, where ``action_short_id`` is the substring
+    after the last dot of the action type (e.g. ``java.awt.Checkbox.setState`` ->
+    ``setState``). Optional ``window_title`` (substring of the window's title/name)
+    and ``label`` (exact component label) scope the search so the target is
+    deterministic rather than "the first match anywhere in the tree". Returns
+    ``(None, None)`` if no match is found or the snapshot can't be parsed.
+    """
+    for node, window in _walk_components(snap_text):
+        ref = node.get("ref")
+        if ref is None:
+            continue
+        if label is not None and node.get("label") != label:
+            continue
+        if window_title is not None:
+            wtitle = ""
+            if isinstance(window, dict):
+                wtitle = window.get("title") or window.get("name") or ""
+            if window_title not in wtitle:
+                continue
+        for action in node.get("actions") or []:
+            if isinstance(action, dict) and str(action.get("type", "")).endswith(type_suffix):
+                return ref, str(action.get("type", "")).rsplit(".", 1)[-1]
     return None, None
+
+
+def checkbox_state_by_ref(snap_text: str, ref: str) -> bool | None:
+    """Return the ``state`` of the checkbox identified by ``ref``, or ``None``."""
+    for node, _ in _walk_components(snap_text):
+        if node.get("ref") == ref and "state" in node:
+            return bool(node["state"])
+    return None
+
+
+def expect_tool_error(
+    client: McpClient,
+    results: Results,
+    name: str,
+    args: dict,
+    needle: str,
+) -> None:
+    """Assert a tools/call returns ``isError`` whose text contains ``needle``.
+
+    Used for the ref-model's error contracts (stale/bogus ref -> "not found";
+    unknown action -> "unknown action"). A Fiji-unreachable result downgrades to
+    SKIP; anything else is a FAIL.
+    """
+    try:
+        res = client.call("tools/call", {"name": "call_action", "arguments": args})
+    except McpError as e:
+        results.add(name, "FAIL", str(e)[:200])
+        return
+    res = res or {}
+    text = first_text(res).strip()
+    if res.get("isError") and needle in text.lower():
+        results.add(name, "PASS", text[:140])
+    elif fiji_down(text):
+        results.add(name, "SKIP", "Fiji unreachable")
+    else:
+        results.add(name, "FAIL", f"expected isError + '{needle}', got: {text[:200]}")
 
 
 # --------------------------------------------------------------------------- #
@@ -437,9 +492,11 @@ def main() -> int:
         results.add("notifications/initialized", "FAIL", str(e)[:200])
 
     # 3. tools/list — expect exactly the 9 tools.
+    tools: list[dict] = []
     try:
         res = client.call("tools/list")
-        names = {t.get("name") for t in (res or {}).get("tools", [])}
+        tools = (res or {}).get("tools", [])
+        names = {t.get("name") for t in tools}
         if names == EXPECTED_TOOLS:
             results.add("tools/list", "PASS", f"{len(names)} tools")
         else:
@@ -450,6 +507,27 @@ def main() -> int:
             )
     except McpError as e:
         results.add("tools/list", "FAIL", str(e)[:200])
+
+    # 3b. Tool metadata — descriptions/schemas must teach the snapshot->ref->action
+    # loop, otherwise the metadata change can regress while every other check still
+    # passes (codex #5).
+    tools_by_name = {t.get("name"): t for t in tools if isinstance(t, dict)}
+    ts_desc = (tools_by_name.get("take_snapshot") or {}).get("description", "")
+    ca = tools_by_name.get("call_action") or {}
+    ca_desc = ca.get("description", "")
+    ca_params = ((ca.get("inputSchema") or {}).get("properties") or {}).get("parameters", {})
+    ca_params_desc = ca_params.get("description", "") if isinstance(ca_params, dict) else ""
+    md_problems: list[str] = []
+    if "ref" not in ts_desc:
+        md_problems.append("take_snapshot description lacks 'ref'")
+    if "ref" not in ca_desc:
+        md_problems.append("call_action description lacks 'ref'")
+    if not ca_params_desc or ca_params_desc.strip() == "Action parameters":
+        md_problems.append("call_action parameters description is still the bare 'Action parameters'")
+    if md_problems:
+        results.add("tool metadata", "FAIL", "; ".join(md_problems))
+    else:
+        results.add("tool metadata", "PASS", "descriptions + parameters schema teach the ref loop")
 
     # 4. resources/list.
     try:
@@ -496,16 +574,83 @@ def main() -> int:
     call_tool(client, "run_macro", {"script": 'print("smoke test");'}, results)
     call_tool(client, "run_script", {"language": "macro", "script": 'print("py smoke");'}, results)
     call_tool(client, "take_snapshot", {}, results)
-    # call_action needs a real ref + action pointing at an interactable widget.
-    # A bare Fiji has none, so open ROI Manager (non-modal; its "Show All"/
-    # "Labels" checkboxes expose a safe, side-effect-free checkbox.setState action),
-    # re-snapshot, then toggle it. SKIP if no such action is discoverable.
+    # call_action + the ref-model invariants need an interactable widget. A bare Fiji
+    # has none, so open ROI Manager (its "Show All" checkbox exposes a safe
+    # checkbox.setState action) and target it deterministically by label (codex #3).
     call_tool_quiet(client, "run_macro", {"script": 'run("ROI Manager...");'})
-    ref, action_name = find_action_ref(call_tool_quiet(client, "take_snapshot", {}), ".setState")
+    snap_a = call_tool_quiet(client, "take_snapshot", {})
+    ref, action_name = find_action_ref(snap_a, ".setState", label="Show All")
+    if ref is None:
+        # Fall back to any setState if the named label isn't present.
+        ref, action_name = find_action_ref(snap_a, ".setState")
+
+    # Check 1 — ref stability: the same widget keeps the same ref across snapshots
+    # that don't change the UI (scoped to the targeted checkbox; codex #4).
+    snap_b = call_tool_quiet(client, "take_snapshot", {})
+    ref_b, _ = find_action_ref(snap_b, ".setState", label="Show All") if ref else (None, None)
     if ref is None or action_name is None:
-        results.add("call_action", "SKIP", "no checkbox action in snapshot (ROI Manager unavailable?)")
+        results.add("call_action (stability)", "SKIP", "no checkbox action (ROI Manager unavailable?)")
+    elif ref_b == ref:
+        results.add("call_action (stability)", "PASS", f"{ref} stable across 2 snapshots")
     else:
-        call_tool(client, "call_action", {"ref": ref, "action": action_name, "parameters": [False]}, results)
+        results.add("call_action (stability)", "FAIL", f"{ref} -> {ref_b} (expected stable)")
+
+    if ref is not None and action_name is not None:
+        # Check 3 — round-trip: flip the checkbox, re-snapshot, verify, restore.
+        before = checkbox_state_by_ref(snap_a, ref)
+        if before is None:
+            results.add("call_action (round-trip)", "SKIP", "could not read checkbox state")
+        else:
+            target = not before
+            call_tool_quiet(
+                client,
+                "call_action",
+                {"ref": ref, "action": action_name, "parameters": [target]},
+            )
+            after = checkbox_state_by_ref(call_tool_quiet(client, "take_snapshot", {}), ref)
+            call_tool_quiet(
+                client,
+                "call_action",
+                {"ref": ref, "action": action_name, "parameters": [before]},  # restore
+            )
+            if after == target:
+                results.add("call_action (round-trip)", "PASS", f"state {before}->{after} (restored)")
+            else:
+                results.add("call_action (round-trip)", "FAIL", f"expected {target}, got {after}")
+
+        # Check 4 — unknown action id on a valid ref -> distinct error contract.
+        expect_tool_error(
+            client,
+            results,
+            "call_action (unknown action)",
+            {"ref": ref, "action": "bogusAction", "parameters": []},
+            "unknown action",
+        )
+
+        # Check 2 — stale ref: close the window, then the ref must be "not found"
+        # (the real production invariant — a previously-valid ref goes stale; codex #1).
+        call_tool_quiet(
+            client,
+            "run_macro",
+            {"script": 'selectWindow("ROI Manager"); run("Close");'},
+        )
+        expect_tool_error(
+            client,
+            results,
+            "call_action (stale ref)",
+            {"ref": ref, "action": action_name, "parameters": [False]},
+            "not found",
+        )
+
+    # Cheap extra: a fabricated ref also yields "not found" (stable baseline that
+    # doesn't depend on the window-close succeeding).
+    expect_tool_error(
+        client,
+        results,
+        "call_action (bogus ref)",
+        {"ref": "e999999", "action": "setState", "parameters": [False]},
+        "not found",
+    )
     since = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
     call_tool(client, "list_operations", {"since": since}, results)
     call_tool(client, "capture_image", {}, results)

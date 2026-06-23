@@ -55,6 +55,11 @@ public abstract class AbstractComponentNode<T extends Component> implements Comp
   }
 
   @Override
+  public List<Action> getActions() {
+    return actions;
+  }
+
+  @Override
   public boolean isRefEligible() {
     return true;
   }

@@ -76,7 +76,7 @@ public class ChoiceNode extends AbstractComponentNode<Choice> {
         if (!(param instanceof String)) {
           throw new IllegalArgumentException(
               "Action 'selectItem' requires a string 'item' parameter, but got " +
-                  param.getClass().getSimpleName());
+                  (param != null ? param.getClass().getSimpleName() : "null"));
         }
 
         return selectItem((String) param);

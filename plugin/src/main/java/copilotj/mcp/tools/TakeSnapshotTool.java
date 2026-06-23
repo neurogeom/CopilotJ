@@ -28,9 +28,10 @@ public class TakeSnapshotTool {
 			.name("take_snapshot")
 			.description("Get a structured snapshot of the current Fiji UI state. "
 				+ "Returns open windows and their component trees; each actionable component carries "
-				+ "a ref handle and a per-component actions list (use call_action with the ref and an "
-				+ "action name). Also returns the current image name and screen dimensions. "
-				+ "Use this to understand what's open before running commands.")
+				+ "a ref handle and a per-component actions list. A ref is stable for the lifetime of "
+				+ "the same live component instance; if Fiji rebuilds a control it gets a new ref. Pass "
+				+ "the ref plus an action's short id to call_action; each action's parameters[] documents "
+				+ "what to pass. Also returns the current image name and screen dimensions.")
 			.inputSchema(new McpSchema.JsonSchema("object", Map.of(), null, true, null, null))
 			.build();
 	}

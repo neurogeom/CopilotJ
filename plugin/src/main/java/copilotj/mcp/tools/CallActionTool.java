@@ -26,17 +26,22 @@ public class CallActionTool {
 	public static McpSchema.Tool definition() {
 		return McpSchema.Tool.builder()
 			.name("call_action")
-			.description("Execute a UI action on a component from a previous snapshot. "
+			.description("Execute a UI action on a component identified by its ref handle. "
 				+ "First call take_snapshot() to inspect the component tree: each actionable "
 				+ "component carries a ref handle and a per-component actions list. Then call "
-				+ "this with the component's ref and the action name (the short id, i.e. the "
-				+ "part after the last dot of the action type, such as click or setState).")
+				+ "this with the component's ref, the action's short id (e.g. click, setState, "
+				+ "selectItem, setValue), and the positional parameters. A ref stays valid while the "
+				+ "underlying component is alive; if it is not found the widget closed or the UI "
+				+ "changed, so capture a new snapshot. After the action, take a fresh snapshot to "
+				+ "observe the result.")
 			.inputSchema(new McpSchema.JsonSchema("object",
 				Map.of(
 					"ref", Map.of("type", "string", "description", "Component ref handle from take_snapshot (e.g. e5)"),
 					"action", Map.of("type", "string",
 						"description", "Action short id — the part after the last dot of the action type (e.g. click, setState)"),
-					"parameters", Map.of("type", "array", "description", "Action parameters", "items", Map.of())
+					"parameters", Map.of("type", "array",
+						"description", "Positional arguments in the order given by the action's parameters[] in the snapshot, e.g. [false] for setState or [42] for setValue",
+						"items", Map.of())
 				),
 				List.of("ref", "action"), true, null, null))
 			.build();

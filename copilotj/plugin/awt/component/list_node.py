@@ -4,9 +4,9 @@
 
 from typing import Literal, override
 
-from copilotj.plugin.awt._base import ComponentBase, format_items, str_or_empty
+from copilotj.plugin.awt._base import ActionResponse, ComponentBase, format_items, str_or_empty
 
-__all__ = ["ListNode"]
+__all__ = ["ListNode", "ListSelectResponse"]
 
 
 class ListNode(ComponentBase[Literal["java.awt.List"]]):
@@ -20,3 +20,6 @@ class ListNode(ComponentBase[Literal["java.awt.List"]]):
     @override
     def _state_inline(self) -> str | None:
         return f"selected={str_or_empty(self.selected_item)} items={format_items(self.items)}"
+
+
+ListSelectResponse = ActionResponse[Literal["java.awt.List.select"], None]

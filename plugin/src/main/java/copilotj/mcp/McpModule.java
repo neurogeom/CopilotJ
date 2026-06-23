@@ -109,11 +109,12 @@ public class McpModule {
 		mcpServer = McpServer.sync(transport)
 			.serverInfo("CopilotJ", "0.1.0")
 			.instructions(
-				"CopilotJ provides Fiji/ImageJ2 bioimage analysis tools. "
-				+ "Use capture_fiji_screen to see the current Fiji state, "
-				+ "run_macro to execute ImageJ macros, and capture_image to "
-				+ "inspect specific images. Start by checking the environment "
-				+ "with fiji_environment.")
+				"CopilotJ drives Fiji/ImageJ2 for bioimage analysis. Start with "
+				+ "fiji_environment and capture_fiji_screen to see the current state. "
+				+ "Run macros with run_macro and inspect images with capture_image. "
+				+ "To operate Fiji's UI (dialogs, buttons, sliders, checkboxes), call "
+				+ "take_snapshot for a component tree where each widget has a ref handle and an actions "
+				+ "list, then call_action(ref, action, parameters) to drive it; re-snapshot after.")
 			// Tools — use method references for BiFunction compatibility
 			.toolCall(RunMacroTool.definition(), runMacroTool::handle)
 			.toolCall(RunScriptTool.definition(), runScriptTool::handle)

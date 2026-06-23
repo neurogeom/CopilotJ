@@ -12,6 +12,8 @@ from copilotj.plugin.awt._base import str_or_empty
 from copilotj.plugin.awt.component.button_node import ButtonClickResponse
 from copilotj.plugin.awt.component.checkbox_node import CheckboxSetStateResponse
 from copilotj.plugin.awt.component.choice_node import ChoiceSelectItemResponse
+from copilotj.plugin.awt.component.list_node import ListSelectResponse
+from copilotj.plugin.awt.component.scrollbar_node import ScrollbarSetValueResponse
 from copilotj.plugin.awt.component.text_area_node import TextAreaSetTextResponse
 from copilotj.plugin.awt.component.text_field_node import TextFieldSetTextResponse
 from copilotj.plugin.awt.window.ij_image import IjImageCaptureResponse
@@ -142,6 +144,8 @@ type TypedActionResponse = (
     ButtonClickResponse
     | CheckboxSetStateResponse
     | ChoiceSelectItemResponse
+    | ListSelectResponse
+    | ScrollbarSetValueResponse
     | TextAreaSetTextResponse
     | TextFieldSetTextResponse
     | IjImageCaptureResponse

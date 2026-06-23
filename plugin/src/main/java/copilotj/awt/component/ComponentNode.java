@@ -10,6 +10,7 @@ import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import copilotj.awt.Action;
 import copilotj.awt.ComponentIdentifier;
 
 /**
@@ -24,6 +25,15 @@ public interface ComponentNode {
   public String getName();
 
   public String getType();
+
+  /**
+   * Returns the actions available on this component (captured at snapshot time),
+   * or {@code null}/empty for descriptive-only nodes. Used to resolve a short
+   * action id to its fully-qualified type when building an action response.
+   *
+   * @return the actions list, or {@code null}.
+   */
+  public List<Action> getActions();
 
   /**
    * Returns the playwright-mcp-style ref handle ({@code "e" + int}) assigned to

@@ -4,9 +4,9 @@
 
 from typing import Literal, override
 
-from copilotj.plugin.awt._base import ComponentBase
+from copilotj.plugin.awt._base import ActionResponse, ComponentBase
 
-__all__ = ["ScrollbarNode"]
+__all__ = ["ScrollbarNode", "ScrollbarSetValueResponse"]
 
 
 class ScrollbarNode(ComponentBase[Literal["java.awt.Scrollbar"]]):
@@ -22,3 +22,6 @@ class ScrollbarNode(ComponentBase[Literal["java.awt.Scrollbar"]]):
     @override
     def _state_inline(self) -> str | None:
         return f"value={self.value}"
+
+
+ScrollbarSetValueResponse = ActionResponse[Literal["java.awt.Scrollbar.setValue"], None]

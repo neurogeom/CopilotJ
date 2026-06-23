@@ -234,6 +234,24 @@ public class Snapshot {
           "Ref " + ref + " not found in the current snapshot. Try capturing a new snapshot.");
     }
     final Object result = node.runAction(action, parameters);
-    return new Action.Response(action, result);
+    return new Action.Response(resolveActionType(node, action), result);
+  }
+
+  /**
+   * Resolves the short action id to its fully-qualified action type, falling back
+   * to the short id if the node exposes no matching action. The response must
+   * carry the fully-qualified type so clients (e.g. the Python bridge's
+   * TypedActionResponse union) can discriminate on it.
+   */
+  private static String resolveActionType(final ComponentNode node, final String action) {
+    final List<Action> actions = node.getActions();
+    if (actions != null) {
+      for (final Action a : actions) {
+        if (a.shortId().equals(action)) {
+          return a.type;
+        }
+      }
+    }
+    return action;
   }
 }
