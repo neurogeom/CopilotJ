@@ -74,7 +74,8 @@ watch(
       useDefaultModel.value = false;
     } else {
       // null or {use_server:true} → use the server's model.
-      useDefaultModel.value = true;
+      // "Use Default Model" must never be enabled (strict BYO). TODO: temporarily disabled
+      // useDefaultModel.value = true;
     }
     model.value = name;
     // Show the effective endpoint (stored override or the provider default),
@@ -115,13 +116,15 @@ defineExpose({ isValid, getModelValue });
   <div class="flex flex-col gap-6">
     <p class="text-sm text-slate-500 dark:text-slate-400">Choose the primary language model for your conversations.</p>
 
-    <FormItem for="defaultModel" label="Use Default Model" layout="row">
+    <!-- "Use Default Model" toggle — hidden; the option must never be enabled (strict BYO). TODO: temporarily disabled -->
+    <!-- <FormItem for="defaultModel" label="Use Default Model" layout="row">
       <ToggleSwitch v-model="useDefaultModel" inputId="defaultModel" />
-    </FormItem>
+    </FormItem> -->
 
-    <p v-if="useDefaultModel && activeModelName" class="text-sm text-slate-500 dark:text-slate-400 -mt-4">
+    <!-- "Active model" hint — depends on "Use Default Model", which is disabled. TODO: temporarily disabled -->
+    <!-- <p v-if="useDefaultModel && activeModelName" class="text-sm text-slate-500 dark:text-slate-400 -mt-4">
       Active model: <span class="font-mono">{{ activeModelName }}</span>
-    </p>
+    </p> -->
 
     <FormItem for="provider" label="Provider" :required="!useDefaultModel">
       <Select
