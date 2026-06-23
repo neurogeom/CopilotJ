@@ -69,6 +69,7 @@ public class CopilotJBridgeDialog
   private JButton serverToggleButton;
   private JButton openChatButton;
   private JButton openResourcesButton;
+  private JButton copyUrlButton;
   private JLabel envStatusLabel;
   private JLabel managedStatusLabel;
   private JTextArea progressArea;
@@ -417,7 +418,7 @@ public class CopilotJBridgeDialog
     serverRow.add(Box.createHorizontalStrut(10));
     serverRow.add(serverToggleButton);
 
-    // -- Links row --
+    // -- Actions row (open-links + copy-server-url) --
     openChatButton = new JButton("Open copilotj.chat");
     openChatButton.setToolTipText("Open the hosted CopilotJ chat in your browser");
     openChatButton.addActionListener(e -> openInBrowser("https://copilotj.chat/#/chat"));
@@ -426,11 +427,19 @@ public class CopilotJBridgeDialog
     openResourcesButton.setToolTipText("Open the local resource directory ($COPILOTJ_HOME) in your file manager");
     openResourcesButton.addActionListener(e -> openInFileManager(service.getEnvironmentRoot()));
 
-    final JPanel linksRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
-    linksRow.add(new JLabel("Links:"));
-    linksRow.add(Box.createHorizontalStrut(10));
-    linksRow.add(openChatButton);
-    linksRow.add(openResourcesButton);
+    copyUrlButton = new JButton("Copy URL");
+    copyUrlButton.setToolTipText("Copy the running managed server's URL to the clipboard");
+    // Enabled only while the managed server runs; kept in sync by syncUIState()
+    // (which runs at the end of buildManagedTab, so it is re-checked on reopen).
+    copyUrlButton.setEnabled(false);
+    copyUrlButton.addActionListener(e -> copyServerUrl());
+
+    final JPanel actionsRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+    actionsRow.add(new JLabel("Actions:"));
+    actionsRow.add(Box.createHorizontalStrut(10));
+    actionsRow.add(openChatButton);
+    actionsRow.add(openResourcesButton);
+    actionsRow.add(copyUrlButton);
 
     // -- Progress area --
     progressArea = new JTextArea(6, 40);
@@ -450,7 +459,7 @@ public class CopilotJBridgeDialog
     topRows.add(Box.createVerticalStrut(5));
     topRows.add(serverRow);
     topRows.add(Box.createVerticalStrut(5));
-    topRows.add(linksRow);
+    topRows.add(actionsRow);
 
     panel.add(topRows, BorderLayout.NORTH);
     panel.add(progressScroll, BorderLayout.CENTER);
@@ -693,6 +702,32 @@ public class CopilotJBridgeDialog
     }
   }
 
+  /**
+   * Copies the running managed server's URL to the system clipboard, with a brief
+   * "Copied!" confirmation on the button. No-op if there is no URL yet. Shows a
+   * fallback dialog if the clipboard is unavailable (some platforms deny access
+   * while another app holds the system clipboard).
+   */
+  private void copyServerUrl() {
+    final String url = service.getServerUrl();
+    if (url == null || url.isEmpty()) return;
+    try {
+      final java.awt.datatransfer.StringSelection sel =
+          new java.awt.datatransfer.StringSelection(url);
+      java.awt.Toolkit.getDefaultToolkit().getSystemClipboard().setContents(sel, sel);
+    } catch (final IllegalStateException ex) {
+      javax.swing.JOptionPane.showMessageDialog(opened,
+          "Could not access the clipboard. Copy this URL manually:\n" + url,
+          "Cannot Copy", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+      return;
+    }
+    final String saved = copyUrlButton.getText();
+    copyUrlButton.setText("Copied!");
+    final javax.swing.Timer restore = new javax.swing.Timer(1200, ev -> copyUrlButton.setText(saved));
+    restore.setRepeats(false);
+    restore.start();
+  }
+
   private boolean serverRunning() {
     return service.isServerRunning() && service.isManaged();
   }
@@ -745,6 +780,7 @@ public class CopilotJBridgeDialog
       uninstallButton.setEnabled(!busy && envReady);
       serverToggleButton.setEnabled(!busy && envReady);
       serverToggleButton.setText(running ? "Stop" : "Start");
+      copyUrlButton.setEnabled(running);
 
       if (envReady && !"Ready".equals(envStatusLabel.getText()) &&
           !"Installing...".equals(envStatusLabel.getText()) &&
