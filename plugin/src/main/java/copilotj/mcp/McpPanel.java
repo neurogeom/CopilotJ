@@ -23,6 +23,7 @@ import javax.swing.SwingUtilities;
 
 import org.scijava.log.LogService;
 
+import copilotj.BoundedLog;
 import copilotj.EventHandler;
 import copilotj.McpControl;
 
@@ -43,6 +44,10 @@ public class McpPanel extends JPanel implements McpControl {
 	// bar can reflect it. Supplied by the core dialog.
 	private final BiConsumer<String, Color> statusUpdater;
 	private JTextArea logArea;
+	// Retained MCP log; survives config-window close/reopen (static ⇒ per-JVM,
+	// matching McpModule's lifetime). Mirrors the Managed tab's BoundedLog;
+	// seeded into logArea on construction, kept in sync via appendLog().
+	private static final BoundedLog mcpLog = new BoundedLog();
 
 	public McpPanel(EventHandler handler, LogService log, BooleanSupplier requireExclusiveControl,
 			BiConsumer<String, Color> statusUpdater) {
@@ -108,6 +113,11 @@ public class McpPanel extends JPanel implements McpControl {
 		logArea.setFont(new java.awt.Font("Monospaced", java.awt.Font.PLAIN, 11));
 		final JScrollPane logScroll = new JScrollPane(logArea);
 		logScroll.setBorder(BorderFactory.createTitledBorder("MCP Log"));
+		// Replay retained MCP log so the panel shows history on reopen (mirrors
+		// the Managed tab's Progress Log). Placed before the isRunning() check
+		// below, whose appendLog(...) then layers "already running" on top.
+		logArea.setText(mcpLog.snapshot());
+		logArea.setCaretPosition(logArea.getDocument().getLength());
 
 		// Check if already running
 		if (McpModule.isRunning()) {
@@ -140,6 +150,7 @@ public class McpPanel extends JPanel implements McpControl {
 	private void appendLog(String msg) {
 		logArea.append(msg);
 		logArea.setCaretPosition(logArea.getDocument().getLength());
+		mcpLog.append(msg);
 	}
 
 	private void setStatus(String text, Color color) {

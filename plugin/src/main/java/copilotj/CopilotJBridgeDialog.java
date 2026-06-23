@@ -73,6 +73,13 @@ public class CopilotJBridgeDialog
   private JLabel managedStatusLabel;
   private JTextArea progressArea;
 
+  // Source of truth for the Managed "Progress Log". Static ⇒ per-JVM lifetime,
+  // so it survives the dialog's dispose+recreate (matching the managed env, which
+  // also lives for the Fiji session) and is replayed into progressArea on each
+  // open. Bounded so it never grows without limit. Kept in sync with the visible
+  // area via appendProgressLog/clearProgressLog.
+  private static final BoundedLog progressLog = new BoundedLog();
+
   // -- MCP panel --
   private JPanel mcpPanel;
   // Typed handle to the bundle's MCP server (null when MCP is unavailable on
@@ -360,7 +367,7 @@ public class CopilotJBridgeDialog
     serverToggleButton.addActionListener(e -> {
       if (serverRunning()) {
         service.stop();
-        progressArea.append("Server stopped.\n");
+        appendProgressLog("Server stopped.\n");
         syncUIState();
       } else {
         // Warn if a standalone connection is ACTIVE — starting managed will
@@ -429,6 +436,10 @@ public class CopilotJBridgeDialog
     progressArea = new JTextArea(6, 40);
     progressArea.setEditable(false);
     progressArea.setFont(new java.awt.Font("Monospaced", java.awt.Font.PLAIN, 11));
+    // Replay retained progress log so the "Progress Log" survives close/reopen of
+    // the config window. Scrolled to the end so the newest output is visible.
+    progressArea.setText(progressLog.snapshot());
+    progressArea.setCaretPosition(progressArea.getDocument().getLength());
     final javax.swing.JScrollPane progressScroll = new javax.swing.JScrollPane(progressArea);
     progressScroll.setBorder(BorderFactory.createTitledBorder("Progress Log"));
 
@@ -449,13 +460,30 @@ public class CopilotJBridgeDialog
     return panel;
   }
 
+  /**
+   * Appends to both the visible area and the retained {@link #progressLog}, then
+   * scrolls to the newest line. All progress-log writes go through here so the
+   * buffer (the source of truth) stays in sync with what the user sees.
+   */
+  private void appendProgressLog(final String msg) {
+    progressArea.append(msg);
+    progressLog.append(msg);
+    progressArea.setCaretPosition(progressArea.getDocument().getLength());
+  }
+
+  /** Clears both the visible area and the retained {@link #progressLog}. */
+  private void clearProgressLog() {
+    progressArea.setText("");
+    progressLog.clear();
+  }
+
   // -- SwingWorkers for blocking operations --
 
   private void runInstallWorker() {
     installing = true;
     syncUIState();
     envStatusLabel.setText("Installing...");
-    progressArea.setText("");
+    clearProgressLog();
 
     new SwingWorker<Void, String>() {
       @Override
@@ -468,7 +496,7 @@ public class CopilotJBridgeDialog
       @Override
       protected void process(final List<String> chunks) {
         for (final String msg : chunks) {
-          progressArea.append(msg);
+          appendProgressLog(msg);
         }
       }
 
@@ -478,10 +506,10 @@ public class CopilotJBridgeDialog
         try {
           get();
           envStatusLabel.setText("Ready");
-          progressArea.append("Environment installed successfully.\n");
+          appendProgressLog("Environment installed successfully.\n");
         } catch (final Exception e) {
           envStatusLabel.setText("Failed");
-          progressArea.append("Installation failed: " + getRootCauseMessage(e) + "\n");
+          appendProgressLog("Installation failed: " + getRootCauseMessage(e) + "\n");
         }
         syncUIState();
       }
@@ -492,7 +520,7 @@ public class CopilotJBridgeDialog
     syncing = true;
     syncUIState();
     envStatusLabel.setText("Syncing...");
-    progressArea.setText("");
+    clearProgressLog();
 
     new SwingWorker<Void, String>() {
       @Override
@@ -505,7 +533,7 @@ public class CopilotJBridgeDialog
       @Override
       protected void process(final List<String> chunks) {
         for (final String msg : chunks) {
-          progressArea.append(msg);
+          appendProgressLog(msg);
         }
       }
 
@@ -515,10 +543,10 @@ public class CopilotJBridgeDialog
         try {
           get();
           envStatusLabel.setText("Ready");
-          progressArea.append("Environment synced successfully.\n");
+          appendProgressLog("Environment synced successfully.\n");
         } catch (final Exception e) {
           envStatusLabel.setText("Sync failed");
-          progressArea.append("Sync failed: " + getRootCauseMessage(e) + "\n");
+          appendProgressLog("Sync failed: " + getRootCauseMessage(e) + "\n");
         }
         syncUIState();
       }
@@ -529,7 +557,7 @@ public class CopilotJBridgeDialog
     uninstalling = true;
     syncUIState();
     envStatusLabel.setText(keepUserData ? "Removing environment..." : "Uninstalling...");
-    progressArea.setText("");
+    clearProgressLog();
 
     new SwingWorker<Void, String>() {
       @Override
@@ -545,7 +573,7 @@ public class CopilotJBridgeDialog
       @Override
       protected void process(final List<String> chunks) {
         for (final String msg : chunks) {
-          progressArea.append(msg);
+          appendProgressLog(msg);
         }
       }
 
@@ -556,12 +584,12 @@ public class CopilotJBridgeDialog
           get();
           envStatusLabel.setText("Not installed");
           managedStatusLabel.setText("Stopped");
-          progressArea.append(keepUserData
+          appendProgressLog(keepUserData
               ? "Environment removed. Your Knowledge Bank and Config were kept.\n"
               : "Environment uninstalled successfully.\n");
         } catch (final Exception e) {
           envStatusLabel.setText("Uninstall failed");
-          progressArea.append("Uninstall failed: " + getRootCauseMessage(e) + "\n");
+          appendProgressLog("Uninstall failed: " + getRootCauseMessage(e) + "\n");
         }
         syncUIState();
       }
@@ -584,7 +612,7 @@ public class CopilotJBridgeDialog
       @Override
       protected void process(final List<String> chunks) {
         for (final String msg : chunks) {
-          progressArea.append(msg);
+          appendProgressLog(msg);
         }
       }
 
@@ -594,13 +622,13 @@ public class CopilotJBridgeDialog
         try {
           final String url = get();
           managedStatusLabel.setText("Running at " + url);
-          progressArea.append("Server started at " + url + "\n");
+          appendProgressLog("Server started at " + url + "\n");
 
           // Switch listener from old (closed) connection to the new managed connection.
           switchConnectionListener(service.getConnection());
         } catch (final Exception e) {
           managedStatusLabel.setText("Failed");
-          progressArea.append("Start failed: " + getRootCauseMessage(e) + "\n");
+          appendProgressLog("Start failed: " + getRootCauseMessage(e) + "\n");
         }
         syncUIState();
       }
