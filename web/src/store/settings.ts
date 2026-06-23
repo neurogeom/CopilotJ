@@ -46,7 +46,9 @@ export const useSettings = defineStore("settings", () => {
       vision_enabled: cfg.data.visionEnabled,
       proxy: cfg.data.proxy,
       tavily_api_key: cfg.data.tavilyApiKey,
-      kb_autosave: cfg.data.kbAutosave,
+      // "Auto Save" disabled; kb_autosave is omitted so the server's COPILOTJ_KB_AUTOSAVE env is the
+      // sole authority (no override is sent, regardless of backend version). TODO: temporarily disabled
+      // kb_autosave: cfg.data.kbAutosave,
     };
   });
 

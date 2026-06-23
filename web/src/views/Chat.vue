@@ -57,9 +57,10 @@ onMounted(async () => {
     }
 
     // KB autosave
-    if (!config.data.kbAutosave && serverConfig.kb_autosave) {
-      config.setKbAutosave(serverConfig.kb_autosave);
-    }
+    // "Auto Save" disabled; value always sent as null. TODO: temporarily disabled
+    // if (!config.data.kbAutosave && serverConfig.kb_autosave) {
+    //   config.setKbAutosave(serverConfig.kb_autosave);
+    // }
 
     // Vision: store the server's default for display only. The user's explicit
     // choice (visionEnabled) is authoritative; null defers to this server value.

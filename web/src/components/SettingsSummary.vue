@@ -117,10 +117,11 @@ function maskKey(key: string | null): string {
         <span class="text-slate-500 dark:text-slate-400">Tavily</span>
         <span class="font-mono">{{ wizardData.tavilyApiKey ? maskKey(wizardData.tavilyApiKey) : "—" }}</span>
       </div>
-      <div class="flex justify-between border-b border-gray-200 dark:border-gray-700 pb-2">
+      <!-- "KB Autosave" summary row — option disabled; value always sent as null. TODO: temporarily disabled -->
+      <!-- <div class="flex justify-between border-b border-gray-200 dark:border-gray-700 pb-2">
         <span class="text-slate-500 dark:text-slate-400">KB Autosave</span>
         <span class="font-mono">{{ wizardData.kbAutosave ? "On" : "Off" }}</span>
-      </div>
+      </div> -->
       <div class="flex justify-between pb-2">
         <span class="text-slate-500 dark:text-slate-400">Auto-scroll</span>
         <span class="font-mono">{{ wizardData.autoScroll ? "On" : "Off" }}</span>
