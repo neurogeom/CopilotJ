@@ -98,7 +98,7 @@ function clickPost(postId: string) {
       v-model:visible="state.showSettings"
       modal
       header="Settings"
-      class="copilotj-settings-dialog w-[960px] max-w-[95vw] h-[720px] max-h-[90vh]"
+      class="copilotj-settings-dialog w-[960px] max-w-[95vw] h-[780px] max-h-[90vh]"
     >
       <Settings ref="settingsRef" />
     </Dialog>
@@ -109,7 +109,7 @@ function clickPost(postId: string) {
       modal
       header="Welcome to CopilotJ"
       :closable="false"
-      class="copilotj-settings-dialog w-[960px] max-w-[95vw] h-[720px] max-h-[90vh]"
+      class="copilotj-settings-dialog w-[960px] max-w-[95vw] h-[780px] max-h-[90vh]"
     >
       <Wizard @complete="onSetupComplete" />
     </Dialog>

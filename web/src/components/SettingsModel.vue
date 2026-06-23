@@ -20,24 +20,20 @@ import {
 
 const props = withDefaults(
   defineProps<{
-    model: ThreadConfigModel | null;
     /** Wizard: server config used to pre-fill the model. Settings: leave null. */
     serverConfig?: ServerConfig | null;
     /** Settings: name of the active (server) model, shown when "use default" is on. */
     serverModelName?: string | null;
-    /** Settings: show the per-tab Submit button. Hidden in the wizard (uses Next). */
-    showSubmitButton?: boolean;
   }>(),
   {
     serverConfig: null,
     serverModelName: null,
-    showSubmitButton: false,
   },
 );
 
-const emit = defineEmits<{
-  (e: "update:model", value: ThreadConfigModel): void;
-}>();
+// Two-way model value: {use_server:true} or an explicit model. Live-bound by
+// the parent (Settings draft / Wizard wizard.model); edits emit on every change.
+const modelValue = defineModel<ThreadConfigModel | null>({ default: null });
 
 const useDefaultModel = ref(false);
 const model = ref("");
@@ -52,17 +48,14 @@ const ollamaModelRef = ref<{ reloadOllama: () => void } | null>(null);
 
 const isOllamaModel = computed(() => model.value.startsWith("ollama/"));
 
-// Valid when a default is in use or a model name is entered.
-const isValid = computed(() => useDefaultModel.value || !!model.value);
-
 // Model name surfaced when "Use Default Model" is on: the settings prop, or
 // the wizard's server-config model.
 const activeModelName = computed(() => props.serverModelName ?? props.serverConfig?.model?.name ?? null);
 
-// Pre-fill only from the user's configured model. The server's default is never
-// written into the fields — "Use Default Model" (on) represents using it.
+// Pre-fill only from the model value. The server's default is never written
+// into the fields — "Use Default Model" (on) represents using it.
 watch(
-  [() => props.serverConfig, () => props.model],
+  [() => props.serverConfig, modelValue],
   ([, existingModel]) => {
     let stored = "";
     let name = "";
@@ -85,6 +78,16 @@ watch(
   { immediate: true },
 );
 
+// Emit the composed value live whenever a field changes. The equality guard
+// breaks the seed↔emit feedback loop (seeding from the parent re-derives the
+// same fields, so it doesn't re-emit).
+watch([useDefaultModel, model, apiKey, baseUrl, provider], () => {
+  const next = getModelValue();
+  if (JSON.stringify(modelValue.value) !== JSON.stringify(next)) {
+    modelValue.value = next;
+  }
+});
+
 // Clear the model and pre-fill the provider's default base URL when the user
 // switches provider — models and endpoints are provider-specific.
 function onProviderChange() {
@@ -104,11 +107,7 @@ function getModelValue(): ThreadConfigModel {
   };
 }
 
-function submit() {
-  emit("update:model", getModelValue());
-}
-
-defineExpose({ isValid, getModelValue });
+defineExpose({ getModelValue });
 </script>
 
 <template>
@@ -238,7 +237,5 @@ defineExpose({ isValid, getModelValue });
         </FormItem>
       </div>
     </template>
-
-    <Button v-if="showSubmitButton" label="Submit" :disabled="!isValid" @click="submit" />
   </div>
 </template>

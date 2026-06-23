@@ -8,8 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 import "highlight.js/styles/github-dark.css";
 
 import { computed } from "vue";
-
-import { createMarkdownRenderer } from "../lib/markdown";
+import { createMarkdownRenderer } from "../lib";
 
 const props = withDefaults(
   defineProps<{

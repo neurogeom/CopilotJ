@@ -48,7 +48,7 @@ function usePromptSuggestion(suggestion: string) {
       No model configured. Click
       <button
         class="underline font-medium hover:text-amber-600 dark:hover:text-amber-200"
-        @click="state.showSettings = true"
+        @click="state.openSettings('model')"
       >
         Settings
       </button>
@@ -63,7 +63,7 @@ function usePromptSuggestion(suggestion: string) {
         >Cannot connect to the backend server. Please check if the API Server URL is correct in
         <button
           class="underline font-medium hover:text-amber-600 dark:hover:text-amber-200"
-          @click="state.showSettings = true"
+          @click="state.openSettings('base')"
         >
           Settings
         </button>

@@ -5,10 +5,20 @@ SPDX-License-Identifier: Apache-2.0
 -->
 
 <script setup lang="ts">
-import { computed, reactive, ref } from "vue";
+import { computed, reactive, ref, watch } from "vue";
+import { useDebounceFn } from "@vueuse/core";
 import { isExplicit } from "../apis";
 import type { ServerConfig, ThreadConfigModel } from "../apis";
 import { setApiBaseUrl } from "../apis/base";
+import {
+  checkVisionResolvable,
+  toVlmConfig,
+  validateAgreement,
+  validateBase,
+  validateModel,
+  validateVlm,
+  type ValidationInput,
+} from "../lib";
 import { useConfig, useSettings } from "../store";
 import SettingsConnection from "../components/SettingsConnection.vue";
 import UsageNotice from "../components/UsageNotice.vue";
@@ -46,17 +56,96 @@ const wizard = reactive({
   autoScroll: true,
 });
 
-// Refs to child components for reading values
-const connectionRef = ref<InstanceType<typeof SettingsConnection> | null>(null);
-const llmRef = ref<InstanceType<typeof SettingsModel> | null>(null);
-const vlmRef = ref<InstanceType<typeof SettingsVLM> | null>(null);
-const advancedRef = ref<InstanceType<typeof SettingsPreference> | null>(null);
-
 // Effective main model name for the Vision capability check: the explicit
 // choice, or the server's model name when "use server" is selected.
 const mainModelName = computed(() => {
   const m = wizard.model;
   return m && isExplicit(m) ? m.name : (wizard.serverConfig?.model?.name ?? null);
+});
+
+// Shared validation (../lib) — the same rules the Settings dialog uses. Each
+// step gates on its own concern; values flow live via v-model, so no child refs
+// or getValue() reads are needed.
+function wizardInput(): ValidationInput {
+  return {
+    userAgreement: wizard.userAgreement,
+    visionEnabled: wizard.visionEnabled,
+    model: wizard.model,
+    vlm: toVlmConfig(wizard.vlm),
+    connectionStatus: wizard.connectionStatus,
+    apiBaseUrl: wizard.apiBaseUrl,
+  };
+}
+const agreementOk = computed(() => validateAgreement(wizardInput()).ok);
+const baseOk = computed(() => validateBase(wizardInput()).ok);
+const modelOk = computed(() => validateModel(wizardInput()).ok);
+const vlmOk = computed(() => validateVlm(wizardInput()).ok);
+
+// Vision resolvability (async) — a safety net on top of vlmOk. It covers the
+// window before SettingsVLM's internal capability check settles, where "use main
+// model" could still be on for a main model that lacks vision. Only a confirmed
+// "no vision" result blocks; unknown models and lookup failures are allowed.
+const visionResolvable = ref(true);
+async function refreshVisionResolvable() {
+  if (!wizard.visionEnabled) {
+    visionResolvable.value = true;
+    return;
+  }
+  const result = await checkVisionResolvable({
+    visionEnabled: true,
+    mainModelName: mainModelName.value,
+    vlm: toVlmConfig(wizard.vlm),
+  });
+  visionResolvable.value = result.ok;
+}
+const debouncedRefreshVision = useDebounceFn(refreshVisionResolvable, 400);
+watch([mainModelName, () => wizard.vlm, () => wizard.visionEnabled], () => debouncedRefreshVision(), {
+  deep: true,
+  immediate: true,
+});
+
+// v-model proxies: the components use camelCase composite values; map them onto
+// the wizard's reactive fields so edits are live-synced (committed on Finish).
+const wizardVlm = computed<{
+  useMainModel: boolean;
+  model: string | null;
+  apiKey: string | null;
+  baseUrl: string | null;
+  provider: string | null;
+}>({
+  get: () => ({
+    useMainModel: wizard.vlm.useMainModel,
+    model: wizard.vlm.model,
+    apiKey: wizard.vlm.apiKey,
+    baseUrl: wizard.vlm.baseUrl,
+    provider: wizard.vlm.provider,
+  }),
+  set: (v) => {
+    wizard.vlm.useMainModel = v.useMainModel;
+    wizard.vlm.model = v.model;
+    wizard.vlm.apiKey = v.apiKey;
+    wizard.vlm.baseUrl = v.baseUrl;
+    wizard.vlm.provider = v.provider;
+  },
+});
+const wizardPref = computed<{
+  proxy: string | null;
+  tavilyApiKey: string | null;
+  kbAutosave: boolean;
+  autoScroll: boolean;
+}>({
+  get: () => ({
+    proxy: wizard.proxy,
+    tavilyApiKey: wizard.tavilyApiKey,
+    kbAutosave: wizard.kbAutosave,
+    autoScroll: wizard.autoScroll,
+  }),
+  set: (v) => {
+    wizard.proxy = v.proxy;
+    wizard.tavilyApiKey = v.tavilyApiKey;
+    wizard.kbAutosave = v.kbAutosave;
+    wizard.autoScroll = v.autoScroll;
+  },
 });
 
 function completeSetup() {
@@ -104,7 +193,7 @@ function completeSetup() {
             <UsageNotice v-model:userAgreement="wizard.userAgreement" v-model:visionEnabled="wizard.visionEnabled" />
           </div>
           <div class="flex pt-4 justify-end">
-            <Button label="Next" :disabled="!wizard.userAgreement" @click="activateCallback('2')" />
+            <Button label="Next" :disabled="!agreementOk" @click="activateCallback('2')" />
           </div>
         </div>
       </StepPanel>
@@ -114,17 +203,14 @@ function completeSetup() {
         <div class="flex min-h-0 flex-1 flex-col">
           <div class="min-h-0 flex-1 overflow-y-auto">
             <SettingsConnection
-              ref="connectionRef"
-              :api-base-url="wizard.apiBaseUrl"
-              :connection-status="wizard.connectionStatus"
-              @update:api-base-url="wizard.apiBaseUrl = $event"
-              @update:connection-status="wizard.connectionStatus = $event"
+              v-model:api-base-url="wizard.apiBaseUrl"
+              v-model:connection-status="wizard.connectionStatus"
               @update:server-config="wizard.serverConfig = $event"
             />
           </div>
           <div class="flex pt-4 justify-between">
             <Button label="Back" severity="secondary" @click="activateCallback('1')" />
-            <Button label="Next" :disabled="wizard.connectionStatus !== 'ok'" @click="activateCallback('3')" />
+            <Button label="Next" :disabled="!baseOk" @click="activateCallback('3')" />
           </div>
         </div>
       </StepPanel>
@@ -133,23 +219,11 @@ function completeSetup() {
       <StepPanel v-slot="{ activateCallback }" value="3">
         <div class="flex min-h-0 flex-1 flex-col">
           <div class="min-h-0 flex-1 overflow-y-auto">
-            <SettingsModel
-              ref="llmRef"
-              :model="wizard.model"
-              :server-config="wizard.serverConfig"
-              @update:model="wizard.model = $event"
-            />
+            <SettingsModel v-model="wizard.model" :server-config="wizard.serverConfig" />
           </div>
           <div class="flex pt-4 justify-between">
             <Button label="Back" severity="secondary" @click="activateCallback('2')" />
-            <Button
-              label="Next"
-              :disabled="!llmRef?.isValid"
-              @click="
-                wizard.model = llmRef?.getModelValue() ?? { use_server: true };
-                activateCallback(wizard.visionEnabled ? '4' : '5');
-              "
-            />
+            <Button label="Next" :disabled="!modelOk" @click="activateCallback(wizard.visionEnabled ? '4' : '5')" />
           </div>
         </div>
       </StepPanel>
@@ -158,27 +232,11 @@ function completeSetup() {
       <StepPanel v-if="wizard.visionEnabled" v-slot="{ activateCallback }" value="4">
         <div class="flex min-h-0 flex-1 flex-col">
           <div class="min-h-0 flex-1 overflow-y-auto">
-            <SettingsVLM
-              ref="vlmRef"
-              :use-main-model="wizard.vlm.useMainModel"
-              :model="wizard.vlm.model"
-              :api-key="wizard.vlm.apiKey"
-              :base-url="wizard.vlm.baseUrl"
-              :provider="wizard.vlm.provider"
-              :main-model-name="mainModelName"
-              @update="wizard.vlm = { ...wizard.vlm, ...$event }"
-            />
+            <SettingsVLM v-model="wizardVlm" :main-model-name="mainModelName" />
           </div>
           <div class="flex pt-4 justify-between">
             <Button label="Back" severity="secondary" @click="activateCallback('3')" />
-            <Button
-              label="Next"
-              :disabled="!vlmRef?.isValid"
-              @click="
-                wizard.vlm = { ...wizard.vlm, ...vlmRef!.getVlmValue() };
-                activateCallback('5');
-              "
-            />
+            <Button label="Next" :disabled="!vlmOk || !visionResolvable" @click="activateCallback('5')" />
           </div>
         </div>
       </StepPanel>
@@ -187,28 +245,13 @@ function completeSetup() {
       <StepPanel v-slot="{ activateCallback }" value="5">
         <div class="flex min-h-0 flex-1 flex-col">
           <div class="min-h-0 flex-1 overflow-y-auto">
-            <SettingsPreference
-              ref="advancedRef"
-              :proxy="wizard.proxy"
-              :tavily-api-key="wizard.tavilyApiKey"
-              :kb-autosave="wizard.kbAutosave"
-              :auto-scroll="wizard.autoScroll"
-            />
+            <SettingsPreference v-model="wizardPref" />
           </div>
           <div class="flex pt-4 justify-between">
             <Button label="Back" severity="secondary" @click="activateCallback(wizard.visionEnabled ? '4' : '3')" />
             <div class="flex gap-2">
               <Button label="Skip" severity="secondary" outlined @click="activateCallback('6')" />
-              <Button
-                label="Next"
-                @click="
-                  wizard.proxy = advancedRef?.getValue().proxy ?? null;
-                  wizard.tavilyApiKey = advancedRef?.getValue().tavilyApiKey ?? null;
-                  wizard.kbAutosave = advancedRef?.getValue().kbAutosave ?? false;
-                  wizard.autoScroll = advancedRef?.getValue().autoScroll ?? true;
-                  activateCallback('6');
-                "
-              />
+              <Button label="Next" @click="activateCallback('6')" />
             </div>
           </div>
         </div>

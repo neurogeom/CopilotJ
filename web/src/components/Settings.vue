@@ -5,10 +5,22 @@ SPDX-License-Identifier: Apache-2.0
 -->
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, reactive, ref, watch } from "vue";
+import { IconAlertTriangle } from "@tabler/icons-vue";
 import type { ThreadConfigModel } from "../apis";
 import { getBaseUrl } from "../apis/base";
-import { useConfig, useSettings } from "../store";
+import {
+  resolveMainModelName,
+  toVlmConfig,
+  validateBase,
+  validateModel,
+  validateVlm,
+  validateVision,
+  type ValidationInput,
+  type ValidationKey,
+} from "../lib";
+import { useConfig, useSettings, useSystemState } from "../store";
+import type { SettingsTab } from "../store";
 import SettingsConnection from "./SettingsConnection.vue";
 import UsageNotice from "./UsageNotice.vue";
 import SettingsModel from "./SettingsModel.vue";
@@ -17,80 +29,191 @@ import SettingsPreference from "./SettingsPreference.vue";
 
 const settings = useSettings();
 const config = useConfig();
+const state = useSystemState();
 
-// Base URL tab seeds from the current API base URL; the component persists + reloads on connect.
-const apiBaseUrl = ref(getBaseUrl().replace(/\/api$/, ""));
+// The dialog's working copy — edited live via v-model, committed to the store
+// only on Save. Re-seeded from the committed config each time the dialog opens,
+// so closing via the header × discards pending edits.
+const draft = reactive<{
+  userAgreement: boolean;
+  visionEnabled: boolean;
+  model: ThreadConfigModel | null;
+  vlm: {
+    useMainModel: boolean;
+    model: string | null;
+    apiKey: string | null;
+    baseUrl: string | null;
+    provider: string | null;
+  };
+  pref: { proxy: string | null; tavilyApiKey: string | null; kbAutosave: boolean; autoScroll: boolean };
+  apiBaseUrl: string;
+  // Owned with SettingsConnection; "ok" only while the URL is connected & unchanged.
+  connectionStatus: "idle" | "testing" | "ok" | "fail";
+}>({
+  userAgreement: false,
+  visionEnabled: false,
+  model: null,
+  vlm: { useMainModel: true, model: null, apiKey: null, baseUrl: null, provider: null },
+  pref: { proxy: null, tavilyApiKey: null, kbAutosave: false, autoScroll: true },
+  apiBaseUrl: getBaseUrl().replace(/\/api$/, ""),
+  // The running server is already connected; an unchanged URL stays valid without
+  // a re-test. Demoted to "idle" by SettingsConnection once the URL is edited.
+  connectionStatus: "ok",
+});
 
-// Notice tab (User Agreement + Vision opt-in) — edit-then-save, like the other tabs.
-const userAgreement = ref(config.data.userAgreement);
-const visionEnabled = ref(config.data.visionEnabled ?? config.serverVisionEnabled ?? false);
+// Submit-time validation error (required fields / vision gate). Declared before
+// seedDraft() because the immediate showSettings watch calls it during setup.
+const formError = ref<string | null>(null);
 
-const activeTab = ref("notice");
+function seedDraft() {
+  draft.userAgreement = config.data.userAgreement;
+  // visionEnabled is nullable on main (null = defer to server); coerce for the draft.
+  draft.visionEnabled = config.data.visionEnabled ?? config.serverVisionEnabled ?? false;
+  draft.model = config.data.defaultModel;
+  draft.vlm = {
+    useMainModel: config.data.vlm.useMainModel,
+    model: config.data.vlm.model,
+    apiKey: config.data.vlm.api_key,
+    baseUrl: config.data.vlm.base_url,
+    provider: config.data.vlm.provider,
+  };
+  draft.pref = {
+    proxy: config.data.proxy,
+    tavilyApiKey: config.data.tavilyApiKey,
+    kbAutosave: config.data.kbAutosave,
+    autoScroll: settings.autoScroll,
+  };
+  draft.apiBaseUrl = getBaseUrl().replace(/\/api$/, "");
+  // Re-assume the running server is connected each time the dialog opens.
+  draft.connectionStatus = "ok";
+  formError.value = null;
+}
+
+// Seed whenever the dialog opens.
+watch(
+  () => state.showSettings,
+  (open) => {
+    if (open) seedDraft();
+  },
+  { immediate: true },
+);
+
+// The active tab lives in the store so cross-tab jumps and chat-error
+// navigation land on the right tab.
+const activeTab = computed<SettingsTab>({
+  get: () => state.settingsTab,
+  set: (v) => {
+    state.settingsTab = v;
+  },
+});
+
 const connectionRef = ref<InstanceType<typeof SettingsConnection> | null>(null);
-const modelRef = ref<InstanceType<typeof SettingsModel> | null>(null);
-const vlmRef = ref<InstanceType<typeof SettingsVLM> | null>(null);
-const prefRef = ref<InstanceType<typeof SettingsPreference> | null>(null);
 
-function submitModel(model: ThreadConfigModel) {
-  // Persists the choice: {use_server:true} or an explicit model.
-  config.setDefaultModel(model);
-  settings.setModel(model);
+// Effective main model name (used by the submit-time vision check below and by
+// SettingsVLM's native capability check on the Vision tab).
+const draftMainModelName = computed(() => resolveMainModelName(draft.model, config.serverModel));
+
+// Build the normalized validation input from the draft. All rules live in the
+// shared lib (../lib) so Settings and Wizard can never drift apart.
+function draftInput(): ValidationInput {
+  return {
+    userAgreement: draft.userAgreement,
+    visionEnabled: draft.visionEnabled,
+    model: draft.model,
+    vlm: toVlmConfig(draft.vlm),
+    connectionStatus: draft.connectionStatus,
+    apiBaseUrl: draft.apiBaseUrl,
+  };
 }
 
-// --- VLM config ---
-function submitVlm(vlm: {
-  model: string | null;
-  apiKey: string | null;
-  baseUrl: string | null;
-  provider: string | null;
-  useMainModel: boolean;
-}) {
-  config.setVlm({
-    model: vlm.model,
-    api_key: vlm.apiKey,
-    base_url: vlm.baseUrl,
-    provider: vlm.provider,
-    useMainModel: vlm.useMainModel,
-  });
-}
-
-// --- Preferences (proxy, Tavily, KB autosave, auto-scroll) ---
-function savePreference(value: {
-  proxy: string | null;
-  tavilyApiKey: string | null;
-  kbAutosave: boolean;
-  autoScroll: boolean;
-}) {
-  config.setProxy(value.proxy);
-  config.setTavilyApiKey(value.tavilyApiKey);
-  config.setKbAutosave(value.kbAutosave);
-  settings.toggleAutoScroll(value.autoScroll);
-}
-
-function onSubmit() {
-  switch (activeTab.value) {
-    case "notice":
-      config.setUserAgreement(userAgreement.value);
-      config.setVisionEnabled(visionEnabled.value);
-      break;
+// Map a failing concern to the tab the user should fix it on.
+function tabForKey(key: ValidationKey): SettingsTab {
+  switch (key) {
+    case "agreement":
+      return "notice";
     case "base":
-      connectionRef.value?.connect();
-      break;
+      return "base";
     case "model":
-      if (modelRef.value) submitModel(modelRef.value.getModelValue());
-      break;
+      return "model";
+    case "vlm":
     case "vision":
-      if (vlmRef.value) submitVlm(vlmRef.value.getVlmValue());
-      break;
-    case "pref":
-      if (prefRef.value) savePreference(prefRef.value.getValue());
-      break;
+      return "vision";
   }
+}
+
+// Clear any stale submit error as soon as the user edits the draft.
+watch(draft, () => {
+  formError.value = null;
+});
+
+// --- Commit the draft to the store on Save. ---
+function commitDraft() {
+  config.setUserAgreement(draft.userAgreement);
+  config.setVisionEnabled(draft.visionEnabled);
+  config.setDefaultModel(draft.model);
+  settings.setModel(draft.model);
+  config.setVlm({
+    model: draft.vlm.model,
+    api_key: draft.vlm.apiKey,
+    base_url: draft.vlm.baseUrl,
+    provider: draft.vlm.provider,
+    useMainModel: draft.vlm.useMainModel,
+  });
+  config.setProxy(draft.pref.proxy);
+  config.setTavilyApiKey(draft.pref.tavilyApiKey);
+  config.setKbAutosave(draft.pref.kbAutosave);
+  settings.toggleAutoScroll(draft.pref.autoScroll);
+  formError.value = null;
+}
+
+// Save is always clickable. Base is a pure connection action (test URL + reload
+// on success) that does not commit the draft. Every other tab validates the
+// WHOLE draft on click via the shared rules: synchronous concerns first
+// (base → model → vlm), then the async vision gate. On any failure we show a
+// message and jump to the offending tab instead of committing. Agreement is
+// intentionally not checked here — it is a first-run concern (Wizard only).
+async function onSubmit() {
+  if (activeTab.value === "base") {
+    connectionRef.value?.connect();
+    return;
+  }
+  const input = draftInput();
+  const failed = [validateBase(input), validateModel(input), validateVlm(input)].find((c) => !c.ok);
+  if (failed) {
+    formError.value = failed.message;
+    activeTab.value = tabForKey(failed.key);
+    return;
+  }
+  // Async: only a confirmed "no vision" result blocks; lookup failures skip (allow).
+  const vision = await validateVision(input, draftMainModelName.value);
+  if (!vision.ok) {
+    formError.value = vision.message;
+    activeTab.value = "vision";
+    return;
+  }
+  commitDraft();
+  state.showSettings = false;
 }
 </script>
 
 <template>
   <div class="flex min-h-0 w-full flex-1 flex-col">
+    <!-- Submit-time validation error (required fields / vision gate). -->
+    <div
+      v-if="formError"
+      class="mb-4 flex items-start gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-700 dark:border-red-700 dark:bg-red-950/40 dark:text-red-300"
+    >
+      <IconAlertTriangle size="16" class="mt-0.5 shrink-0" />
+      <span class="flex-1">{{ formError }}</span>
+      <button
+        type="button"
+        class="shrink-0 font-bold hover:text-red-900 dark:hover:text-red-100"
+        @click="formError = null"
+      >
+        &times;
+      </button>
+    </div>
+
     <Tabs v-model:value="activeTab" class="flex min-h-0 flex-1 flex-col">
       <TabList>
         <Tab value="notice">Notice</Tab>
@@ -101,16 +224,17 @@ function onSubmit() {
       </TabList>
 
       <TabPanels class="flex-1 overflow-y-auto">
-        <!-- Notice Tab (User Agreement + Vision opt-in; auto-persists, no Save footer) -->
+        <!-- Notice Tab (User Agreement + Vision opt-in) — live-bound to the draft. -->
         <TabPanel value="notice">
-          <UsageNotice v-model:userAgreement="userAgreement" v-model:visionEnabled="visionEnabled" />
+          <UsageNotice v-model:userAgreement="draft.userAgreement" v-model:visionEnabled="draft.visionEnabled" />
         </TabPanel>
 
-        <!-- Base Tab -->
+        <!-- Base Tab (connection action: test URL + reload on success) -->
         <TabPanel value="base">
           <SettingsConnection
             ref="connectionRef"
-            :api-base-url="apiBaseUrl"
+            v-model:api-base-url="draft.apiBaseUrl"
+            v-model:connection-status="draft.connectionStatus"
             :reload-on-connect="true"
             :show-connect-button="false"
           />
@@ -118,47 +242,33 @@ function onSubmit() {
 
         <!-- Model Tab -->
         <TabPanel value="model">
-          <SettingsModel
-            ref="modelRef"
-            :model="settings.model"
-            :server-model-name="config.serverModel?.name ?? null"
-            :show-submit-button="false"
-          />
+          <SettingsModel v-model="draft.model" :server-model-name="config.serverModel?.name ?? null" />
         </TabPanel>
 
         <!-- Vision Tab (configurable only when Vision is enabled on the Notice tab) -->
         <TabPanel value="vision">
-          <SettingsVLM
-            v-if="config.data.visionEnabled"
-            ref="vlmRef"
-            :model="config.data.vlm.model"
-            :api-key="config.data.vlm.api_key"
-            :base-url="config.data.vlm.base_url"
-            :provider="config.data.vlm.provider"
-            :use-main-model="config.data.vlm.useMainModel"
-            :main-model-name="settings.effectiveModel?.name ?? null"
-            :show-submit-button="false"
-          />
+          <SettingsVLM v-if="draft.visionEnabled" v-model="draft.vlm" :main-model-name="draftMainModelName" />
           <p v-else class="text-sm text-slate-500 dark:text-slate-400">
-            Vision is currently disabled. Enable it on the <strong>Notice</strong> tab to configure a vision model.
+            Vision is currently disabled.
+            <button
+              type="button"
+              class="cursor-pointer font-medium text-violet-600 underline hover:text-violet-500 dark:text-violet-400"
+              @click="activeTab = 'notice'"
+            >
+              Enable it on the Notice tab
+            </button>
+            to configure a vision model.
           </p>
         </TabPanel>
 
         <!-- Preferences Tab -->
         <TabPanel value="pref">
-          <SettingsPreference
-            ref="prefRef"
-            :proxy="config.data.proxy"
-            :tavily-api-key="config.data.tavilyApiKey"
-            :kb-autosave="config.data.kbAutosave"
-            :auto-scroll="settings.autoScroll"
-            :show-submit-button="false"
-          />
+          <SettingsPreference v-model="draft.pref" />
         </TabPanel>
       </TabPanels>
     </Tabs>
 
-    <!-- Pinned submit (per active tab). -->
+    <!-- Pinned submit: always clickable; validates on click. -->
     <div class="flex justify-end pt-4">
       <Button label="Save" @click="onSubmit" />
     </div>

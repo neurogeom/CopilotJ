@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { useDebounceFn } from "@vueuse/core";
 import { IconChevronDown, IconChevronRight } from "@tabler/icons-vue";
 import { getModelCapabilities } from "../apis";
 import {
@@ -17,40 +18,34 @@ import {
   getDefaultBaseUrl,
 } from "../composables";
 
-const props = defineProps<{
+interface VlmValue {
   useMainModel: boolean;
   model: string | null;
   apiKey: string | null;
   baseUrl: string | null;
   provider: string | null;
+}
+
+// mainModelName is display/derived (the parent computes it from its own model
+// draft); it is not two-way.
+const props = defineProps<{
   mainModelName: string | null;
-  showSubmitButton?: boolean;
 }>();
 
-const emit = defineEmits<{
-  (
-    e: "update",
-    value: {
-      useMainModel: boolean;
-      model: string | null;
-      apiKey: string | null;
-      baseUrl: string | null;
-      provider: string | null;
-    },
-  ): void;
-}>();
+// Two-way VLM value (camelCase). Live-bound by the parent; edits emit on change.
+const value = defineModel<VlmValue>({ required: true });
 
 const mainModelSupportsVision = ref<boolean | null>(null);
 const checkingVision = ref(false);
 
-const useMainModel = ref(props.useMainModel);
-const model = ref(props.model || "");
-const apiKey = ref(props.apiKey || "");
-const provider = ref(props.provider || (props.model ? inferProvider(props.model) : ""));
+const useMainModel = ref(false);
+const model = ref("");
+const apiKey = ref("");
+const provider = ref("");
 // Show the effective endpoint (stored override or the provider default), but
 // only reveal "Advanced settings" for a genuine override.
-const baseUrl = ref(resolveBaseUrl(provider.value, props.baseUrl));
-const showAdvanced = ref(hasCustomBaseUrl(provider.value, props.baseUrl));
+const baseUrl = ref("");
+const showAdvanced = ref(false);
 
 // Template ref to the Ollama model picker so the Base URL field can trigger an
 // immediate refresh on blur via the picker's exposed reloadOllama().
@@ -58,8 +53,31 @@ const ollamaModelRef = ref<{ reloadOllama: () => void } | null>(null);
 
 const isOllamaModel = computed(() => model.value.startsWith("ollama/"));
 
-const isValid = computed(() => useMainModel.value || !!model.value);
+// Seed fields from the model value (initial + whenever the parent resets it).
+watch(
+  value,
+  (v) => {
+    if (!v) return;
+    useMainModel.value = v.useMainModel;
+    model.value = v.model || "";
+    apiKey.value = v.apiKey || "";
+    provider.value = v.provider || (v.model ? inferProvider(v.model) : "");
+    baseUrl.value = resolveBaseUrl(provider.value, v.baseUrl);
+    showAdvanced.value = hasCustomBaseUrl(provider.value, v.baseUrl);
+  },
+  { immediate: true },
+);
 
+// Emit the composed value live on every field change (guarded to avoid a
+// seed↔emit loop). checkVisionSupport mutating useMainModel also flows through.
+watch([useMainModel, model, apiKey, baseUrl, provider], () => {
+  const next = getVlmValue();
+  if (JSON.stringify(value.value) !== JSON.stringify(next)) {
+    value.value = next;
+  }
+});
+
+// Debounced so a typed/selected main model name doesn't spam the capabilities API.
 async function checkVisionSupport(modelName: string | null) {
   if (!modelName) {
     mainModelSupportsVision.value = null;
@@ -77,8 +95,12 @@ async function checkVisionSupport(modelName: string | null) {
     checkingVision.value = false;
   }
 }
-
-watch(() => props.mainModelName, checkVisionSupport, { immediate: true });
+const debouncedCheckVisionSupport = useDebounceFn(checkVisionSupport, 400);
+watch(
+  () => props.mainModelName,
+  (n) => debouncedCheckVisionSupport(n),
+  { immediate: true },
+);
 
 // Clear the model and pre-fill the provider's default base URL when the user
 // switches provider — models and endpoints are provider-specific.
@@ -87,21 +109,17 @@ function onProviderChange() {
   baseUrl.value = getDefaultBaseUrl(provider.value);
 }
 
-function getVlmValue() {
+function getVlmValue(): VlmValue {
   return {
     useMainModel: useMainModel.value,
-    model: useMainModel.value ? null : model.value,
+    model: useMainModel.value ? null : model.value || null,
     apiKey: useMainModel.value ? null : isOllamaModel.value ? null : apiKey.value || null,
     baseUrl: useMainModel.value ? null : persistBaseUrl(provider.value, baseUrl.value),
     provider: useMainModel.value ? null : provider.value || inferProvider(model.value),
   };
 }
 
-function submit() {
-  emit("update", getVlmValue());
-}
-
-defineExpose({ isValid, getVlmValue });
+defineExpose({ getVlmValue });
 </script>
 
 <template>
@@ -228,7 +246,5 @@ defineExpose({ isValid, getVlmValue });
         </div>
       </template>
     </template>
-
-    <Button v-if="showSubmitButton" label="Submit" @click="submit" />
   </div>
 </template>

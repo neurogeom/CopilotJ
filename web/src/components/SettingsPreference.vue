@@ -5,43 +5,52 @@ SPDX-License-Identifier: Apache-2.0
 -->
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, watch } from "vue";
 
-const props = withDefaults(
-  defineProps<{
-    proxy: string | null;
-    tavilyApiKey: string | null;
-    kbAutosave: boolean;
-    autoScroll: boolean;
-    /** Settings: show the per-tab Save button. Hidden in the wizard (uses Next). */
-    showSubmitButton?: boolean;
-  }>(),
-  { showSubmitButton: false },
+interface PrefValue {
+  proxy: string | null;
+  tavilyApiKey: string | null;
+  kbAutosave: boolean;
+  autoScroll: boolean;
+}
+
+// Two-way preferences value. Live-bound by the parent; edits emit on change.
+const value = defineModel<PrefValue>({ required: true });
+
+const proxy = ref("");
+const tavilyApiKey = ref("");
+const kbAutosave = ref(false);
+const autoScroll = ref(true);
+
+// Seed fields from the model value (initial + whenever the parent resets it).
+watch(
+  value,
+  (v) => {
+    if (!v) return;
+    proxy.value = v.proxy || "";
+    tavilyApiKey.value = v.tavilyApiKey || "";
+    kbAutosave.value = v.kbAutosave;
+    autoScroll.value = v.autoScroll;
+  },
+  { immediate: true },
 );
 
-const emit = defineEmits<{
-  (
-    e: "update",
-    value: { proxy: string | null; tavilyApiKey: string | null; kbAutosave: boolean; autoScroll: boolean },
-  ): void;
-}>();
+// Emit the composed value live on every field change (guarded to avoid a
+// seed↔emit loop).
+watch([proxy, tavilyApiKey, kbAutosave, autoScroll], () => {
+  const next = getValue();
+  if (JSON.stringify(value.value) !== JSON.stringify(next)) {
+    value.value = next;
+  }
+});
 
-const proxy = ref(props.proxy || "");
-const tavilyApiKey = ref(props.tavilyApiKey || "");
-const kbAutosave = ref(props.kbAutosave);
-const autoScroll = ref(props.autoScroll);
-
-function getValue() {
+function getValue(): PrefValue {
   return {
     proxy: proxy.value || null,
     tavilyApiKey: tavilyApiKey.value || null,
     kbAutosave: kbAutosave.value,
     autoScroll: autoScroll.value,
   };
-}
-
-function submit() {
-  emit("update", getValue());
 }
 
 defineExpose({ getValue });
@@ -79,7 +88,5 @@ defineExpose({ getValue });
     <FormItem for="autoScroll" label="Auto-scroll to Bottom" layout="row">
       <ToggleSwitch v-model="autoScroll" inputId="autoScroll" />
     </FormItem>
-
-    <Button v-if="showSubmitButton" label="Save" @click="submit" />
   </div>
 </template>
