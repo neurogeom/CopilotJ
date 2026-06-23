@@ -1,0 +1,8 @@
+# Stand up Java plugin test infrastructure + make McpPanel unit-testable
+
+- **What:** Introduce JUnit 5 + Maven Surefire (likely Mockito too) into `plugin/`, which currently has zero Java tests; refactor `McpPanel.buildUI()` so its construction path is testable without a live isolated-classloader bundle + static Jetty server.
+- **Why:** The Java plugin is verified entirely manually in Fiji. A latent init-order NPE in `McpPanel.buildUI()` (exposed by the `decouple-window-service` work) shipped undetected because nothing could automatically exercise the "construct the panel while MCP is already running" path. A regression test would have caught it.
+- **Pros:** Future init-order / construction regressions caught in CI; first Java test coverage for the plugin; enables TDD on the Swing panels and the McpLoader reflection path.
+- **Cons:** Non-trivial — `McpPanel`/`McpModule` live in a Java-17-only isolated bundle loaded reflectively via `McpLoader`, and `McpModule.isRunning()` keys off a static Jetty server. Testability requires extracting the init-order-sensitive logic out of the static/Swing/isolated context. Multi-step effort (the repo's first Java tests).
+- **Context:** Decided in `/plan-eng-review` (D2=C, 2026-06-23) to defer rather than smuggle a test-framework introduction into the MCP NPE fix PR. The NPE fix itself relies on manual Fiji verification (see plan `java-plugin-vast-seahorse.md`). Files of interest: `plugin/src/main/java/copilotj/mcp/McpPanel.java`, `plugin/src/main/java/copilotj/McpLoader.java`, `plugin/pom.xml` (add surefire+junit; the `compile-mcp` execution already separates the Java 17 build).
+- **Depends on / blocked by:** Nothing. Can be done independently; ideally before further `McpPanel` / `buildUI` changes.
