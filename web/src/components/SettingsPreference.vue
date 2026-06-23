@@ -71,9 +71,10 @@ defineExpose({ getValue });
       />
     </FormItem>
 
-    <FormItem for="kbAutosave" label="Auto-save to Knowledge Bank" layout="row">
+    <!-- "Auto-save to Knowledge Bank" toggle — hidden; value always sent as null. TODO: temporarily disabled -->
+    <!-- <FormItem for="kbAutosave" label="Auto-save to Knowledge Bank" layout="row">
       <ToggleSwitch v-model="kbAutosave" inputId="kbAutosave" />
-    </FormItem>
+    </FormItem> -->
 
     <FormItem for="autoScroll" label="Auto-scroll to Bottom" layout="row">
       <ToggleSwitch v-model="autoScroll" inputId="autoScroll" />
