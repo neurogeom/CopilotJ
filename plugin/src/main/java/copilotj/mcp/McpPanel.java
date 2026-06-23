@@ -97,6 +97,18 @@ public class McpPanel extends JPanel implements McpControl {
 			appendLog("MCP server stopped.\n");
 		});
 
+		// -- MCP log (mirrors the Managed Server tab's Progress Log) --
+		// Created BEFORE the isRunning() check below: when the window reopens with
+		// MCP already running in the background, that branch calls appendLog(...),
+		// which dereferences logArea. If logArea is still null the NPE aborts panel
+		// construction (swallowed by McpLoader) and the dialog falls back to the
+		// "Fiji-Latest / Java 17+" unavailable label.
+		logArea = new JTextArea(8, 40);
+		logArea.setEditable(false);
+		logArea.setFont(new java.awt.Font("Monospaced", java.awt.Font.PLAIN, 11));
+		final JScrollPane logScroll = new JScrollPane(logArea);
+		logScroll.setBorder(BorderFactory.createTitledBorder("MCP Log"));
+
 		// Check if already running
 		if (McpModule.isRunning()) {
 			setStatus("Running", new Color(0, 128, 0));
@@ -118,13 +130,6 @@ public class McpPanel extends JPanel implements McpControl {
 		JPanel configPanel = new JPanel(new BorderLayout(5, 5));
 		configPanel.add(hostPortPanel, BorderLayout.NORTH);
 		configPanel.add(buttonPanel, BorderLayout.CENTER);
-
-		// -- MCP log (mirrors the Managed Server tab's Progress Log) --
-		logArea = new JTextArea(8, 40);
-		logArea.setEditable(false);
-		logArea.setFont(new java.awt.Font("Monospaced", java.awt.Font.PLAIN, 11));
-		final JScrollPane logScroll = new JScrollPane(logArea);
-		logScroll.setBorder(BorderFactory.createTitledBorder("MCP Log"));
 
 		setLayout(new BorderLayout(5, 5));
 		setBorder(BorderFactory.createTitledBorder("MCP Server"));

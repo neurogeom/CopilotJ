@@ -118,6 +118,16 @@ public class CopilotJBridgeDialog
     tabbedPane.addTab("Managed Server", buildManagedTab());
     tabbedPane.addTab("Standalone Server", buildStandaloneTab());
 
+    // Shared status labels — created BEFORE createMcpPanel(): run() executes off
+    // the EDT (SciJava CommandService command thread), so McpPanel's
+    // constructor-time setStatus("Running") -> invokeLater can run on the EDT
+    // before this method reached the old creation site further down. Creating
+    // them here guarantees that deferred "MCP: Running" write lands on THIS
+    // open's statusLabel (not null / a prior disposed label) — otherwise the bar
+    // sticks at its initial "Status: disconnected" on reopen.
+    statusLabel = new JLabel("Status: disconnected");
+    idLabel = new JLabel("ID: N/A");
+
     // MCP panel tab (loaded dynamically)
     mcpPanel = createMcpPanel();
     tabbedPane.addTab("MCP Server", mcpPanel);
@@ -128,7 +138,7 @@ public class CopilotJBridgeDialog
     // debug mode initialize() auto-connects a standalone dev server, so the
     // isServerRunning() branch already lands on the Standalone tab — no special
     // debug case needed here.
-    if (mcpControl != null && mcpControl.isMcpRunning()) {
+    if (isMcpActive()) {
       tabbedPane.setSelectedIndex(2); // MCP Server
     } else if (service.isServerRunning()) {
       tabbedPane.setSelectedIndex(service.isManaged() ? 0 : 1); // Managed / Standalone
@@ -136,9 +146,6 @@ public class CopilotJBridgeDialog
     // else: default index 0 (Managed Server)
 
     // -- Shared status panel (below tabs) --
-    statusLabel = new JLabel("Status: disconnected");
-    idLabel = new JLabel("ID: N/A");
-
     final JPanel statusPanel = new JPanel(new BorderLayout(5, 5));
     statusPanel.add(statusLabel, BorderLayout.NORTH);
     statusPanel.add(idLabel, BorderLayout.SOUTH);
@@ -671,6 +678,18 @@ public class CopilotJBridgeDialog
   }
 
   /**
+   * True if the MCP server is the currently active endpoint. The three endpoints
+   * are mutually exclusive, so when MCP is active the standalone WebSocket
+   * connection is not — and must not own the shared status bar. In particular, a
+   * lingering disconnected standalone connection (which {@code service.getConnection()}
+   * still returns) fires an immediate current-state notify on reopen via
+   * {@code Connection.registerStateListener}; that must not clobber "MCP: Running".
+   */
+  private boolean isMcpActive() {
+    return mcpControl != null && mcpControl.isMcpRunning();
+  }
+
+  /**
    * Tears down whichever single endpoint is currently active. The three modes
    * are mutually exclusive, so at most one runs; each branch is idempotent.
    * {@code service.stop()} handles both the standalone WebSocket connection and
@@ -746,8 +765,10 @@ public class CopilotJBridgeDialog
   // -- MCP panel --
 
   private JPanel createMcpPanel() {
-    // MCP ships as an isolated Java 17 bundle loaded via McpLoader; on Java <17
-    // (or if the bundle is missing/corrupt) it degrades to a static label.
+    // MCP ships as an isolated Java 17 bundle loaded via McpLoader; on Java <17,
+    // a missing/corrupt bundle, or a panel-construction failure it degrades to a
+    // static label. createPanel returns a typed PanelResult so each cause gets its
+    // own truthful message (see buildMcpUnavailablePanel).
     final McpLoader loader = new McpLoader(logService);
     // Forward mutual-exclusion guard, run right before MCP starts: if a managed
     // or standalone server is active, prompt the user and stop it so Fiji keeps a
@@ -784,21 +805,50 @@ public class CopilotJBridgeDialog
       // Intentionally do NOT touch idLabel: MCP owns no ID, and resetting it
       // would race onIdChanged during endpoint transitions.
     };
-    final JPanel panel = loader.createPanel(service.getEventHandler(), requireExclusiveControl, mcpStatusUpdater);
-    if (panel instanceof McpControl) {
-      mcpControl = (McpControl) panel;
+    final McpLoader.PanelResult result =
+        loader.createPanel(service.getEventHandler(), requireExclusiveControl, mcpStatusUpdater);
+    if (result.panel() instanceof McpControl) {
+      mcpControl = (McpControl) result.panel();
       // Register with the service so Fiji Quit (ContextDisposingEvent) stops MCP
       // too, mirroring the managed Python server's shutdown path.
       service.setMcpControl(mcpControl);
     }
-    if (panel != null) {
-      return panel;
+    if (result.status() == McpLoader.PanelResult.Status.OK) {
+      return result.panel();
     }
+    return buildMcpUnavailablePanel(result);
+  }
+
+  /**
+   * Static fallback panel shown when the MCP panel cannot be created, with a
+   * message tailored to the specific failure returned by {@link McpLoader}:
+   * Java too old, bundle missing/corrupt, or panel construction threw. The
+   * manual link is shared across all three. Previously every failure shared one
+   * catch-all "requires Java 17+" label, which lied on Java 17+ when the real
+   * cause was a missing bundle or a construction exception.
+   */
+  private JPanel buildMcpUnavailablePanel(final McpLoader.PanelResult result) {
     final String manualUrl = "https://copilotj.chat/#/manual#why-is-my-mcp-server-not-available";
-    final JLabel label = new JLabel("<html>MCP can only run with Fiji-Latest "
-        + "(requires Java 17+; current Java version: "
-        + System.getProperty("java.version") + ").<br>"
-        + "See the <a href=\"" + manualUrl + "\">manual FAQ</a> for details.</html>");
+    final String currentJava = System.getProperty("java.version");
+    final String text;
+    switch (result.status()) {
+      case UNAVAILABLE_JAVA_TOO_OLD:
+        text = "<html>MCP can only run with Fiji-Latest (requires Java 17+; current Java version: "
+            + currentJava + ").<br>See the <a href=\"" + manualUrl + "\">manual FAQ</a> for details.</html>";
+        break;
+      case UNAVAILABLE_BUNDLE:
+        text = "<html>The MCP bundle could not be loaded (missing or corrupt). "
+            + "Check the Fiji log and see the <a href=\"" + manualUrl + "\">manual</a>.</html>";
+        break;
+      case CONSTRUCTION_FAILED:
+      default:
+        // Don't dump the raw exception in the UI; McpLoader already logged it with
+        // its stack. Point the user at the log instead.
+        text = "<html>MCP panel failed to initialize. See the Fiji log for details, "
+            + "or the <a href=\"" + manualUrl + "\">manual</a>.</html>";
+        break;
+    }
+    final JLabel label = new JLabel(text);
     label.setForeground(Color.GRAY);
     label.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
     label.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -822,7 +872,13 @@ public class CopilotJBridgeDialog
   @Override
   public void onStateChange(final Connection.State state, final String message) {
     SwingUtilities.invokeLater(() -> {
-      if (statusLabel != null) {
+      // The standalone connection is NOT the active endpoint while MCP runs
+      // (mutual exclusion), so don't let its state own the shared status bar.
+      // This includes the immediate current-state notify that
+      // Connection.registerStateListener fires when the listener is re-registered
+      // on window reopen — without this guard a lingering disconnected standalone
+      // connection would clobber the "MCP: Running" status.
+      if (statusLabel != null && !isMcpActive()) {
         statusLabel.setText("Status: " + state + " - " + message);
         switch (state) {
           case CONNECTED:

@@ -46,6 +46,9 @@ public final class McpLoader {
 
   private static volatile ClassLoader bundleLoader;
   private static volatile boolean unavailable;
+  // Why the bundle is unavailable, so callers can show a truthful message instead
+  // of guessing from a null panel. Set together with `unavailable` in ensureLoaded().
+  private static volatile PanelResult.Status unavailableStatus;
 
   private final LogService log;
 
@@ -54,17 +57,54 @@ public final class McpLoader {
   }
 
   /**
-   * True if the MCP bundle could be loaded on this JVM (Java 17+ and bundle
-   * present).
+   * Typed outcome of {@link #createPanel}, so callers can show a truthful message
+   * for each failure mode instead of guessing from a {@code null} panel. The four
+   * statuses map one-to-one onto the dialog's fallback labels.
    */
-  public boolean isAvailable() {
-    ensureLoaded();
-    return bundleLoader != null;
+  public static final class PanelResult {
+    public enum Status {
+      /** Panel constructed successfully; {@link #panel()} is non-null. */
+      OK,
+      /** JVM is older than Java 17 — the bundle's bytecode fails verification. */
+      UNAVAILABLE_JAVA_TOO_OLD,
+      /** Bundle resource is missing, unreadable, or otherwise failed to load. */
+      UNAVAILABLE_BUNDLE,
+      /** Bundle loaded, but {@code McpPanel}'s constructor threw; see {@link #cause()}. */
+      CONSTRUCTION_FAILED
+    }
+
+    private final Status status;
+    private final JPanel panel;
+    private final Throwable cause;
+
+    private PanelResult(final Status status, final JPanel panel, final Throwable cause) {
+      this.status = status;
+      this.panel = panel;
+      this.cause = cause;
+    }
+
+    static PanelResult ok(final JPanel panel) { return new PanelResult(Status.OK, panel, null); }
+
+    static PanelResult unavailable(final Status status) { return new PanelResult(status, null, null); }
+
+    static PanelResult failed(final Throwable cause) {
+      return new PanelResult(Status.CONSTRUCTION_FAILED, null, cause);
+    }
+
+    public Status status() { return status; }
+
+    /** Non-null iff {@link #status()} is {@link Status#OK}. */
+    public JPanel panel() { return panel; }
+
+    /** Non-null iff {@link #status()} is {@link Status#CONSTRUCTION_FAILED}. */
+    public Throwable cause() { return cause; }
   }
 
   /**
-   * Reflectively creates the MCP control panel, or {@code null} if MCP is
-   * unavailable on this JVM.
+   * Reflectively creates the MCP control panel, returning a {@link PanelResult}
+   * that distinguishes a ready panel from each failure mode (Java too old, bundle
+   * missing/corrupt, or construction threw) so the caller can show a truthful
+   * message instead of a catch-all label.
    *
    * @param handler forwarded into the bundle as the shared event channel
    * @param requireExclusiveControl invoked by the panel right before starting
@@ -76,19 +116,39 @@ public final class McpLoader {
    *        color); the core dialog routes it to the shared status bar, merging
    *        MCP state into the single endpoint-status display.
    */
-  public JPanel createPanel(final EventHandler handler, final BooleanSupplier requireExclusiveControl,
+  public PanelResult createPanel(final EventHandler handler, final BooleanSupplier requireExclusiveControl,
       final java.util.function.BiConsumer<String, java.awt.Color> statusUpdater) {
-    if (!isAvailable()) return null;
+    ensureLoaded();
+    if (bundleLoader == null) {
+      // ensureLoaded() set `unavailable` together with unavailableStatus; fall back
+      // defensively to BUNDLE in case of a null race.
+      final PanelResult.Status status = unavailableStatus != null
+          ? unavailableStatus : PanelResult.Status.UNAVAILABLE_BUNDLE;
+      return PanelResult.unavailable(status);
+    }
     try {
       final Class<?> cls = Class.forName(PANEL_CLASS, true, bundleLoader);
       final java.lang.reflect.Constructor<?> ctor =
           cls.getConstructor(EventHandler.class, LogService.class, BooleanSupplier.class,
               java.util.function.BiConsumer.class);
-      return (JPanel) ctor.newInstance(handler, log, requireExclusiveControl, statusUpdater);
+      return PanelResult.ok((JPanel) ctor.newInstance(handler, log, requireExclusiveControl, statusUpdater));
     } catch (final Throwable t) {
       log.warn("copilotj: Failed to create MCP panel: " + t.getMessage(), t);
-      return null;
+      return PanelResult.failed(unwrap(t));
     }
+  }
+
+  /** Peels {@link java.lang.reflect.InvocationTargetException} to the real cause. */
+  private static Throwable unwrap(final Throwable t) {
+    Throwable c = t;
+    for (int i = 0; i < 8 && c != null; i++) {
+      if (c instanceof java.lang.reflect.InvocationTargetException && c.getCause() != null) {
+        c = c.getCause();
+      } else {
+        return c;
+      }
+    }
+    return t;
   }
 
   private void ensureLoaded() {
@@ -106,10 +166,25 @@ public final class McpLoader {
         bundleLoader = loader;
       } catch (final Throwable t) {
         unavailable = true;
+        // UnsupportedClassVersionError (Java <17 bytecode) vs an IO/load failure
+        // (bundle missing/corrupt) need different user-facing messages.
+        unavailableStatus = isJavaTooOld(t)
+            ? PanelResult.Status.UNAVAILABLE_JAVA_TOO_OLD
+            : PanelResult.Status.UNAVAILABLE_BUNDLE;
         log.info("copilotj: MCP unavailable on Java " + System.getProperty("java.version")
             + " (" + t.getClass().getSimpleName() + ": " + t.getMessage() + ")");
       }
     }
+  }
+
+  /** True if {@code t} (or its cause chain) is a bytecode-version mismatch — i.e. JVM < 17. */
+  private static boolean isJavaTooOld(Throwable t) {
+    Throwable c = t;
+    for (int i = 0; i < 8 && c != null; i++) {
+      if (c instanceof UnsupportedClassVersionError) return true;
+      c = c.getCause();
+    }
+    return false;
   }
 
   /**
