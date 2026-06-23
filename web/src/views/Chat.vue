@@ -11,7 +11,8 @@ import Settings from "../components/Settings.vue";
 import Wizard from "../components/Wizard.vue";
 import Sidebar from "../components/Sidebar.vue";
 import { getServerConfig } from "../apis";
-import type { ThreadConfigModel } from "../apis";
+// Only used by the commented-out "use server" block below. TODO: temporarily disabled
+// import type { ThreadConfigModel } from "../apis";
 import { useConfig, useSettings, useSystemState } from "../store";
 
 const settings = useSettings();
@@ -43,11 +44,12 @@ onMounted(async () => {
 
     // Model — if nothing is configured yet but the server has a model, default
     // to "use the server's model" (an explicit, persisted choice).
-    if (settings.model === null && serverConfig.model !== null) {
-      const useServer: ThreadConfigModel = { use_server: true };
-      settings.setModel(useServer);
-      config.setDefaultModel(useServer);
-    }
+    // "Use Default Model" must never be enabled (strict BYO). TODO: temporarily disabled
+    // if (settings.model === null && serverConfig.model !== null) {
+    //   const useServer: ThreadConfigModel = { use_server: true };
+    //   settings.setModel(useServer);
+    //   config.setDefaultModel(useServer);
+    // }
 
     // Proxy
     if (config.data.proxy === null && serverConfig.proxy !== null) {
