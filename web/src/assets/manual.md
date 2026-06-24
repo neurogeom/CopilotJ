@@ -76,7 +76,7 @@ Models are provided by **AI providers** — companies that operate the model ser
 
 === OpenAI
 
-OpenAI's GPT models work reliably with CopilotJ. `gpt-5.4` is the current flagship; `gpt-5.4-mini` costs less but may produce weaker results on complex workflows.
+OpenAI's GPT models work reliably with CopilotJ. `gpt-5.5` is the current flagship; `gpt-5.4` costs less but may produce weaker results on complex workflows.
 
 1. Create an account at [platform.openai.com](https://platform.openai.com).
 2. Add credits via [OpenAI Billing](https://platform.openai.com/settings/organization/billing/overview).
@@ -84,7 +84,7 @@ OpenAI's GPT models work reliably with CopilotJ. `gpt-5.4` is the current flagsh
 
 === Google Gemini
 
-Gemini models are well-supported and competitively priced. `gemini-2.5-flash` is fast and inexpensive; `gemini-2.5-pro` provides stronger reasoning.
+Gemini models are well-supported and competitively priced. `gemini-2.5-pro` provides stronger reasoning; `gemini-2.5-flash` is fast and inexpensive.
 
 1. Visit [Google AI Studio](https://aistudio.google.com) and sign in with a Google account.
 2. Enable billing if required via [Google AI Billing](https://aistudio.google.com/billing).
@@ -92,7 +92,7 @@ Gemini models are well-supported and competitively priced. `gemini-2.5-flash` is
 
 === Anthropic (Claude)
 
-Claude models are recommended for their strong multi-step reasoning and tool use. `claude-sonnet-4-6` offers a good balance of capability and cost; `claude-opus-4-6` is the most capable option.
+Claude models are recommended for their strong multi-step reasoning and tool use. `claude-sonnet-4-6` offers a good balance of capability and cost; `claude-opus-4-8` is the highly capable option.
 
 1. Create an account at [console.anthropic.com](https://console.anthropic.com).
 2. Add credits via [Anthropic Billing](https://platform.claude.com/settings/billing).
@@ -100,12 +100,12 @@ Claude models are recommended for their strong multi-step reasoning and tool use
 
 === DeepSeek
 
-[DeepSeek](https://platform.deepseek.com) offers capable reasoning models at low cost through an OpenAI-compatible API.
+[DeepSeek](https://platform.deepseek.com) offers capable reasoning models at low cost.
 
 1. Create an account and add credits at [platform.deepseek.com](https://platform.deepseek.com).
 2. Create an API key at [DeepSeek API keys](https://platform.deepseek.com/api_keys).
 
-In CopilotJ, select **DeepSeek** as the provider (the base URL `https://api.deepseek.com` is filled in automatically), enter your API key, and choose a model such as `deepseek-chat` (general) or `deepseek-reasoner` (reasoning).
+In CopilotJ, select **DeepSeek** as the provider, enter your API key, and choose a model such as `deepseek-chat` (general).
 
 === OpenRouter
 
@@ -115,7 +115,7 @@ In CopilotJ, select **DeepSeek** as the provider (the base URL `https://api.deep
 2. Add credits via [OpenRouter Credits](https://openrouter.ai/credits).
 3. Create an API key at [OpenRouter Keys](https://openrouter.ai/keys).
 
-To use OpenRouter with CopilotJ, select **OpenRouter** as the provider, enter your OpenRouter API key, and type the model slug from the [OpenRouter model library](https://openrouter.ai/models) — these are prefixed with the provider, for example `openai/gpt-5.2`, `google/gemini-2.5-pro` or `anthropic/claude-sonnet-4.5`.
+To use OpenRouter with CopilotJ, select **OpenRouter** as the provider, enter your OpenRouter API key, and type the model slug from the [OpenRouter model library](https://openrouter.ai/models) — these are prefixed with the provider, for example `openai/gpt-5.4`, `google/gemini-2.5-pro` or `anthropic/claude-sonnet-4.6`.
 
 === Ollama (local, offline)
 
@@ -138,9 +138,9 @@ Note: Ollama models generally do not support image input. If image understanding
 
 === OpenAI-compatible server
 
-If your model is served by any other OpenAI-compatible endpoint — for example a local inference server such as [LM Studio](https://lmstudio.ai), [vLLM](https://docs.vllm.ai), [llama.cpp](https://github.com/ggml-org/llama.cpp), or [Ollama's OpenAI-compatible API](https://github.com/ollama/ollama/blob/main/docs/openai.md) — you can connect CopilotJ to it directly.
+If your model is served by any other OpenAI-compatible endpoint — for example a local inference server such as [LM Studio](https://lmstudio.ai), [vLLM](https://docs.vllm.ai) or [llama.cpp](https://github.com/ggml-org/llama.cpp) — you can connect CopilotJ to it directly.
 
-To do so, select **OpenAI** as the provider, set the **Base URL** to your server's endpoint (for example, `http://localhost:1234/v1` for LM Studio), enter whatever API key the server requires (use a placeholder such as `sk-1234` for servers that do not enforce authentication), and type the model name exactly as the server exposes it.
+To do so, select **OpenAI-compatible** as the provider, set the **Base URL** to your server's endpoint (for example, `http://localhost:1234/v1` for LM Studio), enter whatever API key the server requires (use a placeholder such as `sk-1234` for servers that do not enforce authentication), and type the model name exactly as the server exposes it.
 
 Consult your server's documentation for the correct base URL and the list of available model names.
 
@@ -150,18 +150,16 @@ Consult your server's documentation for the correct base URL and the list of ava
 
 The first time you open the CopilotJ chat page, a setup wizard appears. It has six steps — click each to expand:
 
-<details id="wizard-notice">
-<summary>Step 1 — Notice</summary>
+::: tabs
+
+=== Notice
 
 Before anything else, CopilotJ shows a **Privacy & Data Handling notice**. It explains that your task text — and, if you enable Vision, image snapshots of the ImageJ interface — is sent to your model provider, and that how that data is handled is governed by the provider's own policies.
 
 - Tick _I have read and understood the above information and agree to use CopilotJ under these conditions_ to proceed. You cannot continue until you agree.
-- Optionally tick _I choose to enable Vision support_ to turn on image understanding. This is **recommended** when your model supports it, and you can also change it later. Enabling Vision here adds the Vision step (Step 4) to the wizard; if you leave it off, that step is skipped.
+- Optionally tick _I choose to enable Vision support_ to turn on image understanding. This is **recommended** when your model supports it, and you can also change it later. Enabling Vision here adds the Vision step to the wizard; if you leave it off, that step is skipped.
 
-</details>
-
-<details id="wizard-connection">
-<summary>Step 2 — Connection</summary>
+=== Connection
 
 Enter the URL of your CopilotJ server and click **Connect**.
 
@@ -170,10 +168,7 @@ Enter the URL of your CopilotJ server and click **Connect**.
 
 The wizard tests the connection and shows a success or error message. You must connect successfully before proceeding.
 
-</details>
-
-<details id="wizard-model">
-<summary>Step 3 — Model</summary>
+=== Model
 
 First choose a **Provider** from the dropdown — OpenAI, Anthropic, Google Gemini, DeepSeek, OpenRouter, SiliconFlow, Ollama (local), or OpenAI-compatible. The fields then adapt to the provider:
 
@@ -183,10 +178,7 @@ First choose a **Provider** from the dropdown — OpenAI, Anthropic, Google Gemi
 
 See the [Provider quick reference](#provider-quick-reference) below for how to obtain each provider's API key.
 
-</details>
-
-<details id="wizard-vision">
-<summary>Step 4 — Vision</summary>
+=== Vision
 
 This step only appears if you enabled Vision in the **Notice** step (Step 1). CopilotJ **auto-detects** whether your main model supports image input, using a built-in model-capability database (for Ollama, a known list that includes llava, moondream, minicpm-v, llama3.2-vision, gemma3, qwen2.5-vl, and pixtral):
 
@@ -195,10 +187,7 @@ This step only appears if you enabled Vision in the **Notice** step (Step 1). Co
 
 If you don't need image understanding, simply leave vision disabled.
 
-</details>
-
-<details id="wizard-preferences">
-<summary>Step 5 — Preferences</summary>
+=== Preferences
 
 Optional settings that you can skip or configure later:
 
@@ -209,14 +198,11 @@ Optional settings that you can skip or configure later:
 
 You can click **Skip** to proceed without changing any advanced settings.
 
-</details>
-
-<details id="wizard-finish">
-<summary>Step 6 — Finish</summary>
+=== Finish
 
 Review your server, model, vision, and preference settings. Once you click **Start Using CopilotJ**, the configuration is saved and you are ready to begin. You can revise any of these settings later from the ⚙️ icon in the chat interface.
 
-</details>
+:::
 
 ## Using CopilotJ
 
