@@ -892,7 +892,10 @@ public class CopilotJBridgeDialog
    * cause was a missing bundle or a construction exception.
    */
   private JPanel buildMcpUnavailablePanel(final McpLoader.PanelResult result) {
-    final String manualUrl = "https://copilotj.chat/#/manual#why-is-my-mcp-server-not-available";
+    // Single '#' so java.net.URI accepts it: a second '#' (anchor-in-fragment) makes
+    // URI.create throw "Illegal character in fragment", silently breaking the link.
+    // The ?section= form is read by Manual.vue's deep-link handler.
+    final String manualUrl = "https://copilotj.chat/#/manual?section=why-is-my-mcp-server-not-available";
     final String currentJava = System.getProperty("java.version");
     final String text;
     switch (result.status()) {
@@ -918,11 +921,7 @@ public class CopilotJBridgeDialog
     label.addMouseListener(new java.awt.event.MouseAdapter() {
       @Override
       public void mouseClicked(final java.awt.event.MouseEvent e) {
-        try {
-          java.awt.Desktop.getDesktop().browse(java.net.URI.create(manualUrl));
-        } catch (final Exception ex) {
-          logService.warn("copilotj: Could not open manual: " + ex.getMessage());
-        }
+        openInBrowser(manualUrl);
       }
     });
     final JPanel p = new JPanel();
