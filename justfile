@@ -2,7 +2,6 @@
 #
 # JDK configuration (set via flake.nix env vars):
 #   JAVA_HOME   -> JDK 21 (builds the single JAR: core -> Java 8 bytecode, MCP -> Java 17)
-#   JAVA8_HOME  -> JDK 8  (only for ad-hoc Java 8 downgrade checks; not required to build)
 
 default:
   @just --list

@@ -153,7 +153,6 @@
               UV_PYTHON = python.interpreter;
               # JDK configuration
               JAVA_HOME = pkgs.jdk21.home;
-              JAVA8_HOME = pkgs.jdk8.home;
             }
             // lib.optionalAttrs pkgs.stdenv.isLinux {
               # Python libraries often load native shared objects using dlopen(3).
@@ -206,7 +205,6 @@
 
                 # JDK configuration
                 JAVA_HOME = pkgs.jdk21.home;
-                JAVA8_HOME = pkgs.jdk8.home;
               };
 
               shellHook = ''
