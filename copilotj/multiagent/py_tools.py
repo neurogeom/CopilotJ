@@ -51,9 +51,6 @@ def get_project_templates_dir() -> Path:
     return templates_dir
 
 
-MODEL_ROOT = get_home() / "assets" / "models"
-
-
 async def cellpose_segmentation(
     image_path: Annotated[str | None, "Path to the input image or directory (use forward slashes)"] = None,
     model_type: Annotated[str, "Type of model to use (nuclei, cyto, cyto2)"] = "nuclei",
@@ -228,10 +225,10 @@ async def stardist_segmentation(
             model_name = "2D_versatile_he" if key in {"he", "tissue", "brightfield"} else "2D_versatile_fluo"
         else:
             model_name = model
-        mclass = StarDist2D
-
-        model_dir = MODEL_ROOT / "stardist" / model_name
-        model_instance = mclass(None, name=model_name, basedir=str(model_dir.parent))
+        # Lazy: download the standard pretrained model on first use and cache it
+        # under ~/.stardist/models/<name> (mirrors how cellpose fetches its
+        # weights). Keeps the plugin JAR free of bundled model weights.
+        model_instance = StarDist2D.from_pretrained(model_name)
 
         kwargs = {}
         if prob_thresh is not None:
