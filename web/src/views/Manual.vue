@@ -69,10 +69,14 @@ function onContentClick(event: MouseEvent) {
 // Deep-link scroll: run exactly once on first mount (e.g. opening the plugin's FAQ
 // link in a fresh tab). HMR edits do not remount, so this never fires repeatedly.
 onMounted(async () => {
-  const hash = route.hash;
-  if (!hash) return;
+  // External deep links (e.g. the plugin's MCP-unavailable link) arrive as ?section=<id>,
+  // because java.net.URI rejects a '#' inside the hash-routed fragment. In-page links still
+  // arrive as route.hash.
+  const section = route.query.section;
+  const id = typeof section === "string" ? section : route.hash ? decodeURIComponent(route.hash.slice(1)) : null;
+  if (!id) return;
   await nextTick();
-  scrollToSection(decodeURIComponent(hash.slice(1)));
+  scrollToSection(id);
 });
 </script>
 
