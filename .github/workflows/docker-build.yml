@@ -48,7 +48,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build Python image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         id: build_python
         with:
           context: .
@@ -60,7 +60,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=python-image
 
       - name: Build web image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         id: build_web
         with:
           context: ./web
