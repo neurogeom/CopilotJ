@@ -48,6 +48,11 @@
       <excludes>
         <!-- Dev-only (ImageJ1 patcher for the forked dev JVM); not part of MCP. -->
         <exclude>net.imagej:ij1-patcher</exclude>
+        <!-- ImageJ1 (Fiji's own core) and javassist leak in via the provided-scope
+             over-resolution; MCP never references them, and Fiji already supplies
+             ij, so the child-first loader falls back to the parent for any use. -->
+        <exclude>net.imagej:ij</exclude>
+        <exclude>org.javassist:javassist</exclude>
       </excludes>
       <unpack>true</unpack>
       <unpackOptions>
