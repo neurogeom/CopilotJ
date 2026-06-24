@@ -99,7 +99,7 @@
     <!-- MCP stack versions (override pom-scijava where needed). The MCP SDK and
          Jetty 12 require Java 17 bytecode, so they cannot live on Fiji's shared
          classpath; they are bundled into an isolated lib/mcp-bundle.jar instead. -->
-    <mcp.version>1.1.2</mcp.version>
+    <mcp.version>2.0.0</mcp.version>
     <jetty.version>12.0.16</jetty.version>
     <jackson.version>2.18.0</jackson.version>
     <slf4j.version>2.0.9</slf4j.version>
