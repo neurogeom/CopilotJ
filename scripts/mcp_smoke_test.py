@@ -39,7 +39,7 @@ EXPECTED_TOOLS = {
     "list_operations",
     "folder_summary",
 }
-EXPECTED_RESOURCES = {"fiji://environment", "fiji://windows"}
+EXPECTED_RESOURCES = set()  # windows/environment are now tools (take_snapshot, fiji_environment)
 EXPECTED_PROMPTS = {"analyze_bioimage", "debug_macro"}
 
 # Substrings produced by the Java side when Fiji is not reachable (stable across
@@ -529,12 +529,12 @@ def main() -> int:
     else:
         results.add("tool metadata", "PASS", "descriptions + parameters schema teach the ref loop")
 
-    # 4. resources/list.
+    # 4. resources/list — no resources are exposed (windows/environment are tools).
     try:
         res = client.call("resources/list")
         uris = {r.get("uri") for r in (res or {}).get("resources", [])}
         if uris == EXPECTED_RESOURCES:
-            results.add("resources/list", "PASS", f"{len(uris)} resources")
+            results.add("resources/list", "PASS", "no resources (converted to tools)")
         else:
             results.add(
                 "resources/list",
@@ -655,27 +655,6 @@ def main() -> int:
     call_tool(client, "list_operations", {"since": since}, results)
     call_tool(client, "capture_image", {}, results)
     call_tool(client, "capture_fiji_screen", {}, results)
-
-    # 15. resources/read for both URIs.
-    for uri in sorted(EXPECTED_RESOURCES):
-        try:
-            res = client.call("resources/read", {"uri": uri})
-            text = ""
-            for item in (res or {}).get("contents", []):
-                if isinstance(item, dict) and "text" in item:
-                    text = item.get("text", "")
-                    break
-            text = text.strip()
-            if fiji_down(text):
-                results.add(f"resources/read {uri}", "SKIP", text[:140])
-            else:
-                results.add(
-                    f"resources/read {uri}",
-                    "PASS",
-                    text.replace("\n", " ")[:140] or "ok",
-                )
-        except McpError as e:
-            results.add(f"resources/read {uri}", "FAIL", str(e)[:200])
 
     # 16-17. prompts/get for both prompts (debug_macro requires both args).
     try:

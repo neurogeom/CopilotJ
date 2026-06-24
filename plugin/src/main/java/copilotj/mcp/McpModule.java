@@ -24,8 +24,6 @@ import com.fasterxml.jackson.databind.node.NullNode;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import copilotj.EventHandler;
-import copilotj.mcp.resources.EnvironmentResource;
-import copilotj.mcp.resources.WindowsResource;
 import copilotj.mcp.prompts.AnalyzeBioimagePrompt;
 import copilotj.mcp.prompts.DebugMacroPrompt;
 import copilotj.mcp.tools.CallActionTool;
@@ -100,9 +98,6 @@ public class McpModule {
 		var listOperationsTool = new ListOperationsTool(handler);
 		var folderSummaryTool = new FolderSummaryTool();
 
-		var envResource = new EnvironmentResource(handler);
-		var windowsResource = new WindowsResource(handler);
-
 		var analyzePrompt = new AnalyzeBioimagePrompt();
 		var debugPrompt = new DebugMacroPrompt();
 
@@ -125,12 +120,6 @@ public class McpModule {
 			.toolCall(FijiEnvironmentTool.definition(), fijiEnvironmentTool::handle)
 			.toolCall(ListOperationsTool.definition(), listOperationsTool::handle)
 			.toolCall(FolderSummaryTool.definition(), folderSummaryTool::handle)
-			// Resources
-			.resources(
-				new McpServerFeatures.SyncResourceSpecification(
-					EnvironmentResource.definition(), envResource::handle),
-				new McpServerFeatures.SyncResourceSpecification(
-					WindowsResource.definition(), windowsResource::handle))
 			// Prompts
 			.prompts(
 				new McpServerFeatures.SyncPromptSpecification(
