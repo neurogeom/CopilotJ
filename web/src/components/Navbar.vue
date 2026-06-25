@@ -15,8 +15,8 @@ const links = [
     <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
       <h1
         class="text-xl font-bold cursor-pointer hover:text-primary-500 transition-colors"
-        :class="currentRoute === '/' ? 'text-primary-500' : 'text-gray-900'"
-        @click="router.push('/')"
+        :class="currentRoute === '/home' ? 'text-primary-500' : 'text-gray-900'"
+        @click="router.push('/home')"
       >
         CopilotJ
       </h1>
