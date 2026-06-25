@@ -1,6 +1,6 @@
 # User manual
 
-## Installation
+## Install CopilotJ
 
 CopilotJ can be installed with just a few clicks. You can refer to the video below.
 
@@ -52,7 +52,7 @@ The ImageJ Updater is the recommended way to install and update the CopilotJ plu
 2. Wait for the installation to complete. This may take **5–10 minutes** depending on your network speed. Progress is shown in the **Progress Log** area.
 3. Once the status shows **Ready**, the installation is complete and does not need to be repeated.
 
-## First launch of CopilotJ
+## Launch CopilotJ
 
 1. **Open the CopilotJ plugin dialog**
    - In Fiji, navigate to **Plugins -> CopilotJ**.
@@ -65,7 +65,7 @@ The ImageJ Updater is the recommended way to install and update the CopilotJ plu
 3. **Open the web interface**
    - Click **Open copilotj.chat** in the dialog's **Managed Server** tab to open the chat interface in your default browser.
    - Click the "Chat" button in the top-right corner of the page to open a new chat session.
-   - On first use, the setup wizard will guide you through connecting to the server and configuring your model and API key (see the [Setup wizard](#setup-wizard) below).
+   - On first use, the [setup wizard](#setup-wizard) will guide you through connecting to the server and configuring your model and API key.
 
 <details>
 <summary>Advanced usage</summary>
@@ -84,28 +84,31 @@ To connect to a standalone server instead, switch to the **Standalone Server** t
 
 </details>
 
-### Models, providers, and API keys
+### Recommended models
+
+<details>
+<summary>Basic Concepts: Models, providers, and API keys</summary>
 
 CopilotJ requires at least one **large language model** (LLM) to function. A large language model is a remote AI service that understands and generates text; CopilotJ sends your instructions to the model, which reasons about what to do and orchestrates CopilotJ's tools accordingly.
 
 Models are provided by **AI providers** — companies that operate the model servers. Each provider requires you to create an account and authenticate with an **API key**: a secret credential that authorizes requests on your behalf. Every request your session sends to a model runs on that provider's remote servers and is billed to your account in units called **tokens** (roughly corresponding to words). Most providers require you to add a payment method and purchase credits before API requests will succeed; a free or evaluation-tier account will typically return an error on the first request.
 
-**Data handling depends on the selected provider.** Information transmitted to a cloud-hosted
-model is subject to the data-handling, security, and retention policies of the corresponding provider. Users
-should review and evaluate these policies before using external services.
-
-### Recommended models
+</details>
 
 CopilotJ supports a wide range of language and vision-language models. The following recommendations are based on our experience.
 
-#### Best Performance _(all support vision)_
+::: tabs
+
+=== Best Performance
 
 - anthropic/claude-opus-4.8
 - anthropic/claude-sonnet-4.6
 - openai/gpt-5.5
 - google/gemini-3.1-pro
 
-#### Cost-effective
+_All these models support vision._
+
+=== Cost-effective
 
 **Vision-supported**
 
@@ -122,6 +125,12 @@ CopilotJ supports a wide range of language and vision-language models. The follo
 - deepseek/deepseek-v4-flash + openai/gpt-5.2
 - z-ai/glm-5.2 + openai/gpt-5.2
 - z-ai/glm-5.1 + openai/gpt-5.2
+
+:::
+
+**Data handling depends on the selected provider.** Information transmitted to a cloud-hosted
+model is subject to the data-handling, security, and retention policies of the corresponding provider. Users
+should review and evaluate these policies before using external services.
 
 #### Provider quick reference
 
@@ -257,7 +266,7 @@ Review your server, model, vision, and preference settings. Once you click **Sta
 
 :::
 
-## Using CopilotJ
+## Use CopilotJ
 
 With setup complete, the sections below describe everyday use.
 
