@@ -69,11 +69,9 @@ function migrateConfig(config: ConfigData): ConfigData {
   const dm = config.defaultModel;
   if (dm && isExplicit(dm)) {
     if (dm.api_key === null && !dm.name.startsWith("ollama/")) {
-      // Legacy "null api_key → borrow the server's key" hack: previously converted
-      // to the explicit "use the server's model" choice.
-      // "Use Default Model" disabled (strict BYO): clear the choice instead. TODO: temporarily disabled
-      // config.defaultModel = { use_server: true };
-      config.defaultModel = null;
+      // Legacy "null api_key → borrow the server's key" hack: convert to the
+      // explicit "use the server's model" choice.
+      config.defaultModel = { use_server: true };
     } else {
       if (dm.provider === "google") dm.provider = "gemini";
       if (!dm.provider && dm.name) dm.provider = inferProvider(dm.name);

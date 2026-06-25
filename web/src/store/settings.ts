@@ -6,14 +6,9 @@
 
 import { acceptHMRUpdate, defineStore } from "pinia";
 import { computed, ref } from "vue";
-import { isExplicit, isUseServer } from "../apis";
+import { isUseServer } from "../apis";
 import type { ExplicitModel, ThreadConfigModel, ThreadConfigQuery } from "../apis";
 import { useConfig } from "./config";
-
-// Empty explicit model sent when no model is configured, so the backend rejects
-// it with "No model configured" instead of silently falling back to the server
-// model. "Use Default Model" must never be enabled (strict BYO). TODO: temporarily disabled
-const EMPTY_MODEL: ExplicitModel = { name: "", api_key: null, base_url: null, provider: null };
 
 export const useSettings = defineStore("settings", () => {
   const expandSidebar = ref(false);
@@ -39,9 +34,7 @@ export const useSettings = defineStore("settings", () => {
     }
 
     return {
-      // model: model.value,
-      // Always send an explicit model (never null / use_server) — strict BYO. TODO: temporarily disabled
-      model: isExplicit(model.value) ? model.value : EMPTY_MODEL,
+      model: model.value,
       vlm: resolvedVlm,
       vision_enabled: cfg.data.visionEnabled,
       proxy: cfg.data.proxy,
