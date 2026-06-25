@@ -98,7 +98,7 @@ onMounted(async () => {
               <li v-for="item in toc" :key="item.id">
                 <button
                   type="button"
-                  class="block rounded-xl px-3 py-2 transition-colors hover:bg-zinc-100 text-left"
+                  class="block rounded-xl w-full px-3 py-2 transition-colors hover:bg-zinc-100 text-left"
                   :class="item.level === 3 ? 'ml-3 text-zinc-500' : 'font-medium text-zinc-800'"
                   @click="scrollToSection(item.id)"
                 >
