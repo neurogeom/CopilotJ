@@ -27,7 +27,7 @@ CopilotJ can be installed with just a few clicks. You can refer to the video bel
 - **[Fiji](https://fiji.sc/#download)**: Stable and Latest versions are both supported
 - **Hardware:**
   - RAM: `>= 16 GB` (`32 GB` recommended)
-  - GPU: optional, only required for deep-learning models
+  - GPU: Optional. Only required for accelerating deep-learning models
 - **Network:** required for downloading the Python environment on first use and for LLM API access
 
 ### Install the CopilotJ Bridge plugin
@@ -318,14 +318,26 @@ Upon user request, CopilotJ can capture an accepted analysis procedure as a stru
 
 3. **Sharing and reusing workflows**
 
-   Saved workflows can be shared with collaborators or re-applied to new datasets.
+   Saved workflows can be shared with collaborators or re-applied to new datasets by exporting them from CopilotJ.
 
-   Supported export formats:
-   - **Markdown workflows** for supplementary documentation or lab protocols
-   - **JSON workflows** that can be reloaded into CopilotJ, for example under `<project_dir>/temp/workflows`
-   - **ZIP archives** bundling workflows with images, scripts, and metadata
+   **Example user commands:**
 
-   This workflow-centric design supports reproducibility, transparency, and efficient reuse of analysis pipelines.
+   ```text
+   Export workflow 1 as ZIP
+   Export workflow named: XXX as Markdown
+   Export workflow named: XXX as JSON
+   ```
+
+   Exported workflow files are saved under `<copilotj_home>/temp/workflows/shared`. ZIP workflow packages can be shared directly with collaborators.
+
+   **Supported export formats:**
+   - **Markdown workflows** for supplementary documentation or laboratory protocols.
+   - **JSON workflows** for reloading into CopilotJ.
+   - **ZIP workflow packages** containing the workflow, images, scripts, and metadata.
+
+   **Importing workflows:**
+
+   Previously exported workflow packages can be imported back into CopilotJ. To import a workflow package, first extract the ZIP archive. The extracted package contains a workflow folder (named after the workflow) with the JSON workflow file. Copy the entire workflow folder to `<copilotj_home>/temp/workflows`. CopilotJ automatically detects the imported workflow and adds it to the local workflow collection.
 
 ### File locations and temporary folder
 
@@ -408,8 +420,8 @@ The **Open Chat** button launches the hosted CopilotJ web frontend at [copilotj.
 
 The **Open Resources** button opens the CopilotJ home directory in your file manager:
 
-- **Windows:** `%LOCALAPPDATA%\copilotj\.env.local`
-- **macOS / Linux:** `~/.local/state/copilotj/.env.local`
+- **Windows:** `%LOCALAPPDATA%\copilotj`
+- **macOS / Linux:** `~/.local/state/copilotj`
 
 If the button doesn't work:
 
