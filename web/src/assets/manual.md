@@ -2,19 +2,28 @@
 
 ## Installation
 
-CopilotJ consists of three components:
+CopilotJ can be installed with just a few clicks. You can refer to the video below.
 
-- **CopilotJ Core Server** — a Python application that manages the language model, reasoning, and tool orchestration.
-- **CopilotJ Bridge Plugin** - a Fiji plugin for communication between the Core Server and ImageJ.
-- **CopilotJ Web Frontend** — a Vue-based web application that provides the conversational interface for users to interact with CopilotJ.
+<details open>
+<summary>Video - Installation and configuration of CopilotJ</summary>
 
-For the convenience of end users, the CopilotJ Bridge plugin supports a **managed server** mode where the Core Server is installed, configured, and launched automatically in the background.
-This provides a seamless experience with minimal setup. For advanced users, a **standalone server** mode allows connecting to a manually managed Core Server instance, for example running on a remote machine or in a Docker container.
-We also provide a hosted version of the web frontend for users who prefer not to run it locally, accessible at [copilotj.chat](https://copilotj.chat).
+<div style="margin: 1em 0;">
+    <iframe
+        src="https://www.youtube.com/embed/nNE9nsMvXZU?si=WVRfYICmMmrnSI3B"
+        style="width:100%;aspect-ratio:16/9;display:block;overflow:hidden;border-radius:8px;"
+        title="YouTube video player"
+        frameborder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        referrerpolicy="strict-origin-when-cross-origin"
+        allowfullscreen
+    ></iframe>
+</div>
+
+</details>
 
 **System requirements**:
 
-- **Operating systems**: macOS, Linux, Windows
+- **Operating systems**: macOS, Windows
 - **[Fiji](https://fiji.sc/#download)**: Stable and Latest versions are both supported
 - **Hardware:**
   - RAM: `>= 16 GB` (`32 GB` recommended)
@@ -37,13 +46,13 @@ The ImageJ Updater is the recommended way to install and update the CopilotJ plu
 
 </details>
 
-### Install the Python environment
+### Install the CopilotJ Core Server
 
 1. In the dialog's **Managed Server** tab, click **Install**. The plugin downloads Python, creates a virtual environment, and installs all dependencies automatically.
 2. Wait for the installation to complete. This may take **5–10 minutes** depending on your network speed. Progress is shown in the **Progress Log** area.
 3. Once the status shows **Ready**, the installation is complete and does not need to be repeated.
 
-## Getting started
+## First launch of CopilotJ
 
 1. **Open the CopilotJ plugin dialog**
    - In Fiji, navigate to **Plugins -> CopilotJ**.
@@ -51,26 +60,70 @@ The ImageJ Updater is the recommended way to install and update the CopilotJ plu
 
 2. **Start the server**
    - Click **Start**. The backend starts and connects automatically.
-   - The server URL (e.g., `http://127.0.0.1:12345`) is shown next to the **Server** label once startup completes. The port is chosen automatically and persisted across restarts.
+   - Click **Copy URL** to copy the the server URL.
 
 3. **Open the web interface**
    - Click **Open copilotj.chat** in the dialog's **Managed Server** tab to open the chat interface in your default browser.
-   - On first use, the setup wizard will guide you through connecting to the server and configuring your model and API key (see the [First-time setup wizard](#first-time-setup-wizard) below).
-   - The web frontend connects to the managed server automatically.
+   - Click the "Chat" button in the top-right corner of the page to open a new chat session.
+   - On first use, the setup wizard will guide you through connecting to the server and configuring your model and API key (see the [Setup wizard](#setup-wizard) below).
 
-4. **Open an image for analysis**
-   - Use Fiji to open the image or image stack to be analyzed.
-   - Example datasets used in the study can be found in supplementary data for testing and reproducibility.
+<details>
+<summary>Advanced usage</summary>
 
-> **Advanced:** To connect to a standalone server instead, switch to the **Standalone Server** tab in the dialog, enter the server URL, and click **(Re)Connect**. For advanced usage such as Docker deployment, local development servers, and building the plugin from source, see the [development documentation](https://github.com/neurogeom/CopilotJ/blob/main/DEVELOPMENT.md).
+CopilotJ consists of three components:
+
+- **CopilotJ Core Server** — a Python application that manages the language model, reasoning, and tool orchestration.
+- **CopilotJ Bridge Plugin** - a Fiji plugin for communication between the Core Server and ImageJ.
+- **CopilotJ Web Frontend** — a Vue-based web application that provides the conversational interface for users to interact with CopilotJ.
+
+For the convenience of end users, the CopilotJ Bridge plugin supports a **managed server** mode where the Core Server is installed, configured, and launched automatically in the background.
+This provides a seamless experience with minimal setup. For advanced users, a **standalone server** mode allows connecting to a manually managed Core Server instance, for example running on a remote machine or in a Docker container.
+We also provide a hosted version of the web frontend for users who prefer not to run it locally, accessible at [copilotj.chat](https://copilotj.chat).
+
+To connect to a standalone server instead, switch to the **Standalone Server** tab in the dialog, enter the server URL, and click **(Re)Connect**. For advanced usage such as Docker deployment, local development servers, and building the plugin from source, see the [development documentation](https://github.com/neurogeom/CopilotJ/blob/main/DEVELOPMENT.md).
+
+</details>
 
 ### Models, providers, and API keys
 
-CopilotJ requires at least one **language model** (LLM) to function. A language model is a remote AI service that understands and generates text; CopilotJ sends your instructions to the model, which reasons about what to do and orchestrates CopilotJ's tools accordingly.
+CopilotJ requires at least one **large language model** (LLM) to function. A large language model is a remote AI service that understands and generates text; CopilotJ sends your instructions to the model, which reasons about what to do and orchestrates CopilotJ's tools accordingly.
 
 Models are provided by **AI providers** — companies that operate the model servers. Each provider requires you to create an account and authenticate with an **API key**: a secret credential that authorizes requests on your behalf. Every request your session sends to a model runs on that provider's remote servers and is billed to your account in units called **tokens** (roughly corresponding to words). Most providers require you to add a payment method and purchase credits before API requests will succeed; a free or evaluation-tier account will typically return an error on the first request.
 
-### Provider quick reference
+**Data handling depends on the selected provider.** Information transmitted to a cloud-hosted
+model is subject to the data-handling, security, and retention policies of the corresponding provider. Users
+should review and evaluate these policies before using external services.
+
+### Recommended models
+
+CopilotJ supports a wide range of language and vision-language models. The following recommendations are based on our experience.
+
+#### Best Performance _(all support vision)_
+
+- anthropic/claude-opus-4.8
+- anthropic/claude-sonnet-4.6
+- openai/gpt-5.5
+- google/gemini-3.1-pro
+
+#### Cost-effective
+
+**Vision-supported**
+
+- openai/gpt-5.2
+- openai/gpt-5.1
+- google/gemini-3.1-flash
+- google/gemini-2.5-pro
+- moonshotai/kimi-k2.6
+- openai/gpt-5-mini
+
+**Text-only + Vision-supported combinations**
+
+- deepseek/deepseek-v4-pro + openai/gpt-5.2
+- deepseek/deepseek-v4-flash + openai/gpt-5.2
+- z-ai/glm-5.2 + openai/gpt-5.2
+- z-ai/glm-5.1 + openai/gpt-5.2
+
+#### Provider quick reference
 
 ::: tabs
 
@@ -146,7 +199,7 @@ Consult your server's documentation for the correct base URL and the list of ava
 
 :::
 
-### First-time setup wizard
+### Setup wizard
 
 The first time you open the CopilotJ chat page, a setup wizard appears. It has six steps — click each to expand:
 
@@ -208,6 +261,8 @@ Review your server, model, vision, and preference settings. Once you click **Sta
 
 With setup complete, the sections below describe everyday use.
 
+To begin an analysis, users should first open the image or image stack to be analyzed in Fiji. The example datasets used are available on [Zenodo](https://doi.org/10.5281/zenodo.20413892) and can be used for testing.
+
 ### Issuing analysis instructions
 
 Users interact with CopilotJ through natural-language instructions, for example:
@@ -225,7 +280,7 @@ CopilotJ will automatically:
 
 ### Workflows
 
-CopilotJ treats each analysis session as a structured workflow that can be executed, saved, and shared across datasets and users.
+Upon user request, CopilotJ can capture an accepted analysis procedure as a structured workflow that can be replayed, reused, and shared across datasets and users.
 
 1. **Saving workflows**
 
@@ -291,7 +346,7 @@ The temporary folder is managed by the CopilotJ core server and updates in real 
 ## FAQ
 
 <details id="faq-jar-conflict">
-<summary>After installing or updating other plugins, CopilotJ fails to load</summary>
+<summary>CopilotJ fails to load after installation or after installing other plugins</summary>
 
 Fiji loads **all plugins through a single shared set of Java libraries** (the contents of its `jars/` folder). There is no isolation between plugins: if CopilotJ depends on one version of a shared library (for example the JSON or WebSocket library it uses) but another plugin you installed ships an **older or incompatible** version of that same library, only one copy can win. Whichever version ends up on disk, some plugin is left calling a method that no longer exists, and at runtime this surfaces as a **`NoSuchMethodError`**, **`NoClassDefFoundError`**, **`IncompatibleClassChangeError`**, or simply a plugin that will not start. The ImageJ community refers to this as _version skew_.
 
