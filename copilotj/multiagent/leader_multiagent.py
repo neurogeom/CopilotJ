@@ -609,7 +609,7 @@ User prompt to optimize:
                 summary=json.dumps(context, ensure_ascii=False, indent=2),
                 steps=dialog_context.get("steps", []),
                 question=dialog_context["task"] if dialog_context.get("task") else None,
-                model_client=self._client,
+                model_client=self.model_client,
             )
             result_data = json.loads(kb_result)
             if result_data.get("status") != "ok":
@@ -654,7 +654,7 @@ User prompt to optimize:
         summary_prompt = make_summary_prompt(dialog_context["task"], steps_text)
 
         try:
-            response = await self._client.create([TextMessage(role="user", text=summary_prompt)])
+            response = await self.model_client.create([TextMessage(role="user", text=summary_prompt)])
         except Exception as e:
             self.log_error(f"[ERROR] Error generating dialog context summary: {e}")
             return None
