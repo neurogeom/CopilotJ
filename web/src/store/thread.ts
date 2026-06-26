@@ -414,7 +414,9 @@ export function useThread(): {
       cb();
     }
 
-    deleteThread(id.value!); // no await
+    // Only delete when a thread was actually created; reset() in the init state
+    // (e.g. the "New Thread" button with no thread yet) leaves id null.
+    if (id.value) deleteThread(id.value); // no await
   }
 
   async function optimizePrompt(prompt: string): Promise<string | null> {

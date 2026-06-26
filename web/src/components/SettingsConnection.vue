@@ -14,16 +14,20 @@ type ConnectionStatus = "idle" | "testing" | "ok" | "fail";
 
 const props = withDefaults(
   defineProps<{
-    /** Settings: persist + reload the page on a successful connect. Wizard: fetch config instead. */
-    reloadOnConnect?: boolean;
+    /** Settings: persist the URL, then emit "reconnect" so the parent re-syncs server config (no page reload). Wizard: fetch config instead. */
+    reconnectOnConnect?: boolean;
     /** Show the inline Connect/Save button. Hidden in Settings (the pinned footer triggers connect); shown in the wizard. */
     showConnectButton?: boolean;
+    /** Read-only lock: when true the URL can't be edited (Settings uses this once a thread is in progress). */
+    locked?: boolean;
   }>(),
-  { reloadOnConnect: false, showConnectButton: true },
+  { reconnectOnConnect: false, showConnectButton: true, locked: false },
 );
 
 const emit = defineEmits<{
   (e: "update:serverConfig", value: ServerConfig | null): void;
+  /** Settings mode: fired after the URL is persisted so the parent can soft-reconnect (re-sync server config, no page reload). */
+  (e: "reconnect"): void;
 }>();
 
 // Two-way models: the parent (Settings draft / Wizard reactive) owns these and
@@ -65,10 +69,10 @@ async function connect() {
     // ignore persistence errors
   }
 
-  // Settings changes the backend mid-session: reload to re-initialise.
+  // Settings: the parent re-syncs server config in place (no page reload).
   // Wizard keeps going: fetch the server config so later steps can pre-fill.
-  if (props.reloadOnConnect) {
-    window.location.reload();
+  if (props.reconnectOnConnect) {
+    emit("reconnect");
     return;
   }
   try {
@@ -98,16 +102,21 @@ defineExpose({ getValue, connect });
           inputId="apiBaseUrl"
           placeholder="http://localhost:8786"
           class="w-full"
+          :disabled="locked"
           @keyup.enter="connect"
         />
         <Button
           v-if="showConnectButton"
-          :label="reloadOnConnect ? 'Save' : 'Connect'"
+          :label="reconnectOnConnect ? 'Save' : 'Connect'"
           :loading="connectionStatus === 'testing'"
           @click="connect"
         />
       </div>
-      <p v-if="connectionStatus === 'ok'" class="text-sm text-green-600 dark:text-green-400 mt-1">
+      <p v-if="locked" class="text-sm text-amber-600 dark:text-amber-400 mt-1">
+        The server URL can't be changed while a conversation is in progress. Start a new thread or reload the page to
+        switch servers.
+      </p>
+      <p v-else-if="connectionStatus === 'ok'" class="text-sm text-green-600 dark:text-green-400 mt-1">
         Connected successfully
       </p>
       <p v-else-if="connectionStatus === 'fail'" class="text-sm text-red-600 dark:text-red-400 mt-1">

@@ -6,9 +6,10 @@
 
 import { acceptHMRUpdate, defineStore } from "pinia";
 import { ref } from "vue";
-import { isExplicit } from "../apis";
+import { getServerConfig, isExplicit, isUseServer } from "../apis";
 import type { ExplicitModel, ThreadConfigModel } from "../apis";
 import { inferProvider } from "../composables";
+import { useSettings } from "./settings";
 
 const STORAGE_KEY = "copilotj_config";
 
@@ -162,6 +163,58 @@ export const useConfig = defineStore("config", () => {
     persist();
   }
 
+  // Re-fetch /api/config from the current backend and reconcile derived state.
+  // Shared by Chat.vue onMounted and the Settings soft-reconnect. On failure
+  // returns false AND clears the server-derived display refs (model/VLM/vision)
+  // so callers never show the old backend's capabilities after a failed
+  // reconnect — mirrors the old page-reload behavior that reset everything.
+  async function applyServerConfig(): Promise<boolean> {
+    const settings = useSettings();
+    try {
+      const serverConfig = await getServerConfig();
+
+      setServerModel(serverConfig.model);
+      setServerVlm(serverConfig.vlm);
+
+      // Model — if nothing is configured yet but the server has a model, default
+      // to "use the server's model" (an explicit, persisted choice).
+      if (settings.model === null && serverConfig.model !== null) {
+        const useServer: ThreadConfigModel = { use_server: true };
+        settings.setModel(useServer);
+        setDefaultModel(useServer);
+      }
+
+      // Reconcile stale "use server" choices: if the loaded server has no model
+      // for a slot, a persisted {use_server:true} / useServerVlm choice is no
+      // longer valid — clear it so the UI asks for an explicit model.
+      if (isUseServer(data.value.defaultModel) && !serverConfig.model) {
+        setDefaultModel(null);
+        settings.setModel(null);
+      }
+      if (data.value.vlm.useServerVlm && !serverConfig.vlm) {
+        setVlm({ ...data.value.vlm, useServerVlm: false });
+      }
+
+      // Proxy
+      if (data.value.proxy === null && serverConfig.proxy !== null) {
+        setProxy(serverConfig.proxy);
+      }
+
+      // Vision: store the server's default for display only.
+      setServerVisionEnabled(serverConfig.vision_enabled);
+      return true;
+    } catch {
+      // Server not reachable or /api/config errored. Clear the server-derived
+      // display refs so a failed reconnect never leaves the old backend's
+      // model/VLM shown (the old page-reload wiped this state). Callers
+      // surface the failure; we return false.
+      setServerModel(null);
+      setServerVlm(null);
+      setServerVisionEnabled(null);
+      return false;
+    }
+  }
+
   function reset() {
     data.value = defaultConfig();
     localStorage.removeItem(STORAGE_KEY);
@@ -182,6 +235,7 @@ export const useConfig = defineStore("config", () => {
     setKbAutosave,
     setVisionEnabled,
     setUserAgreement,
+    applyServerConfig,
     reset,
     persist,
   };

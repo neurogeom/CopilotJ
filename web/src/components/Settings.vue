@@ -19,7 +19,7 @@ import {
   type ValidationInput,
   type ValidationKey,
 } from "../lib";
-import { useConfig, useSettings, useSystemState } from "../store";
+import { useActiveThread, useConfig, useSettings, useSystemState } from "../store";
 import type { SettingsTab } from "../store";
 import SettingsConnection from "./SettingsConnection.vue";
 import UsageNotice from "./UsageNotice.vue";
@@ -30,6 +30,7 @@ import SettingsPreference from "./SettingsPreference.vue";
 const settings = useSettings();
 const config = useConfig();
 const state = useSystemState();
+const activeThread = useActiveThread();
 
 // The dialog's working copy — edited live via v-model, committed to the store
 // only on Save. Re-seeded from the committed config each time the dialog opens,
@@ -111,6 +112,14 @@ const activeTab = computed<SettingsTab>({
 
 const connectionRef = ref<InstanceType<typeof SettingsConnection> | null>(null);
 
+// A thread (or an in-flight send/optimize) ties the app to the current backend,
+// so the Base URL is read-only until the user starts a new thread. Covers the
+// pre-start window too: status is still "init" while loading/optimizing.
+const threadActive = computed(() => {
+  const t = activeThread.thread;
+  return t.status !== "init" || t.loading || t.optimizing;
+});
+
 // Effective main model name (used by the submit-time vision check below and by
 // SettingsVLM's native capability check on the Vision tab).
 const draftMainModelName = computed(() => resolveMainModelName(draft.model, config.serverModel));
@@ -179,6 +188,11 @@ function commitDraft() {
 // intentionally not checked here — it is a first-run concern (Wizard only).
 async function onSubmit() {
   if (activeTab.value === "base") {
+    if (threadActive.value) {
+      formError.value =
+        "The server URL can't be changed while a conversation is in progress. Start a new thread or reload the page to switch servers.";
+      return;
+    }
     connectionRef.value?.connect();
     return;
   }
@@ -198,6 +212,20 @@ async function onSubmit() {
   }
   commitDraft();
   state.showSettings = false;
+}
+
+// Soft reconnect (Settings Base tab): the URL was just persisted by
+// SettingsConnection.connect(); re-sync server config from the new backend and
+// refresh the reachability badge, without reloading the page. If /api/config
+// fails, keep the dialog open with a warning instead of hiding the stale state.
+async function onReconnect() {
+  const ok = await config.applyServerConfig();
+  state.testBackendConnection();
+  if (ok) {
+    state.showSettings = false;
+  } else {
+    formError.value = "Connected, but the server didn't return its config. Model availability may be inaccurate.";
+  }
 }
 </script>
 
@@ -240,8 +268,10 @@ async function onSubmit() {
             ref="connectionRef"
             v-model:api-base-url="draft.apiBaseUrl"
             v-model:connection-status="draft.connectionStatus"
-            :reload-on-connect="true"
+            :reconnect-on-connect="true"
+            :locked="threadActive"
             :show-connect-button="false"
+            @reconnect="onReconnect"
           />
         </TabPanel>
 
