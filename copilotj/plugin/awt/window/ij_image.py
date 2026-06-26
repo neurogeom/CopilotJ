@@ -51,6 +51,7 @@ class IjImage(AwtWindowBase[TYPE]):
     image_type: str
     size: str
     path: str | None
+    info: str | None = None
 
     bit_depth: int
     stack_size: int
@@ -92,12 +93,17 @@ class IjImage(AwtWindowBase[TYPE]):
         if verbosity < Verbosity.NORMAL:
             return lines
 
+        if self.info and "ImageDescription:" in self.info:
+            lines.append(self.info)
+            return lines
+
         dimension = (
             f"{self.width}x{self.height} pixels"
             if self.depth <= 0
             else f"{self.width}x{self.height}x{self.depth} voxels"
         )
-        ss, ch, sl, fr = self.stack_size, self.channels, self.slices, self.frames
+        ss = self.stack_size
+        ch, sl, fr = self.channels, self.slices, self.frames
         lines.append(f"Image dimension: {dimension}, stack size: {ss} ({ch} channels, {sl} slices, {fr} frames)")
 
         if self.calibrated:
@@ -129,6 +135,7 @@ class IjImageDifference(AwtWindowDifferenceBase[TYPE]):
     image_type: FromTo[str] | None = None
     size: FromTo[str] | None = None
     path: FromTo[str | None] | None = None
+    info: FromTo[str | None] | None = None
 
     bit_depth: FromTo[int] | None = None
     stack_size: FromTo[int] | None = None
