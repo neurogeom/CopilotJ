@@ -26,6 +26,14 @@ KB_MACRO = KB_ROOT / "macro"
 KB_RESEARCH = KB_ROOT / "research"
 KB_INDEX = KB_ROOT / "index"
 KB_REGISTRY = KB_INDEX / "registry.jsonl"
+KB_EXECUTION_TOOL_NAMES = frozenset({"run_macro", "execute_python_script", "delegate_task", "execute_workflow"})
+KB_SINGLE_STEP_EXECUTION_TOOL_NAMES = frozenset({"execute_python_script", "delegate_task", "execute_workflow"})
+MIN_KB_EXECUTION_STEPS = 2
+MIN_KB_DIALOG_STEPS = 3
+KB_EXECUTION_ERROR_MARKERS = ("command error", "traceback", "exception", "timeout", "failed", "does not work")
+KB_EXECUTION_STEP_FIELDS = frozenset(
+    {"name", "args", "result", "status", "script", "task", "agent", "workflow_id", "inputs"}
+)
 
 
 def _load_macro_plugin_names() -> list[str]:
@@ -130,6 +138,7 @@ def rebuild_registry() -> int:
                     "question": data.get("question")
                     or (f"How to use {data.get('name')} in ImageJ?" if typ == "macro" else None),
                     "summary": data.get("summary"),
+                    "variants": data.get("variants", []),
                     # Look for tips/requirements in both top-level and content section
                     "tips": data.get("tips") or content.get("tips") or [],
                     "requirements": data.get("requirements")
@@ -145,7 +154,7 @@ def rebuild_registry() -> int:
                     "correct_syntax": content.get("correct_syntax"),
                     "site": content.get("site"),
                     # Workflow steps for tasks
-                    "workflow_steps": data.get("steps", []),
+                    "workflow_steps": _registry_workflow_steps(data),
                 }
                 out.write(json.dumps(rec, ensure_ascii=False) + "\n")
                 count += 1
@@ -153,6 +162,22 @@ def rebuild_registry() -> int:
                 # Skip malformed file
                 continue
     return count
+
+
+def _registry_workflow_steps(data: dict[str, Any]) -> list[dict[str, Any]]:
+    steps = data.get("steps", [])
+    if steps:
+        return steps
+
+    workflow_steps: list[dict[str, Any]] = []
+    for variant in data.get("variants", []):
+        if not isinstance(variant, dict):
+            continue
+        for step in variant.get("steps", []):
+            if not isinstance(step, dict) or not isinstance(step.get("action"), dict):
+                continue
+            workflow_steps.append({"id": len(workflow_steps) + 1, "action": step["action"]})
+    return workflow_steps
 
 
 def _load_registry() -> list[dict[str, Any]]:
@@ -674,6 +699,68 @@ def _parse_steps(steps: Any) -> list[dict[str, Any]]:
     return []
 
 
+def _execution_action(step: Any) -> dict[str, Any] | None:
+    action = step.get("action") if isinstance(step, dict) and "action" in step else step
+    return action if isinstance(action, dict) else None
+
+
+def _action_has_execution_error(action: dict[str, Any]) -> bool:
+    if action.get("error"):
+        return True
+    result_fields = {
+        key: action.get(key) for key in ("response", "result", "status", "stderr") if action.get(key) is not None
+    }
+    text = json.dumps(result_fields, ensure_ascii=False).lower()
+    return any(marker in text for marker in KB_EXECUTION_ERROR_MARKERS)
+
+
+def _successful_execution_tools(steps: Any) -> list[str]:
+    names: list[str] = []
+    for step in _parse_steps(steps):
+        action = _execution_action(step)
+        if not action or _action_has_execution_error(action):
+            continue
+        name = action.get("name")
+        if name in KB_EXECUTION_TOOL_NAMES:
+            names.append(name)
+    return names
+
+
+def _has_sufficient_execution_steps(steps: Any) -> bool:
+    parsed_steps = _parse_steps(steps)
+    if len(parsed_steps) < MIN_KB_DIALOG_STEPS:
+        return False
+    names = _successful_execution_tools(parsed_steps)
+    if len(names) >= MIN_KB_EXECUTION_STEPS:
+        return True
+    return any(name in KB_SINGLE_STEP_EXECUTION_TOOL_NAMES for name in names)
+
+
+def kb_has_sufficient_execution_steps(steps: Any) -> bool:
+    return _has_sufficient_execution_steps(steps)
+
+
+def _filtered_execution_steps(steps: Any) -> list[dict[str, Any]]:
+    filtered: list[dict[str, Any]] = []
+    for step in _parse_steps(steps):
+        action = _execution_action(step)
+        if not action or _action_has_execution_error(action):
+            continue
+        if action.get("name") not in KB_EXECUTION_TOOL_NAMES:
+            continue
+        clean_action = {key: value for key, value in action.items() if key in KB_EXECUTION_STEP_FIELDS}
+        filtered.append({"action": clean_action})
+    return filtered
+
+
+def kb_execution_dialog(dialog: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "task": dialog.get("task"),
+        "status": dialog.get("status"),
+        "steps": _filtered_execution_steps(dialog.get("steps", [])),
+    }
+
+
 def _toml_quote(s: str) -> str:
     """Quote string for TOML using triple quotes.
 
@@ -779,6 +866,62 @@ def _normalize_url(u: str) -> str:
         return u.strip()
 
 
+def _metadata_key(value: Any) -> str:
+    return re.sub(r"[^a-z0-9_]", "", str(value or "").lower().replace(" ", "_").replace("-", "_"))
+
+
+def _task_metadata(extras: dict[str, Any] | None) -> dict[str, Any]:
+    metadata = extras.get("task_metadata") if isinstance(extras, dict) else None
+    return metadata if isinstance(metadata, dict) else {}
+
+
+def _append_toml_value(lines: list[str], key: str, value: Any, indent: str) -> None:
+    if isinstance(value, bool):
+        lines.append(f"{indent}{key} = {str(value).lower()}")
+    elif isinstance(value, (int, float)):
+        lines.append(f"{indent}{key} = {value}")
+    elif key == "script":
+        formatted_script = str(value).replace(";", ";\n")
+        lines.append(f"{indent}{key} = {_toml_string(formatted_script, 'script')}")
+    else:
+        lines.append(f"{indent}{key} = {_toml_string(str(value), key)}")
+
+
+def _append_steps_toml(lines: list[str], steps: Any, table_name: str = "steps") -> None:
+    sid = 1
+    for act in _parse_steps(steps):
+        action = act.get("action") if isinstance(act, dict) and "action" in act else act
+        if not isinstance(action, dict):
+            continue
+        name = action.get("name") or action.get("tool")
+        if not name:
+            continue
+        lines.append(f"[[{table_name}]]")
+        lines.append(f"id = {sid}")
+        lines.append(f"  [{table_name}.action]")
+        lines.append(f'  name = "{name}"')
+        for key, value in action.items():
+            if key in ("name", "args") or key not in KB_EXECUTION_STEP_FIELDS:
+                continue
+            _append_toml_value(lines, key, value, "  ")
+        args = action.get("args") or {}
+        if isinstance(args, dict):
+            for key, value in args.items():
+                _append_toml_value(lines, key, value, "  ")
+        lines.append("")
+        sid += 1
+
+
+def _merged_variants(path: Path, method_key: str, summary: str, steps: Any) -> list[dict[str, Any]]:
+    variants = []
+    if path.exists():
+        data = _read_toml(path)
+        variants = [variant for variant in data.get("variants", []) if isinstance(variant, dict)]
+    variants = [variant for variant in variants if variant.get("method_key") != method_key]
+    variants.append({"method_key": method_key, "description": summary, "steps": _parse_steps(steps)})
+    return variants
+
+
 async def kb_add_knowledge(
     summary: Annotated[str, "Plain-text summary of the dialog/workflow"],
     steps: Annotated[Any, "Minimal steps as List, JSON string, or text"],
@@ -802,9 +945,15 @@ async def kb_add_knowledge(
         folder = KB_ROOT / checklist_type
     folder.mkdir(parents=True, exist_ok=True)
 
+    metadata = _task_metadata(extras)
+    task_key = _metadata_key(metadata.get("task_key")) if checklist_type == "task" else ""
+    method_key = _metadata_key(metadata.get("method_key")) if checklist_type == "task" else ""
+
     # derive signature
     base = None
-    if tags and len(tags):
+    if task_key:
+        base = task_key
+    elif tags and len(tags):
         # Use the first tag directly if it follows our naming convention
         tag = tags[0].strip().lower()
         if "_" in tag and len(tag.split("_")) <= 3 and re.match(r"^[a-z0-9_]+$", tag):
@@ -831,7 +980,7 @@ async def kb_add_knowledge(
             i += 1
 
     # Build TOML content
-    steps_list = _parse_steps(steps)
+    steps_list = [] if method_key else _parse_steps(steps)
     lines: list[str] = []
     lines.append(f'type = "{checklist_type}"')
     lines.append(f'signature = "{signature}"')
@@ -846,6 +995,8 @@ async def kb_add_knowledge(
     if tags:
         tag_str = ",".join(f'"{t}"' for t in tags)
         lines.append(f"tags = [{tag_str}]")
+    if task_key:
+        lines.append(f'task_key = "{task_key}"')
     lines.append("")
     lines.append(f"description = {_toml_string(summary, 'description')}")
     lines.append("")
@@ -856,62 +1007,10 @@ async def kb_add_knowledge(
         lines.append("")
 
     if steps_list:
-        sid = 1
-        for act in steps_list:
-            # Handle simple string steps
-            if isinstance(act, str):
-                name = act
-                args = {}
-            else:
-                # support either {name, args} or {action: {name, args}}
-                action = act.get("action") if isinstance(act, dict) and "action" in act else act
-                if not isinstance(action, dict):
-                    continue
-                name = action.get("name") or action.get("tool")
-                args = action.get("args") or {}
-
-            if not name:
-                continue
-            lines.append("[[steps]]")
-            lines.append(f"id = {sid}")
-            lines.append("  [steps.action]")
-            lines.append(f'  name = "{name}"')
-
-            # Write all fields in action except 'name'
-            for k, v in action.items():
-                # Skip name and args since name is already written, args is handled separately
-                if k in ("name", "args"):
-                    continue
-                if isinstance(v, bool):
-                    lines.append(f"  {k} = {str(v).lower()}")
-                elif isinstance(v, (int, float)):
-                    lines.append(f"  {k} = {v}")
-                elif k == "script":
-                    # Special handling for script: use triple quotes and format with newlines
-                    formatted_script = str(v).replace(";", ";\n")
-                    lines.append(f"  {k} = {_toml_string(formatted_script, 'script')}")
-                else:
-                    # Use smart string formatting based on content and field name
-                    lines.append(f"  {k} = {_toml_string(str(v), k)}")
-
-            # Write args directly as flat fields if present
-            if isinstance(args, dict) and args:
-                for k, v in args.items():
-                    if isinstance(v, bool):
-                        lines.append(f"  {k} = {str(v).lower()}")
-                    elif isinstance(v, (int, float)):
-                        lines.append(f"  {k} = {v}")
-                    elif k == "script":
-                        # Special handling for script in args: use triple quotes and format with newlines
-                        formatted_script = str(v).replace(";", ";\n")
-                        lines.append(f"  {k} = {_toml_string(formatted_script, 'script')}")
-                    else:
-                        # Use smart string formatting based on content and field name
-                        lines.append(f"  {k} = {_toml_string(str(v), k)}")
-            lines.append("")
-            sid += 1
+        _append_steps_toml(lines, steps_list)
 
     out_path = folder / f"{signature}.toml"
+    variants = _merged_variants(out_path, method_key, summary, steps) if method_key else []
     with out_path.open("w", encoding="utf-8") as f:
         # Append type-specific extras
         if extras:
@@ -1010,6 +1109,14 @@ async def kb_add_knowledge(
                 lines.append(f"references = [{refs_s}]")
                 lines.append("")
 
+        if variants:
+            for variant in variants:
+                lines.append("[[variants]]")
+                lines.append(f'method_key = "{_metadata_key(variant.get("method_key"))}"')
+                if variant.get("description"):
+                    lines.append(f"description = {_toml_string(str(variant['description']), 'description')}")
+                _append_steps_toml(lines, variant.get("steps", []), "variants.steps")
+
         f.write("\n".join(lines) + "\n")
 
     # Refresh index
@@ -1040,11 +1147,25 @@ async def kb_build(
         return _error_response("Invalid dialog parameter - must be a non-empty dictionary")
 
     final_summary, steps, question = _sanitize_inputs(summary, steps, question)
+    if not _has_sufficient_execution_steps(steps):
+        return json.dumps(
+            {
+                "status": "ok",
+                "created": [],
+                "skipped": [{"type": "task", "reason": "insufficient_execution_steps"}],
+                "checklist_type": "task",
+                "notes": ["Dialog did not include enough successful execution steps to save as reusable knowledge."],
+            },
+            ensure_ascii=False,
+        )
+    execution_steps = _filtered_execution_steps(steps)
+    execution_dialog = kb_execution_dialog(dialog)
+    clean_summary = final_summary
 
     _llm_prompt_template = f"""
 Knowledge Base extraction action: extract reusable knowledge from the following dialog.
-Dialog: {json.dumps(dialog, ensure_ascii=False)}
-Dialog context summary: {final_summary}
+Dialog: {json.dumps(execution_dialog, ensure_ascii=False)}
+Dialog context summary: {clean_summary}
 
 Generate a structured JSON output for KB metadata only. Do not generate workflow JSON and do not reformat the raw steps.
 The raw execution steps are passed separately and will be stored as detailed KB steps.
@@ -1052,6 +1173,9 @@ The raw execution steps are passed separately and will be stored as detailed KB 
 {{
   "task": {{
     "name": "Specific task name for filename",
+    "task_key": "canonical task identity, e.g. segment_cells_3d",
+    "method_key": "method or algorithm variant, e.g. cellpose3d or watershed3d",
+    "question": "Reusable canonical user question, not a short confirmation like yes or continue",
     "data_type": "Detailed image/data description you can retrieved from imagej perception in dialog",
     "topic": ["topic1", "topic2"],
     "description": "Brief description of what this workflow does",
@@ -1106,6 +1230,9 @@ Focus on:
 IMPORTANT: Task name must be one of these 2 formats:
 1. "action_object" - e.g., "segment_nuclei", "measure_fluorescence"
 2. "action_object_method" - e.g., "segment_nuclei_cellpose", "track_cells_trackmate"
+task_key should omit the method when multiple methods solve the same task, e.g. segment_cells_3d.
+method_key should identify the implementation variant, e.g. cellpose3d, watershed3d, stardist.
+question should describe the reusable task goal and must not be a short conversational reply.
 
 Rules: lowercase, underscores only, 2-3 words maximum
 """
@@ -1113,9 +1240,9 @@ Rules: lowercase, underscores only, 2-3 words maximum
     try:
         structured_output = await _llm_extract_with_retry(
             _llm_prompt_template,
-            dialog,
-            final_summary,
-            steps,
+            execution_dialog,
+            clean_summary,
+            execution_steps,
             question,
             model_client=model_client,
         )
@@ -1128,6 +1255,8 @@ Rules: lowercase, underscores only, 2-3 words maximum
         task_extras = {
             "task_metadata": {
                 "name": task_data.get("name"),
+                "task_key": task_data.get("task_key"),
+                "method_key": task_data.get("method_key"),
                 "data_type": task_data.get("data_type"),
                 "question": task_data.get("question"),  # Add question field
                 "requirements": task_data.get("requirements", {}),
@@ -1140,10 +1269,10 @@ Rules: lowercase, underscores only, 2-3 words maximum
         if not _is_duplicate_task(task_data, existing_tasks):
             # Use the LLM-generated task name for filename if available
             filename_tags = []
-            if task_data.get("name") and task_data["name"] != "Generated workflow":
-                # Convert the task name to filename format and use as primary tag
-                filename_tag = task_data["name"].lower().replace(" ", "_").replace("-", "_")
-                filename_tag = re.sub(r"[^a-z0-9_]", "", filename_tag)  # Clean non-alphanumeric except underscore
+            task_identity = task_data.get("task_key") or task_data.get("name")
+            if task_identity and task_identity != "Generated workflow":
+                # Convert the task identity to filename format and use as primary tag
+                filename_tag = _metadata_key(task_identity)
                 if filename_tag:
                     filename_tags = [filename_tag]
 
@@ -1160,7 +1289,7 @@ Rules: lowercase, underscores only, 2-3 words maximum
                 storage=None,
                 upsert=True,
                 extras=task_extras,
-                workflow_summary=final_summary,  # Pass the original summary from kb_build
+                workflow_summary=clean_summary,
             )
             task_result_data = json.loads(task_result)
             if task_result_data["status"] == "ok":
@@ -1243,7 +1372,7 @@ Rules: lowercase, underscores only, 2-3 words maximum
                 storage=None,
                 upsert=True,
                 extras=research_extras,
-                workflow_summary=final_summary,  # Pass the original summary
+                workflow_summary=clean_summary,
             )
             research_result_data = json.loads(research_result)
             if research_result_data["status"] == "ok":
@@ -1277,6 +1406,7 @@ def _load_existing_tasks() -> list[dict[str, Any]]:
                     "name": data.get("name", ""),
                     "signature": data.get("signature", ""),
                     "data_type": data.get("data_type", ""),
+                    "task_key": data.get("task_key", ""),
                     "topic": data.get("topic", []),
                     "tags": data.get("tags", []),
                 }
@@ -1340,6 +1470,8 @@ def _load_existing_research() -> list[dict[str, Any]]:
 
 def _is_duplicate_task(task_data: dict[str, Any], existing_tasks: list[dict[str, Any]]) -> bool:
     """Check if task already exists based on description similarity and topic overlap."""
+    if task_data.get("task_key") and task_data.get("method_key"):
+        return False
     description = (task_data.get("description", "") or "").strip().lower()
     topic = set(str(t).lower() for t in task_data.get("topic", []))
     data_type = (task_data.get("data_type", "") or "").lower()
@@ -1466,9 +1598,11 @@ async def _llm_extract_with_retry(
             return {
                 "task": {
                     "name": llm_data["task"].get("name", final_summary or "Generated workflow"),
+                    "task_key": llm_data["task"].get("task_key"),
+                    "method_key": llm_data["task"].get("method_key"),
                     "data_type": llm_data["task"].get("data_type", "unknown"),
                     "topic": llm_data["task"].get("topic", []),  # Use LLM topic if available
-                    "question": question,  # Add user question as separate field
+                    "question": llm_data["task"].get("question") or question,
                     "description": llm_data["task"].get("description", final_summary or "Task generated from dialog"),
                     "requirements": llm_data["task"].get("requirements", {}),
                     "defaults": llm_data["task"].get("defaults", {}),

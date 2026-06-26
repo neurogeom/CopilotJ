@@ -33,7 +33,14 @@ from copilotj.core import (
 from copilotj.core.config import Config
 from copilotj.multiagent.agent_loader import load_agent_configs
 from copilotj.multiagent.Executor import Executor
-from copilotj.multiagent.kb_tools import _load_macro_plugin_names, kb_build, kb_retrieve, rebuild_registry
+from copilotj.multiagent.kb_tools import (
+    _load_macro_plugin_names,
+    kb_build,
+    kb_execution_dialog,
+    kb_has_sufficient_execution_steps,
+    kb_retrieve,
+    rebuild_registry,
+)
 from copilotj.multiagent.leader_prompts import (
     PROMPT_TOOL_BATCH_PRECHECK,
     PROMPT_TOOL_DELETE_WORKFLOW,
@@ -605,9 +612,16 @@ User prompt to optimize:
         dialog_id: int | None,
     ) -> None:
         try:
+            if not kb_has_sufficient_execution_steps(dialog_context.get("steps", [])):
+                self.log_info(f"[INFO] KB autosave skipped dialog {dialog_id}: insufficient execution steps")
+                return
+            execution_context = kb_execution_dialog(dialog_context)
+            kb_summary = await self._generate_dialog_summary(execution_context)
+            if not kb_summary:
+                kb_summary = self._assistant_text_from_context(context)
             kb_result = await kb_build(
                 dialog=dialog_context,
-                summary=json.dumps(context, ensure_ascii=False, indent=2),
+                summary=kb_summary,
                 steps=dialog_context.get("steps", []),
                 question=dialog_context["task"] if dialog_context.get("task") else None,
                 model_client=self.model_client,
