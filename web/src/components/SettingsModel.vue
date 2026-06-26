@@ -48,9 +48,13 @@ const ollamaModelRef = ref<{ reloadOllama: () => void } | null>(null);
 
 const isOllamaModel = computed(() => model.value.startsWith("ollama/"));
 
-// Model name surfaced when "Use Default Model" is on: the settings prop, or
+// Model name surfaced when "Use server model" is on: the settings prop, or
 // the wizard's server-config model.
 const activeModelName = computed(() => props.serverModelName ?? props.serverConfig?.model?.name ?? null);
+
+// Whether the server actually exposes a model. "Use server model" is only
+// selectable (and only valid) when this is true.
+const serverModelAvailable = computed(() => !!(props.serverModelName ?? props.serverConfig?.model?.name ?? null));
 
 // Pre-fill only from the model value. The server's default is never written
 // into the fields — "Use Default Model" (on) represents using it.
@@ -66,8 +70,9 @@ watch(
       stored = existingModel.base_url || "";
       useDefaultModel.value = false;
     } else {
-      // null or {use_server:true} → use the server's model.
-      useDefaultModel.value = true;
+      // null or {use_server:true} → use the server's model, but only when the
+      // server actually has one; otherwise fall through to explicit (empty).
+      useDefaultModel.value = serverModelAvailable.value;
     }
     model.value = name;
     // Show the effective endpoint (stored override or the provider default),
@@ -77,6 +82,12 @@ watch(
   },
   { immediate: true },
 );
+
+// If the server loses its model (e.g. the Wizard connects to a modelless
+// server), drop a stale "Use server model" choice so the user must pick one.
+watch(serverModelAvailable, (a) => {
+  if (!a && useDefaultModel.value) useDefaultModel.value = false;
+});
 
 // Emit the composed value live whenever a field changes. The equality guard
 // breaks the seed↔emit feedback loop (seeding from the parent re-derives the
@@ -114,12 +125,15 @@ defineExpose({ getModelValue });
   <div class="flex flex-col gap-6">
     <p class="text-sm text-slate-500 dark:text-slate-400">Choose the primary language model for your conversations.</p>
 
-    <FormItem for="defaultModel" label="Use Default Model" layout="row">
-      <ToggleSwitch v-model="useDefaultModel" inputId="defaultModel" />
+    <FormItem for="defaultModel" label="Use server model" layout="row">
+      <ToggleSwitch v-model="useDefaultModel" inputId="defaultModel" :disabled="!serverModelAvailable" />
     </FormItem>
 
     <p v-if="useDefaultModel && activeModelName" class="text-sm text-slate-500 dark:text-slate-400 -mt-4">
       Active model: <span class="font-mono">{{ activeModelName }}</span>
+    </p>
+    <p v-else-if="!serverModelAvailable" class="text-sm text-slate-500 dark:text-slate-400 -mt-4">
+      No model configured on the server — choose one below.
     </p>
 
     <FormItem for="provider" label="Provider" :required="!useDefaultModel">

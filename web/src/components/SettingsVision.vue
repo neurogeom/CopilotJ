@@ -19,6 +19,7 @@ import {
 } from "../composables";
 
 interface VlmValue {
+  useServerVlm: boolean;
   useMainModel: boolean;
   model: string | null;
   apiKey: string | null;
@@ -30,6 +31,7 @@ interface VlmValue {
 // draft); it is not two-way.
 const props = defineProps<{
   mainModelName: string | null;
+  serverVlmName?: string | null;
 }>();
 
 // Two-way VLM value (camelCase). Live-bound by the parent; edits emit on change.
@@ -38,6 +40,7 @@ const value = defineModel<VlmValue>({ required: true });
 const mainModelSupportsVision = ref<boolean | null>(null);
 const checkingVision = ref(false);
 
+const useServerVlm = ref(false);
 const useMainModel = ref(false);
 const model = ref("");
 const apiKey = ref("");
@@ -52,12 +55,14 @@ const showAdvanced = ref(false);
 const ollamaModelRef = ref<{ reloadOllama: () => void } | null>(null);
 
 const isOllamaModel = computed(() => model.value.startsWith("ollama/"));
+const serverVlmAvailable = computed(() => !!props.serverVlmName);
 
 // Seed fields from the model value (initial + whenever the parent resets it).
 watch(
   value,
   (v) => {
     if (!v) return;
+    useServerVlm.value = v.useServerVlm && serverVlmAvailable.value;
     useMainModel.value = v.useMainModel;
     model.value = v.model || "";
     apiKey.value = v.apiKey || "";
@@ -70,7 +75,7 @@ watch(
 
 // Emit the composed value live on every field change (guarded to avoid a
 // seed↔emit loop). checkVisionSupport mutating useMainModel also flows through.
-watch([useMainModel, model, apiKey, baseUrl, provider], () => {
+watch([useServerVlm, useMainModel, model, apiKey, baseUrl, provider], () => {
   const next = getVlmValue();
   if (JSON.stringify(value.value) !== JSON.stringify(next)) {
     value.value = next;
@@ -88,7 +93,10 @@ async function checkVisionSupport(modelName: string | null) {
   try {
     const caps = await getModelCapabilities(modelName);
     mainModelSupportsVision.value = caps.supports_vision;
-    useMainModel.value = caps.supports_vision;
+    // Don't force "use main model" while the server's VLM is selected — it wins.
+    if (!useServerVlm.value) {
+      useMainModel.value = caps.supports_vision;
+    }
   } catch {
     mainModelSupportsVision.value = null;
   } finally {
@@ -102,6 +110,11 @@ watch(
   { immediate: true },
 );
 
+// If the server loses its VLM, drop a stale "Use server vision model" choice.
+watch(serverVlmAvailable, (a) => {
+  if (!a && useServerVlm.value) useServerVlm.value = false;
+});
+
 // Clear the model and pre-fill the provider's default base URL when the user
 // switches provider — models and endpoints are provider-specific.
 function onProviderChange() {
@@ -110,12 +123,14 @@ function onProviderChange() {
 }
 
 function getVlmValue(): VlmValue {
+  const usingPreset = useServerVlm.value || useMainModel.value;
   return {
+    useServerVlm: useServerVlm.value,
     useMainModel: useMainModel.value,
-    model: useMainModel.value ? null : model.value || null,
-    apiKey: useMainModel.value ? null : isOllamaModel.value ? null : apiKey.value || null,
-    baseUrl: useMainModel.value ? null : persistBaseUrl(provider.value, baseUrl.value),
-    provider: useMainModel.value ? null : provider.value || inferProvider(model.value),
+    model: usingPreset ? null : model.value || null,
+    apiKey: usingPreset ? null : isOllamaModel.value ? null : apiKey.value || null,
+    baseUrl: usingPreset ? null : persistBaseUrl(provider.value, baseUrl.value),
+    provider: usingPreset ? null : provider.value || inferProvider(model.value),
   };
 }
 
@@ -124,16 +139,24 @@ defineExpose({ getVlmValue });
 
 <template>
   <div class="flex flex-col gap-6 h-full w-full">
-    <hr class="border-slate-200 dark:border-slate-700" />
-
     <p class="text-sm text-slate-500 dark:text-slate-400">Configure the vision model used for image analysis tasks.</p>
+
+    <FormItem for="useServerVlm" label="Use server vision model" layout="row">
+      <ToggleSwitch v-model="useServerVlm" inputId="useServerVlm" :disabled="!serverVlmAvailable" />
+    </FormItem>
+    <p v-if="useServerVlm && serverVlmName" class="text-sm text-slate-500 dark:text-slate-400 -mt-4">
+      Active vision model: <span class="font-mono">{{ serverVlmName }}</span>
+    </p>
+    <p v-else-if="!serverVlmAvailable" class="text-sm text-slate-500 dark:text-slate-400 -mt-4">
+      No vision model configured on the server.
+    </p>
 
     <div class="flex items-center gap-3">
       <FormItem for="useMainVlm" label="Use main model for vision" layout="row" class="flex-1">
         <ToggleSwitch
           v-model="useMainModel"
           inputId="useMainVlm"
-          :disabled="checkingVision || mainModelSupportsVision === false"
+          :disabled="useServerVlm || checkingVision || mainModelSupportsVision === false"
         />
       </FormItem>
       <ProgressSpinner v-if="checkingVision" style="width: 20px; height: 20px" strokeWidth="4" />
@@ -149,7 +172,7 @@ defineExpose({ getVlmValue });
       Vision tasks will use the same model and API key as the main model.
     </p>
 
-    <template v-if="!useMainModel">
+    <template v-if="!useServerVlm && !useMainModel">
       <FormItem for="vlmProvider" label="Provider" required>
         <Select
           v-model="provider"

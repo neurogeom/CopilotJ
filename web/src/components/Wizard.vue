@@ -22,8 +22,8 @@ import {
 import { useConfig, useSettings } from "../store";
 import SettingsConnection from "../components/SettingsConnection.vue";
 import UsageNotice from "../components/UsageNotice.vue";
-import SettingsModel from "../components/SettingsModel.vue";
-import SettingsVLM from "../components/SettingsVLM.vue";
+import SettingsModel from "./SettingsModel.vue";
+import SettingsVLM from "./SettingsVision.vue";
 import SettingsPreference from "../components/SettingsPreference.vue";
 import SettingsSummary from "../components/SettingsSummary.vue";
 
@@ -40,6 +40,7 @@ const wizard = reactive({
   serverConfig: null as ServerConfig | null,
   model: { use_server: true } as ThreadConfigModel,
   vlm: {
+    useServerVlm: false,
     useMainModel: true,
     model: null as string | null,
     apiKey: null as string | null,
@@ -74,6 +75,8 @@ function wizardInput(): ValidationInput {
     vlm: toVlmConfig(wizard.vlm),
     connectionStatus: wizard.connectionStatus,
     apiBaseUrl: wizard.apiBaseUrl,
+    serverModelAvailable: !!wizard.serverConfig?.model,
+    serverVlmAvailable: !!wizard.serverConfig?.vlm,
   };
 }
 const agreementOk = computed(() => validateAgreement(wizardInput()).ok);
@@ -107,6 +110,7 @@ watch([mainModelName, () => wizard.vlm, () => wizard.visionEnabled], () => debou
 // v-model proxies: the components use camelCase composite values; map them onto
 // the wizard's reactive fields so edits are live-synced (committed on Finish).
 const wizardVlm = computed<{
+  useServerVlm: boolean;
   useMainModel: boolean;
   model: string | null;
   apiKey: string | null;
@@ -114,6 +118,7 @@ const wizardVlm = computed<{
   provider: string | null;
 }>({
   get: () => ({
+    useServerVlm: wizard.vlm.useServerVlm,
     useMainModel: wizard.vlm.useMainModel,
     model: wizard.vlm.model,
     apiKey: wizard.vlm.apiKey,
@@ -121,6 +126,7 @@ const wizardVlm = computed<{
     provider: wizard.vlm.provider,
   }),
   set: (v) => {
+    wizard.vlm.useServerVlm = v.useServerVlm;
     wizard.vlm.useMainModel = v.useMainModel;
     wizard.vlm.model = v.model;
     wizard.vlm.apiKey = v.apiKey;
@@ -151,14 +157,16 @@ const wizardPref = computed<{
 function completeSetup() {
   setApiBaseUrl(wizard.apiBaseUrl);
   config.setDefaultModel(wizard.model);
-  // Populate the runtime server model (Chat.vue skips its onMounted fetch during the wizard).
+  // Populate the runtime server model/VLM (Chat.vue skips its onMounted fetch during the wizard).
   config.setServerModel(wizard.serverConfig?.model ?? null);
+  config.setServerVlm(wizard.serverConfig?.vlm ?? null);
   config.setVlm({
     model: wizard.vlm.model,
     api_key: wizard.vlm.apiKey,
     base_url: wizard.vlm.baseUrl,
     provider: wizard.vlm.provider,
     useMainModel: wizard.vlm.useMainModel,
+    useServerVlm: wizard.vlm.useServerVlm,
   });
   // Notice step: commit the agreement + Vision opt-in (edit-then-save, like the other steps).
   config.setUserAgreement(wizard.userAgreement);
@@ -232,7 +240,11 @@ function completeSetup() {
       <StepPanel v-if="wizard.visionEnabled" v-slot="{ activateCallback }" value="4">
         <div class="flex min-h-0 flex-1 flex-col">
           <div class="min-h-0 flex-1 overflow-y-auto">
-            <SettingsVLM v-model="wizardVlm" :main-model-name="mainModelName" />
+            <SettingsVLM
+              v-model="wizardVlm"
+              :main-model-name="mainModelName"
+              :server-vlm-name="wizard.serverConfig?.vlm?.name ?? null"
+            />
           </div>
           <div class="flex pt-4 justify-between">
             <Button label="Back" severity="secondary" @click="activateCallback('3')" />

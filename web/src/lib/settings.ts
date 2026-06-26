@@ -16,6 +16,9 @@ export interface VlmConfig {
   base_url: string | null;
   provider: string | null;
   useMainModel: boolean;
+  /** Use the server's env-configured VLM (vlm={use_server:true}) instead of the main
+   * model or an explicit one. */
+  useServerVlm: boolean;
 }
 
 /** Resolve the concrete model name a {use_server:true} or explicit choice maps
@@ -28,9 +31,10 @@ export function resolveMainModelName(
   return isUseServer(choice) ? (serverModel?.name ?? null) : choice.name;
 }
 
-/** A separate, dedicated vision model is configured (i.e. not "use main model"). */
+/** A vision model is configured: the server's (useServerVlm), or a separate explicit
+ * one. When true, Vision is resolvable without probing the main model's capability. */
 export function configuredSeparateVlm(vlm: VlmConfig): boolean {
-  return !vlm.useMainModel && !!vlm.model;
+  return vlm.useServerVlm || (!vlm.useMainModel && !!vlm.model);
 }
 
 export type VisionResolvableReason = "main-no-vision";
@@ -105,11 +109,16 @@ export interface ValidationInput {
    * `"idle"` when the URL is later edited — see SettingsConnection). */
   connectionStatus: "idle" | "testing" | "ok" | "fail";
   apiBaseUrl: string;
+  /** Whether the server actually exposes a main / vision model. A {use_server:true}
+   * choice is only valid when the corresponding flag is true. */
+  serverModelAvailable: boolean;
+  serverVlmAvailable: boolean;
 }
 
 /** Map a parent's camelCase VLM draft onto the snake_case VlmConfig this module uses. */
 export function toVlmConfig(v: {
   useMainModel: boolean;
+  useServerVlm: boolean;
   model: string | null;
   apiKey: string | null;
   baseUrl: string | null;
@@ -121,6 +130,7 @@ export function toVlmConfig(v: {
     base_url: v.baseUrl,
     provider: v.provider,
     useMainModel: v.useMainModel,
+    useServerVlm: v.useServerVlm,
   };
 }
 
@@ -136,24 +146,26 @@ export function validateBase(i: ValidationInput): ValidationConcern {
   return { key: "base", ok, message: ok ? "" : "Please test the server URL on the Base tab before saving." };
 }
 
-/** A model is chosen: the server default, or a non-empty explicit name. */
+/** A model is chosen: the server's model (only valid when the server exposes one), or
+ * a non-empty explicit name. */
 export function validateModel(i: ValidationInput): ValidationConcern {
   const m = i.model;
-  const ok = !!m && (isUseServer(m) || !!m.name);
+  const ok = !!m && (isUseServer(m) ? i.serverModelAvailable : !!m.name);
   return {
     key: "model",
     ok,
-    message: ok ? "" : `Please choose a model on the Model tab, or enable “Use Default Model”.`,
+    message: ok ? "" : `Please choose a model on the Model tab, or enable "Use server model".`,
   };
 }
 
-/** When Vision is on, either reuse the main model or pick a separate VLM. */
+/** When Vision is on, the server's VLM (only when available), the main model, or a
+ * separate explicit VLM must be selected. */
 export function validateVlm(i: ValidationInput): ValidationConcern {
-  const ok = !i.visionEnabled || i.vlm.useMainModel || !!i.vlm.model;
+  const ok = !i.visionEnabled || (i.vlm.useServerVlm && i.serverVlmAvailable) || i.vlm.useMainModel || !!i.vlm.model;
   return {
     key: "vlm",
     ok,
-    message: ok ? "" : `Vision is enabled — choose a vision model on the Vision tab, or enable “Use main model”.`,
+    message: ok ? "" : `Vision is enabled — choose a vision model on the Vision tab.`,
   };
 }
 

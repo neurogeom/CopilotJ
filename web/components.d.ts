@@ -41,7 +41,7 @@ declare module 'vue' {
     SettingsModel: typeof import('./src/components/SettingsModel.vue')['default']
     SettingsPreference: typeof import('./src/components/SettingsPreference.vue')['default']
     SettingsSummary: typeof import('./src/components/SettingsSummary.vue')['default']
-    SettingsVLM: typeof import('./src/components/SettingsVLM.vue')['default']
+    SettingsVision: typeof import('./src/components/SettingsVision.vue')['default']
     Showcases: typeof import('./src/components/Showcases.vue')['default']
     Sidebar: typeof import('./src/components/Sidebar.vue')['default']
     Step: typeof import('primevue/step')['default']

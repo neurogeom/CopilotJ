@@ -24,7 +24,7 @@ import type { SettingsTab } from "../store";
 import SettingsConnection from "./SettingsConnection.vue";
 import UsageNotice from "./UsageNotice.vue";
 import SettingsModel from "./SettingsModel.vue";
-import SettingsVLM from "./SettingsVLM.vue";
+import SettingsVLM from "./SettingsVision.vue";
 import SettingsPreference from "./SettingsPreference.vue";
 
 const settings = useSettings();
@@ -39,6 +39,7 @@ const draft = reactive<{
   visionEnabled: boolean;
   model: ThreadConfigModel | null;
   vlm: {
+    useServerVlm: boolean;
     useMainModel: boolean;
     model: string | null;
     apiKey: string | null;
@@ -53,7 +54,7 @@ const draft = reactive<{
   userAgreement: false,
   visionEnabled: false,
   model: null,
-  vlm: { useMainModel: true, model: null, apiKey: null, baseUrl: null, provider: null },
+  vlm: { useServerVlm: false, useMainModel: true, model: null, apiKey: null, baseUrl: null, provider: null },
   pref: { proxy: null, tavilyApiKey: null, kbAutosave: false, autoScroll: true },
   apiBaseUrl: getBaseUrl().replace(/\/api$/, ""),
   // The running server is already connected; an unchanged URL stays valid without
@@ -71,6 +72,7 @@ function seedDraft() {
   draft.visionEnabled = config.data.visionEnabled ?? config.serverVisionEnabled ?? false;
   draft.model = config.data.defaultModel;
   draft.vlm = {
+    useServerVlm: config.data.vlm.useServerVlm,
     useMainModel: config.data.vlm.useMainModel,
     model: config.data.vlm.model,
     apiKey: config.data.vlm.api_key,
@@ -123,6 +125,8 @@ function draftInput(): ValidationInput {
     vlm: toVlmConfig(draft.vlm),
     connectionStatus: draft.connectionStatus,
     apiBaseUrl: draft.apiBaseUrl,
+    serverModelAvailable: !!config.serverModel,
+    serverVlmAvailable: !!config.serverVlm,
   };
 }
 
@@ -158,6 +162,7 @@ function commitDraft() {
     base_url: draft.vlm.baseUrl,
     provider: draft.vlm.provider,
     useMainModel: draft.vlm.useMainModel,
+    useServerVlm: draft.vlm.useServerVlm,
   });
   config.setProxy(draft.pref.proxy);
   config.setTavilyApiKey(draft.pref.tavilyApiKey);
@@ -247,7 +252,12 @@ async function onSubmit() {
 
         <!-- Vision Tab (configurable only when Vision is enabled on the Notice tab) -->
         <TabPanel value="vision">
-          <SettingsVLM v-if="draft.visionEnabled" v-model="draft.vlm" :main-model-name="draftMainModelName" />
+          <SettingsVLM
+            v-if="draft.visionEnabled"
+            v-model="draft.vlm"
+            :main-model-name="draftMainModelName"
+            :server-vlm-name="config.serverVlm?.name ?? null"
+          />
           <p v-else class="text-sm text-slate-500 dark:text-slate-400">
             Vision is currently disabled.
             <button

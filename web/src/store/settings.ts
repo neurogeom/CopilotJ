@@ -24,7 +24,10 @@ export const useSettings = defineStore("settings", () => {
     let resolvedVlm: ThreadConfigModel | null = null;
 
     if (cfg.data.visionEnabled) {
-      if (vlm.useMainModel) {
+      if (vlm.useServerVlm) {
+        // Use the server's env-configured VLM (vlm={use_server:true}).
+        resolvedVlm = { use_server: true };
+      } else if (vlm.useMainModel) {
         // VLM mirrors the main slot: use_server if main is use_server, else the
         // explicit main model (or null when no main model is chosen).
         resolvedVlm = model.value;

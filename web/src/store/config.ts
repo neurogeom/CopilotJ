@@ -20,6 +20,7 @@ export interface ConfigData {
     base_url: string | null;
     provider: string | null;
     useMainModel: boolean;
+    useServerVlm: boolean;
   };
   proxy: string | null;
   tavilyApiKey: string | null;
@@ -33,7 +34,7 @@ export interface ConfigData {
 function defaultConfig(): ConfigData {
   return {
     defaultModel: null,
-    vlm: { model: null, api_key: null, base_url: null, provider: null, useMainModel: true },
+    vlm: { model: null, api_key: null, base_url: null, provider: null, useMainModel: true, useServerVlm: false },
     proxy: null,
     tavilyApiKey: null,
     kbAutosave: false,
@@ -103,6 +104,14 @@ export const useConfig = defineStore("config", () => {
     serverModel.value = model;
   }
 
+  // Server VLM from /api/config — NOT persisted. Display/availability only: the
+  // Vision tab's "Use server vision model" toggle is enabled iff this is non-null.
+  const serverVlm = ref<ExplicitModel | null>(null);
+
+  function setServerVlm(vlm: ExplicitModel | null) {
+    serverVlm.value = vlm;
+  }
+
   // Server's vision_enabled from /api/config — NOT persisted. Display-only: lets
   // the UI render the effective Vision state when visionEnabled is null (user
   // hasn't chosen). Never sent back as a payload.
@@ -161,8 +170,10 @@ export const useConfig = defineStore("config", () => {
   return {
     data,
     serverModel,
+    serverVlm,
     serverVisionEnabled,
     setServerModel,
+    setServerVlm,
     setServerVisionEnabled,
     setDefaultModel,
     setVlm,

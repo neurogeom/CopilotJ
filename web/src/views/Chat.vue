@@ -10,7 +10,7 @@ import Chatbox from "../components/Chatbox.vue";
 import Settings from "../components/Settings.vue";
 import Wizard from "../components/Wizard.vue";
 import Sidebar from "../components/Sidebar.vue";
-import { getServerConfig } from "../apis";
+import { getServerConfig, isUseServer } from "../apis";
 import type { ThreadConfigModel } from "../apis";
 import { useConfig, useSettings, useSystemState } from "../store";
 
@@ -38,8 +38,9 @@ onMounted(async () => {
   try {
     const serverConfig = await getServerConfig();
 
-    // Store server model for runtime use (not persisted to localStorage)
+    // Store server model/VLM for runtime use (not persisted to localStorage)
     config.setServerModel(serverConfig.model);
+    config.setServerVlm(serverConfig.vlm);
 
     // Model — if nothing is configured yet but the server has a model, default
     // to "use the server's model" (an explicit, persisted choice).
@@ -47,6 +48,17 @@ onMounted(async () => {
       const useServer: ThreadConfigModel = { use_server: true };
       settings.setModel(useServer);
       config.setDefaultModel(useServer);
+    }
+
+    // Reconcile stale "use server" choices: if the loaded server has no model for
+    // a slot, a persisted {use_server:true} / useServerVlm choice is no longer
+    // valid — clear it so the UI asks for an explicit model.
+    if (isUseServer(config.data.defaultModel) && !serverConfig.model) {
+      config.setDefaultModel(null);
+      settings.setModel(null);
+    }
+    if (config.data.vlm.useServerVlm && !serverConfig.vlm) {
+      config.setVlm({ ...config.data.vlm, useServerVlm: false });
     }
 
     // Proxy
