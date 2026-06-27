@@ -46,6 +46,7 @@ public class IjImage extends AbstractAwtWindow<ImageWindow> {
     public final FromTo<String> imageType;
     public final FromTo<String> size;
     public final FromTo<String> path;
+    public final FromTo<String> info;
 
     public final FromTo<Integer> bitDepth;
     public final FromTo<Integer> stackSize;
@@ -81,6 +82,7 @@ public class IjImage extends AbstractAwtWindow<ImageWindow> {
       this.imageType = !Objects.equals(from.imageType, to.imageType) ? new FromTo<>(from.imageType, to.imageType) : null;
       this.size =      !Objects.equals(from.size,      to.size)      ? new FromTo<>(from.size,      to.size)      : null;
       this.path =      !Objects.equals(from.path,      to.path)      ? new FromTo<>(from.path,      to.path)      : null;
+      this.info =      !Objects.equals(from.info,      to.info)      ? new FromTo<>(from.info,      to.info)      : null;
 
       this.bitDepth =  !Objects.equals(from.bitDepth,  to.bitDepth)  ? new FromTo<>(from.bitDepth,  to.bitDepth)  : null;
       this.stackSize = !Objects.equals(from.stackSize, to.stackSize) ? new FromTo<>(from.stackSize, to.stackSize) : null;
@@ -277,6 +279,7 @@ public class IjImage extends AbstractAwtWindow<ImageWindow> {
   public final String imageType;
   public final String size;
   public final String path;
+  public final String info;
 
   public final int bitDepth;
   public final int stackSize;
@@ -328,6 +331,7 @@ public class IjImage extends AbstractAwtWindow<ImageWindow> {
       }
     }
     this.path = path;
+    this.info = extractImageDescription((String) imp.getProperty("Info"));
 
     this.bitDepth = imp.getBitDepth();
     this.stackSize = imp.getStackSize();
@@ -362,12 +366,26 @@ public class IjImage extends AbstractAwtWindow<ImageWindow> {
     }
   }
 
+  /** Extract only the ImageDescription line from ImageJ's Info property, discarding the rest. */
+  private static String extractImageDescription(final String info) {
+    if (info == null) {
+      return null;
+    }
+    for (final String line : info.split("\n")) {
+      if (line.startsWith("ImageDescription:")) {
+        return line.trim();
+      }
+    }
+    return null;
+  }
+
   public boolean equals(final IjImage other) {
     return this.id == other.id
         && Objects.equals(this.title, other.title)
         && Objects.equals(this.type, other.type)
         && Objects.equals(this.size, other.size)
         && Objects.equals(this.path, other.path)
+        && Objects.equals(this.info, other.info)
 
         && this.bitDepth == other.bitDepth
         && this.stackSize == other.stackSize
