@@ -1,0 +1,116 @@
+[0]
+query = """
+There are several images, I want to crop them and then, merge image channels
+"""
+correct_macro = [
+  """
+// Define input and output directories
+String inputDir = "C:/XXXX/ExampleFly/images/";
+String outputDir = inputDir + "cropped_merged/";
+File.makeDirectory(outputDir);
+
+// Open a sample image for the user to define the ROI
+open(inputDir + "01_POS002_D.TIF");
+waitForUser("Define Crop Area", "Please draw a rectangular ROI on the image and then click OK.");
+
+// Get the selection bounds and close the sample image
+getSelectionBounds(x, y, width, height);
+close();
+
+// Array of positions to process
+String[] positions = { "002", "076", "218" };
+
+// Loop through each position
+for (int i = 0; i < positions.length; i++) {
+    String pos = positions[i];
+
+    // Open the three channels for the current position
+    open(inputDir + "01_POS" + pos + "_D.TIF");
+    open(inputDir + "01_POS" + pos + "_F.TIF");
+    open(inputDir + "01_POS" + pos + "_R.TIF");
+
+    // Apply the same ROI and crop each image
+    selectWindow("01_POS" + pos + "_D.TIF");
+    makeRectangle(x, y, width, height);
+    run("Crop");
+
+    selectWindow("01_POS" + pos + "_F.TIF");
+    makeRectangle(x, y, width, height);
+    run("Crop");
+
+    selectWindow("01_POS" + pos + "_R.TIF");
+    makeRectangle(x, y, width, height);
+    run("Crop");
+
+    // Merge the cropped channels
+    run("Merge Channels...", "c1=01_POS" + pos + "_R.TIF c2=01_POS" + pos + "_F.TIF c3=01_POS" + pos + "_D.TIF create");
+
+    // Save the merged image
+    saveAs("Tiff", outputDir + "POS" + pos + "_merged.tif");
+
+    // Close all windows to prepare for the next iteration
+    run("Close All");
+}
+
+print("Batch processing complete.");
+""",
+]
+correct_steps = [
+  """
+1. I will run a single, continuous script.
+2. The script will first open a sample image.
+3. ImageJ will then **pause and wait for you** to draw a rectangle over the area you want to crop.
+4. Once you click 'OK' on the dialog box, the script will automatically apply that exact crop to \
+all images, merge their channels, and save them in a new 'cropped_merged' folder.
+
+This process should solve the problem. May I proceed with this plan?\
+""",
+]
+type = "batch"
+
+[1]
+query = "I want to analyze the colocalization of two channels in this image"
+correct_macro = [
+  """
+// Open the two channel images
+open("C:/XXXX/ExampleFly/images/cropped_01_POS076_D.tif");
+open("C:/XXXX/ExampleFly/images/CropGreen.tif");
+
+// Run Coloc 2 analysis
+run("Coloc 2", "channel_1=cropped_01_POS076_D.tif channel_2=CropGreen.tif roi_or_mask=<None> \
+threshold_regression=Costes show_save_pdf_dialog li_histogram_channel_1 li_histogram_channel_2 \
+li_icq spearman's_rank_correlation manders'_correlation kendall's_tau_rank_correlation \
+2d_intensity_histogram costes'_significance_test psf=3 costes_randomisations=10");
+""",
+]
+correct_steps = [
+  "Ensure to select the correct channels for analysis.",
+  "Adjust parameters as needed based on your data.",
+]
+type = "colocalization"
+
+[2]
+query = "I need to segment and count nuclei in this image"
+correct_macro = [
+  """
+```java
+// Open the image
+open("C:/XXXX/ExampleFly/images/cropped_01_POS076_D.tif");
+
+// Convert to grayscale if needed
+run("8-bit");
+
+// Apply a threshold to segment nuclei
+setAutoThreshold("Default");
+run("Convert to Mask");
+
+// Analyze particles to count nuclei
+run("Analyze Particles...", "size=100-Infinity show=Nothing display summarize add-to-manager");
+```\
+""",
+]
+correct_steps = [
+  "Ensure the image is in the correct format for analysis.",
+  "Adjust the size parameters based on your specific nuclei size.",
+]
+type = "segmentation"

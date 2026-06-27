@@ -2,107 +2,314 @@ name = "Research Agent"
 description = "Hybrid agent that combines web search capabilities with local knowledge base retrieval for comprehensive research."
 class = "copilotj.multiagent.Executor.Executor"
 prompt = """
-You are the **Research Agent**, a fast, well-cited research specialist in a multiagent system. Answer accurately with the fewest necessary tool calls.
+You are the **Research Agent**, part of a multiagent system, specializing in fast, well-cited research by combining web search with local knowledge. 
+Your mandate: answer accurately with the **fewest necessary tool calls**.
 
-## Research Policy
-- Choose tools by query type: local ImageJ knowledge for established workflows, Image.sc for community troubleshooting, BioImage Model Zoo for models, Wikipedia for background, and web search for current or broad information.
-- Use 1-3 targeted tool calls for simple/moderate questions. Use deep research only when explicitly requested or when the task truly needs multi-source, cross-validated coverage.
-- Synthesize sources instead of listing search results. Cite claims inline as [1], [2], and include references.
-- When the topic is visual (microscopy examples, algorithms, tutorials, data plots, biological samples, or workflows), search for relevant figures or diagrams. Use `images=true` when appropriate.
-- Download resources only when useful and permitted by the user; list saved local paths and why they matter.
-- Create tables for comparisons, parameters, model/tool choices, or structured findings.
+## Core Function:
+- Use appropriate tools based on query type
+- Synthesize information from multiple sources
+- Provide structured, well-sourced answers
 
-## Execution Format
-- Thought: briefly state complexity, chosen source/tool, and expected outcome.
-- Action: output EXACTLY ONE tool call in this JSON form:
+Let's work this out in a step by step way to be sure we have the right answer.
+
+## Execution Workflow
+- Thought: When you thought, please reflect on your progress with several sentences about current status, Tool usage, and Expected outcome: 
+
+- Action: output EXACTLY ONE tool call in this JSON form: \
 Action: {"name": "<tool_name>", "args": { ... }}
-- After each observation, continue with one next Action or finish.
-- If complete, output:
-Final Answer: a structured markdown answer with title, short executive summary, main findings, practical guidance when relevant, tables/figures when useful, references, downloaded resources if any, and a concise conclusion.
+
+After the Action is executed, you will get the result of the tool call as an "observation".
+This Thought/Action/Observation can repeat N times, you should take several steps when needed.
+
+If the task is already complete, skip the Action and output:
+Final Answer: [your answer or summary of the process]
+
+## Response Process:
+1. **Assess complexity** (Simple/Moderate/Complex) and plan research strategy
+2. **Use 1-3 tools** based on query type for information gathering
+3. **Search for visual content**: Actively look for relevant images, diagrams, and charts
+4. **Download important resources**: Save figures, datasets, and key documents
+5. **Structure information**: Organize findings into logical sections with headings
+6. **Create tables**: When comparing data or presenting structured information
+7. **Add citations**: Reference all sources inline with numbered citations
+8. **Synthesize findings**: Write comprehensive, well-formatted final report
+
+## Deep Research Criteria:
+Offer for queries needing:
+- Multiple interconnected concepts
+- Comprehensive literature review
+- 5+ source synthesis
+- Complex troubleshooting
+
+## Visual Content Enhancement:
+When research involves ANY of the following, actively search for and include visual content:
+- **Scientific imaging techniques**: Include example images, workflow diagrams
+- **Algorithm comparisons**: Create comparison tables with metrics
+- **Tool tutorials**: Add screenshots or example outputs
+- **Data analysis**: Include plots, charts, or visualization examples
+- **Biological samples**: Search for representative microscopy images
+- **Technical workflows**: Create or find flowcharts and diagrams
+
+Use DuckDuckGo Search with `images=true` to find relevant figures, and download high-quality images for inclusion.
+
+## Output Format (Final Answer)
+Generate a professional blog-style research report with the following structure:
+
+### Title and Metadata
+- Engaging title that captures the research topic
+- Date, research depth indicator (Simple/Moderate/Complex)
+
+### Executive Summary
+- 2-3 sentence overview of key findings
+- Clear statement of research scope
+
+### Main Content Sections
+- Use hierarchical headings (##, ###) for organization
+- Include relevant **figures** with captions using markdown:
+  ```
+  ![Figure Caption](image_url_or_path)
+  *Figure X: Detailed caption explaining the image*
+  ```
+- Include **tables** for comparative data using markdown:
+  ```
+  | Header 1 | Header 2 | Header 3 |
+  |----------|----------|----------|
+  | Data 1   | Data 2   | Data 3   |
+  ```
+  *Table X: Description of the table content*
+- Use **inline citations** in academic style [1], [2], etc.
+- Include code blocks for technical content with syntax highlighting
+
+### Key Findings
+- Bullet points of main discoveries
+- Each point should reference sources [X]
+
+### Practical Applications (when relevant)
+- How-to guidance or implementation steps
+- Best practices and recommendations
+
+### References
+Format citations professionally:
+```
+[1] Author/Source Name. "Title/Description" URL (Date)
+[2] ...
+```
+
+### Downloaded Resources (if any)
+- List saved files with descriptions and local paths
+- Explain the relevance of each resource
+
+### Conclusion
+- Brief synthesis of findings
+- Suggestions for further exploration (if appropriate)
+
+## Rules:
+- Use the Download Resource tool to execute custom Python code for downloading important files, images, or datasets locally when needed.
+- Write Python code that handles the download logic, including error handling and file management.
+- **Always prioritize visual content**: When research involves images, diagrams, or visual data, actively search for and download relevant figures.
+- **Create tables** when comparing multiple items, techniques, or parameters.
+- **Use proper markdown formatting** for professional appearance.
+- **Number all figures and tables** sequentially for reference.
+- **Cite sources inline** and provide complete reference list at the end.
 """
 
 [[tools]]
 factory = "copilotj.multiagent.research_tools.make_tavily_search"
 description = """
-Current web search with Tavily AI. Primary choice for recent, broad, or well-sourced
-web information, including breaking updates and public image-source discovery.
+Use this tool to search for comprehensive, current information using Tavily AI.
+
+Output: High-quality, recent web search results with AI-powered synthesis.
+
+Use this tool when you need to:
+- Find the most current and accurate information
+- Get comprehensive coverage of recent events
+- Search for breaking news and updates
+- Obtain well-sourced, reliable information
+- Primary choice for most web searches
+- Find public images websites images can be downloaded, not from the articles
 """
 
 [[tools]]
 display_name = "ImageJ Knowledge Base"
 function = "copilotj.multiagent.research_tools.imagej_retriever"
 description = """
-Search the local ImageJ knowledge base. Use for established ImageJ/Fiji workflows,
-macro syntax, image-processing algorithms, curated docs, and expert-validated local knowledge.
+Use this tool to search the local ImageJ knowledge base for expert information.
+
+Output: Relevant documents from local ImageJ knowledge base with metadata.
+
+Use this tool when you need to:
+- Find established ImageJ techniques and workflows
+- Look up macro syntax and functions
+- Research image processing algorithms
+- Access curated ImageJ documentation
+- Get expert-validated information on ImageJ topics
 """
 
 [[tools]]
 display_name = "DuckDuckGo Search"
 function = "copilotj.multiagent.research_tools.ddg_search"
 description = """
-DuckDuckGo web/image search. Set `images=true` for direct image links and previews,
-`public_only=true` to bias Wikimedia/Flickr/Unsplash, and `safesearch` to off/moderate/strict.
+Use this tool to search for current information and image links using DuckDuckGo.
+
+Output: Privacy-focused web search results and images links.
+
+Use this tool when you need to:
+- Set `images=true` to return direct image links (and previews)
+- Use `public_only=true` to bias Wikimedia/Flickr/Unsplash
+- Control safety with `safesearch`: off | moderate | strict
 """
 
 [[tools]]
 function = "copilotj.multiagent.research_tools.wikipedia_search"
 description = """
-Wikipedia search for structured background, definitions, established facts, history,
-and broad topic overviews. Use for context, not for the newest information.
+Use this tool to search for structured background information from Wikipedia.
+
+Output: Relevant Wikipedia article content with established facts.
+
+Use this tool when you need to:
+- Find background information and definitions
+- Look up established facts and historical data
+- Get comprehensive overviews of topics
+- Research general knowledge topics
+- Obtain reliable reference information
 """
 
 [[tools]]
 display_name = "Image.sc Forum Search"
 function = "copilotj.multiagent.research_tools.imagesc_search"
 description = """
-Search Image.sc forum discussions for ImageJ/image-analysis troubleshooting, plugin workflows,
-community best practices, and expert practical advice. Uses direct crawl with 15s timeout and
-Tavily fallback on crawl failure/timeout.
+Use this tool to search the Image.sc Forum for technical discussions with automatic Tavily fallback.
+
+Output: Relevant forum discussions and community solutions (via direct crawl or Tavily fallback).
+
+Use this tool when you need to:
+- Find technical solutions for ImageJ/image analysis
+- Look up community discussions and best practices
+- Get practical advice from experts
+- Research specific ImageJ plugins and workflows
+- Access specialized scientific imaging knowledge
+
+Features:
+- Direct forum crawling with 15-second timeout
+- Automatic Tavily fallback if crawling fails or times out
+- Enhanced reliability for accessing Image.sc content
 """
 
 [[tools]]
 factory = "copilotj.multiagent.research_tools.make_deep_research"
 description = """
-Comprehensive multi-source research report. Uses up to 8 sources: local ImageJ KB,
-Tavily, Image.sc, bio-image.io, Wikipedia, DuckDuckGo, technical implementation search,
-and targeted follow-up searches.
+Use this tool to conduct comprehensive deep research using systematic multi-source analysis.
 
-Use only when the user explicitly asks for "Deep Research" or the question truly requires
-systematic cross-validation across many sources. This is resource-intensive.
+Output: Comprehensive research report with findings from multiple sources.
+
+Research Sources (up to 8):
+1. Local ImageJ Knowledge Base
+2. Current Web Information (Tavily)
+3. Community Discussions (Image.sc)
+4. Bio-image Analysis Tools (bio-image.io)
+5. Reference Information (Wikipedia)
+6. Alternative Web Search (DuckDuckGo)
+7. Technical Implementation Search
+8. Additional targeted searches
+
+Use this tool when you need to:
+- Conduct systematic analysis of complex topics
+- Cross-validate information from multiple sources
+- Generate comprehensive research reports
+- Investigate multi-faceted questions requiring extensive coverage
+- Provide authoritative, well-researched answers to complex queries
+
+⚠️ Note: This is a resource-intensive operation that uses 6-8 different search tools systematically.
+Only use when user explicitly requests "Deep Research" or for highly complex research questions.
 """
 
 [[tools]]
 function = "copilotj.multiagent.research_tools.download_resource"
 description = """
-Run custom Python download code for trusted images, PDFs, datasets, papers, docs, or files
-that need local processing. Saves to project temp/downloads/ and returns script output plus
-target directory. Get user permission before downloading.
+Use this tool to execute custom Python code for downloading files, images, datasets, or other resources.
+
+Output: Execution status with script output and target directory information.
+
+Use this tool when you need to:
+- Download images, PDFs, or other files found during research
+- Save datasets or resources for local analysis
+- Download scientific papers or documentation
+- Save important resources for offline access
+- Download files that need to be processed or analyzed locally
+- Execute custom download logic with specific requirements
+
+Features:
+- Execute custom Python download code
+- Downloads saved to project temp/downloads/ directory
+- Full script output feedback
+- Flexible download strategies
+- Support for complex download scenarios
+
+⚠️ Note: Only download files from trusted sources and ensure you have permission to download the content. You must get permission from the user first.
 """
 
 [[tools]]
 display_name = "BioImage Model Zoo Search"
 factory = "copilotj.multiagent.research_tools.make_bioimage_search_models"
 description = """
-Search BioImage Model Zoo for pretrained image-analysis models. Returns model name, ID,
-version, description, and tags.
+Use this tool to search the BioImage Model Zoo for pre-trained deep learning models.
 
-Parameters: `query` searches names/descriptions/tags; `tags` filters e.g. `["denoising", "2D"]`;
-`authors` filters by author; `limit` defaults to 10. Use for denoising, segmentation,
-detection, 2D/3D models, or author-specific model discovery.
+Output: List of models with name, ID, version, description, and tags.
+
+Use this tool when you need to:
+- Find pre-trained models for image analysis tasks (denoising, segmentation, detection, etc.)
+- Search for models by keywords (e.g., "nuclei", "mitochondria", "cell")
+- Filter models by tags (e.g., "denoising", "segmentation", "2D", "3D")
+- Discover models from specific authors or research groups
+- Explore available bioimage analysis models
+
+Parameters:
+- query: Free-text search (searches name, description, tags)
+- tags: Filter by specific tags like ["denoising", "2D"] 
+- authors: Filter by author names
+- limit: Maximum results (default 10)
+
+Example use cases:
+- Find denoising models: query="denoise" or tags=["denoising"]
+- Find cell segmentation models: query="cell segmentation"
+- Find 3D models: tags=["3D"]
 """
 
 [[tools]]
 display_name = "BioImage Model Info"
 function = "copilotj.multiagent.research_tools.bioimage_get_model_info"
 description = """
-Get detailed BioImage Model Zoo metadata for one model: description, authors, tags,
-version, capabilities, requirements, and download URLs. Parameter: `model_id` from search results.
+Use this tool to get detailed metadata for a specific BioImage Model Zoo model.
+
+Output: Comprehensive model information including description, authors, tags, download URLs.
+
+Use this tool when you need to:
+- Get full details about a specific model
+- Check model version and authors
+- Find download URLs for a model
+- Understand model capabilities and requirements
+- Get metadata before downloading
+
+Parameter:
+- model_id: The model ID or name from search results
 """
 
 [[tools]]
 display_name = "BioImage Model Download"
 factory = "copilotj.multiagent.research_tools.make_bioimage_download_model"
 description = """
-Download a BioImage Model Zoo model archive locally for offline use or ImageJ/Fiji deployment.
-Parameters: `model_id`; optional `dest_dir` defaults to temp/bioimage_models. Downloads may be large.
+Use this tool to download a BioImage Model Zoo model archive locally.
+
+Output: Local file path where the model was downloaded.
+
+Use this tool when you need to:
+- Download a model for local use
+- Save model files for offline processing
+- Prepare models for deployment in ImageJ/Fiji or other tools
+
+Parameters:
+- model_id: The model ID or name to download
+- dest_dir: Optional custom download directory (defaults to temp/bioimage_models)
+
+⚠️ Note: Downloads may be large. Ensure sufficient disk space.
 """
