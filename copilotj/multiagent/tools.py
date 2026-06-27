@@ -40,20 +40,6 @@ class PluginTools:
             return 180.0
         return 15.0
 
-    def _macro_timeout_guidance(self, timeout: float) -> str:
-        return textwrap.dedent(
-            f"""\
-            Script execution timeout ({timeout}s).
-
-            Timeout guidance:
-            - Break large macros into smaller steps and verify progress between calls.
-            - For large stacks or heavy plugins, retry with an explicit timeout in the 60-300s range.
-            - For batch macros, wrap processing with setBatchMode(true) and setBatchMode(false).
-            - If ImageJ is blocked by a dialog or error window, use user_manipulate to ask the user to close it.
-            - If output files may have been created before timeout, use folder_summary to inspect them.
-            """
-        ).strip()
-
     async def run_macro(
         self,
         script: Annotated[str, "Valid ImageJ macro script to execute"],
@@ -69,7 +55,9 @@ class PluginTools:
             script = script + "\n" + 'print("Macro executed.");'
             response = await self.apis.run_script("macro", script, timeout=timeout)
         except asyncio.TimeoutError:
-            raise RuntimeError(self._macro_timeout_guidance(timeout))
+            raise RuntimeError(
+                f"Script execution timeout ({timeout}s). For batch processing, consider breaking down the script or manually setting a longer timeout."
+            )
 
         if response.err or "Error" in str(response):
             # Get basic window info instead of full perception for errors
