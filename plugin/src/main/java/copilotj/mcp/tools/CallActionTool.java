@@ -24,18 +24,17 @@ public class CallActionTool {
 	}
 
 	public static McpSchema.Tool definition() {
-		return McpSchema.Tool.builder()
-			.name("call_action")
+		return McpSchema.Tool.builder("call_action",
+				Map.of(
+					"type", "object",
+					"properties", Map.of(
+						"snapshot_id", Map.of("type", "integer", "description", "Snapshot ID from take_snapshot"),
+						"action_id", Map.of("type", "integer", "description", "Action ID within the snapshot"),
+						"parameters", Map.of("type", "array", "description", "Action parameters", "items", Map.of())),
+					"required", List.of("snapshot_id", "action_id")))
 			.description("Execute a UI action from a previous snapshot. "
 				+ "First call take_snapshot() to get available actions and their IDs, "
 				+ "then call this with the snapshot_id and action_id.")
-			.inputSchema(new McpSchema.JsonSchema("object",
-				Map.of(
-					"snapshot_id", Map.of("type", "integer", "description", "Snapshot ID from take_snapshot"),
-					"action_id", Map.of("type", "integer", "description", "Action ID within the snapshot"),
-					"parameters", Map.of("type", "array", "description", "Action parameters", "items", Map.of())
-				),
-				List.of("snapshot_id", "action_id"), true, null, null))
 			.build();
 	}
 
@@ -51,11 +50,11 @@ public class CallActionTool {
 		try {
 			String result = McpModule.callEvent(handler, "run_action", data);
 			return McpSchema.CallToolResult.builder()
-				.content(List.of(new McpSchema.TextContent(result)))
+				.content(List.of(McpSchema.TextContent.builder(result).build()))
 				.build();
 		} catch (Exception e) {
 			return McpSchema.CallToolResult.builder()
-				.content(List.of(new McpSchema.TextContent("Failed to execute action: " + e.getMessage())))
+				.content(List.of(McpSchema.TextContent.builder("Failed to execute action: " + e.getMessage()).build()))
 				.isError(true)
 				.build();
 		}

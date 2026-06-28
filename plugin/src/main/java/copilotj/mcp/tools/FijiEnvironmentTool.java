@@ -24,11 +24,9 @@ public class FijiEnvironmentTool {
 	}
 
 	public static McpSchema.Tool definition() {
-		return McpSchema.Tool.builder()
-			.name("fiji_environment")
+		return McpSchema.Tool.builder("fiji_environment", Map.of("type", "object"))
 			.description("Get Fiji/ImageJ2 environment information. "
 				+ "Returns ImageJ home, Java version, installed plugins, and other system details.")
-			.inputSchema(new McpSchema.JsonSchema("object", Map.of(), null, true, null, null))
 			.build();
 	}
 
@@ -36,11 +34,11 @@ public class FijiEnvironmentTool {
 		try {
 			String result = McpModule.callEvent(handler, "summarise_environment", null);
 			return McpSchema.CallToolResult.builder()
-				.content(List.of(new McpSchema.TextContent(result)))
+				.content(List.of(McpSchema.TextContent.builder(result).build()))
 				.build();
 		} catch (Exception e) {
 			return McpSchema.CallToolResult.builder()
-				.content(List.of(new McpSchema.TextContent("Failed to get environment: " + e.getMessage())))
+				.content(List.of(McpSchema.TextContent.builder("Failed to get environment: " + e.getMessage()).build()))
 				.isError(true)
 				.build();
 		}

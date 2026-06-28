@@ -22,14 +22,15 @@ public class FolderSummaryTool {
 	private static final int MAX_FILES = 300;
 
 	public static McpSchema.Tool definition() {
-		return McpSchema.Tool.builder()
-			.name("folder_summary")
+		return McpSchema.Tool.builder("folder_summary",
+				Map.of(
+					"type", "object",
+					"properties", Map.of(
+						"folder_path", Map.of("type", "string", "description", "Absolute or relative directory path")),
+					"required", List.of("folder_path")))
 			.description("List files in a directory on the local filesystem. "
 				+ "Useful for discovering image files to open in Fiji. "
 				+ "Returns up to 300 items with relative paths.")
-			.inputSchema(new McpSchema.JsonSchema("object",
-				Map.of("folder_path", Map.of("type", "string", "description", "Absolute or relative directory path")),
-				List.of("folder_path"), true, null, null))
 			.build();
 	}
 
@@ -73,13 +74,13 @@ public class FolderSummaryTool {
 		}
 
 		return McpSchema.CallToolResult.builder()
-			.content(List.of(new McpSchema.TextContent(sb.toString())))
+			.content(List.of(McpSchema.TextContent.builder(sb.toString()).build()))
 			.build();
 	}
 
 	private static McpSchema.CallToolResult error(String msg) {
 		return McpSchema.CallToolResult.builder()
-			.content(List.of(new McpSchema.TextContent(msg)))
+			.content(List.of(McpSchema.TextContent.builder(msg).build()))
 			.isError(true)
 			.build();
 	}

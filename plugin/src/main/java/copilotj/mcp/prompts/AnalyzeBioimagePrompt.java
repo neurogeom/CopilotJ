@@ -15,12 +15,14 @@ import io.modelcontextprotocol.spec.McpSchema;
 public class AnalyzeBioimagePrompt {
 
 	public static McpSchema.Prompt definition() {
-		return new McpSchema.Prompt("analyze_bioimage",
-			"Template for bioimage analysis workflows in Fiji",
-			List.of(
-				new McpSchema.PromptArgument("task",
-					"Analysis goal (e.g., 'segment objects', 'measure fluorescence')", false)
-			));
+		return McpSchema.Prompt.builder("analyze_bioimage")
+			.description("Template for bioimage analysis workflows in Fiji")
+			.arguments(List.of(
+				McpSchema.PromptArgument.builder("task")
+					.description("Analysis goal (e.g., 'segment objects', 'measure fluorescence')")
+					.required(false)
+					.build()))
+			.build();
 	}
 
 	public McpSchema.GetPromptResult handle(McpSyncServerExchange exchange, McpSchema.GetPromptRequest request) {
@@ -39,7 +41,8 @@ public class AnalyzeBioimagePrompt {
 			5. Execute the macro with run_macro and verify results with capture_fiji_screen
 			""".formatted(task);
 
-		return new McpSchema.GetPromptResult(null, List.of(
-			new McpSchema.PromptMessage(McpSchema.Role.USER, new McpSchema.TextContent(promptText))));
+		return McpSchema.GetPromptResult.builder(List.of(
+				new McpSchema.PromptMessage(McpSchema.Role.USER, McpSchema.TextContent.builder(promptText).build())))
+			.build();
 	}
 }

@@ -23,9 +23,7 @@ public class EnvironmentResource {
 	}
 
 	public static McpSchema.Resource definition() {
-		return McpSchema.Resource.builder()
-			.uri("fiji://environment")
-			.name("fiji-environment")
+		return McpSchema.Resource.builder("fiji://environment", "fiji-environment")
 			.description("Fiji/ImageJ2 environment information")
 			.mimeType("application/json")
 			.build();
@@ -34,12 +32,13 @@ public class EnvironmentResource {
 	public McpSchema.ReadResourceResult handle(McpSyncServerExchange exchange, McpSchema.ReadResourceRequest request) {
 		try {
 			String result = McpModule.callEvent(handler, "summarise_environment", null);
-			return new McpSchema.ReadResourceResult(
-				List.of(new McpSchema.TextResourceContents(request.uri(), "application/json", result)));
+			return McpSchema.ReadResourceResult.builder(List.of(
+					McpSchema.TextResourceContents.builder(request.uri(), result)
+						.mimeType("application/json").build())).build();
 		} catch (Exception e) {
-			return new McpSchema.ReadResourceResult(
-				List.of(new McpSchema.TextResourceContents(request.uri(), "application/json",
-					"{\"error\": \"Fiji not connected\"}")));
+			return McpSchema.ReadResourceResult.builder(List.of(
+					McpSchema.TextResourceContents.builder(request.uri(), "{\"error\": \"Fiji not connected\"}")
+						.mimeType("application/json").build())).build();
 		}
 	}
 }

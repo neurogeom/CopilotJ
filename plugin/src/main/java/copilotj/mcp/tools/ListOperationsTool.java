@@ -25,14 +25,14 @@ public class ListOperationsTool {
 	}
 
 	public static McpSchema.Tool definition() {
-		return McpSchema.Tool.builder()
-			.name("list_operations")
+		return McpSchema.Tool.builder("list_operations",
+				Map.of(
+					"type", "object",
+					"properties", Map.of(
+						"since", Map.of("type", "string", "description", "ISO 8601 datetime (e.g., '2026-04-15T10:00:00')"))))
 			.description("Get recent Fiji operation history. "
 				+ "Returns list of operations performed since the given datetime (ISO 8601 format). "
 				+ "If no datetime is provided, returns operations since the last call.")
-			.inputSchema(new McpSchema.JsonSchema("object",
-				Map.of("since", Map.of("type", "string", "description", "ISO 8601 datetime (e.g., '2026-04-15T10:00:00')")),
-				null, true, null, null))
 			.build();
 	}
 
@@ -42,9 +42,9 @@ public class ListOperationsTool {
 
 		if (since == null) {
 			return McpSchema.CallToolResult.builder()
-				.content(List.of(new McpSchema.TextContent(
-					"No timestamp provided and no previous call recorded. "
-					+ "Please provide a 'since' parameter (ISO 8601 datetime).")))
+				.content(List.of(McpSchema.TextContent.builder(
+						"No timestamp provided and no previous call recorded. "
+							+ "Please provide a 'since' parameter (ISO 8601 datetime).").build()))
 				.isError(true)
 				.build();
 		}
@@ -56,11 +56,11 @@ public class ListOperationsTool {
 			// Record timestamp after successful call
 			lastCallTimestamp = java.time.LocalDateTime.now().toString();
 			return McpSchema.CallToolResult.builder()
-				.content(List.of(new McpSchema.TextContent(result)))
+				.content(List.of(McpSchema.TextContent.builder(result).build()))
 				.build();
 		} catch (Exception e) {
 			return McpSchema.CallToolResult.builder()
-				.content(List.of(new McpSchema.TextContent("Failed to get operations: " + e.getMessage())))
+				.content(List.of(McpSchema.TextContent.builder("Failed to get operations: " + e.getMessage()).build()))
 				.isError(true)
 				.build();
 		}

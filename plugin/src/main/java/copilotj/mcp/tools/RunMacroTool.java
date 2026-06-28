@@ -24,17 +24,16 @@ public class RunMacroTool {
 	}
 
 	public static McpSchema.Tool definition() {
-		return McpSchema.Tool.builder()
-			.name("run_macro")
+		return McpSchema.Tool.builder("run_macro",
+				Map.of(
+					"type", "object",
+					"properties", Map.of(
+						"script", Map.of("type", "string", "description", "ImageJ macro script to execute"),
+						"timeout", Map.of("type", "integer", "description", "Timeout in seconds (default: auto-detected)")),
+					"required", List.of("script")))
 			.description("Execute an ImageJ macro script in the running Fiji instance. "
 				+ "Timeout is auto-detected: 15s for normal scripts, 180s for batch/loop scripts. "
 				+ "Set timeout explicitly to override auto-detection.")
-			.inputSchema(new McpSchema.JsonSchema("object",
-				Map.of(
-					"script", Map.of("type", "string", "description", "ImageJ macro script to execute"),
-					"timeout", Map.of("type", "integer", "description", "Timeout in seconds (default: auto-detected)")
-				),
-				List.of("script"), true, null, null))
 			.build();
 	}
 
@@ -56,11 +55,11 @@ public class RunMacroTool {
 		try {
 			String result = McpModule.callEvent(handler, "run_script", data);
 			return McpSchema.CallToolResult.builder()
-				.content(List.of(new McpSchema.TextContent("Macro executed successfully.\n" + result)))
+				.content(List.of(McpSchema.TextContent.builder("Macro executed successfully.\n" + result).build()))
 				.build();
 		} catch (Exception e) {
 			return McpSchema.CallToolResult.builder()
-				.content(List.of(new McpSchema.TextContent("Error: " + e.getMessage())))
+				.content(List.of(McpSchema.TextContent.builder("Error: " + e.getMessage()).build()))
 				.isError(true)
 				.build();
 		}
