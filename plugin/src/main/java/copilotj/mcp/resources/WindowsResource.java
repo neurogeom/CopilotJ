@@ -23,9 +23,7 @@ public class WindowsResource {
 	}
 
 	public static McpSchema.Resource definition() {
-		return McpSchema.Resource.builder()
-			.uri("fiji://windows")
-			.name("fiji-windows")
+		return McpSchema.Resource.builder("fiji://windows", "fiji-windows")
 			.description("Currently open Fiji windows")
 			.mimeType("application/json")
 			.build();
@@ -34,12 +32,13 @@ public class WindowsResource {
 	public McpSchema.ReadResourceResult handle(McpSyncServerExchange exchange, McpSchema.ReadResourceRequest request) {
 		try {
 			String result = McpModule.callEvent(handler, "take_snapshot", null);
-			return new McpSchema.ReadResourceResult(
-				List.of(new McpSchema.TextResourceContents(request.uri(), "application/json", result)));
+			return McpSchema.ReadResourceResult.builder(List.of(
+					McpSchema.TextResourceContents.builder(request.uri(), result)
+						.mimeType("application/json").build())).build();
 		} catch (Exception e) {
-			return new McpSchema.ReadResourceResult(
-				List.of(new McpSchema.TextResourceContents(request.uri(), "application/json",
-					"{\"error\": \"Fiji not connected\"}")));
+			return McpSchema.ReadResourceResult.builder(List.of(
+					McpSchema.TextResourceContents.builder(request.uri(), "{\"error\": \"Fiji not connected\"}")
+						.mimeType("application/json").build())).build();
 		}
 	}
 }

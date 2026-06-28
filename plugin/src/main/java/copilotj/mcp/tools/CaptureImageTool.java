@@ -28,14 +28,14 @@ public class CaptureImageTool {
 	}
 
 	public static McpSchema.Tool definition() {
-		return McpSchema.Tool.builder()
-			.name("capture_image")
+		return McpSchema.Tool.builder("capture_image",
+				Map.of(
+					"type", "object",
+					"properties", Map.of(
+						"title", Map.of("type", "string", "description", "Window title of the image to capture (optional)"))))
 			.description("Capture the current active Fiji image with metadata. "
 				+ "Returns image content along with dimensions, bit depth, and histogram. "
 				+ "Optionally specify a window title to capture a specific image.")
-			.inputSchema(new McpSchema.JsonSchema("object",
-				Map.of("title", Map.of("type", "string", "description", "Window title of the image to capture (optional)")),
-				null, true, null, null))
 			.build();
 	}
 
@@ -58,15 +58,15 @@ public class CaptureImageTool {
 				metadata.put("histogram", McpModule.objectMapper.convertValue(root.get("histogram"), Map.class));
 			}
 			if (!metadata.isEmpty()) {
-				content.add(new McpSchema.TextContent(
-					McpModule.objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(metadata)));
+				content.add(McpSchema.TextContent.builder(
+						McpModule.objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(metadata)).build());
 			}
 
 			if (root.has("image") && !root.get("image").isNull()) {
 				// The image is stored as a data URI ("data:image/png;base64,…");
 				// keep only the base64 payload for ImageContent.
 				String base64Image = IjImageHelper.extractBase64(root.get("image").asText());
-				content.add(new McpSchema.ImageContent(null, base64Image, "image/png"));
+				content.add(McpSchema.ImageContent.builder(base64Image, "image/png").build());
 			}
 
 			if (content.isEmpty()) {
@@ -81,7 +81,7 @@ public class CaptureImageTool {
 
 	private static McpSchema.CallToolResult error(String msg) {
 		return McpSchema.CallToolResult.builder()
-			.content(List.of(new McpSchema.TextContent(msg)))
+			.content(List.of(McpSchema.TextContent.builder(msg).build()))
 			.isError(true)
 			.build();
 	}

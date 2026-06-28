@@ -27,11 +27,9 @@ public class CaptureScreenTool {
 	}
 
 	public static McpSchema.Tool definition() {
-		return McpSchema.Tool.builder()
-			.name("capture_fiji_screen")
+		return McpSchema.Tool.builder("capture_fiji_screen", Map.of("type", "object"))
 			.description("Capture the current Fiji screen as a PNG image. "
 				+ "Returns a screenshot showing all open Fiji windows and their state.")
-			.inputSchema(new McpSchema.JsonSchema("object", Map.of(), null, true, null, null))
 			.build();
 	}
 
@@ -51,7 +49,7 @@ public class CaptureScreenTool {
 			String base64Image = IjImageHelper.extractBase64(screenshots.get(0).get("image").asText());
 
 			return McpSchema.CallToolResult.builder()
-				.content(List.of(new McpSchema.ImageContent(null, base64Image, "image/png")))
+				.content(List.of(McpSchema.ImageContent.builder(base64Image, "image/png").build()))
 				.build();
 		} catch (Exception e) {
 			return error("Failed to capture screen: " + e.getMessage());
@@ -60,7 +58,7 @@ public class CaptureScreenTool {
 
 	private static McpSchema.CallToolResult error(String msg) {
 		return McpSchema.CallToolResult.builder()
-			.content(List.of(new McpSchema.TextContent(msg)))
+			.content(List.of(McpSchema.TextContent.builder(msg).build()))
 			.isError(true)
 			.build();
 	}

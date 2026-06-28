@@ -24,17 +24,16 @@ public class RunScriptTool {
 	}
 
 	public static McpSchema.Tool definition() {
-		return McpSchema.Tool.builder()
-			.name("run_script")
+		return McpSchema.Tool.builder("run_script",
+				Map.of(
+					"type", "object",
+					"properties", Map.of(
+						"language", Map.of("type", "string", "description", "Script language (macro, JavaScript, Python)"),
+						"script", Map.of("type", "string", "description", "Script code to execute"),
+						"timeout", Map.of("type", "integer", "description", "Timeout in seconds (default: auto-detected)")),
+					"required", List.of("language", "script")))
 			.description("Execute a script in Fiji. Supported languages: macro, JavaScript, Python, etc. "
 				+ "Returns script output or error message.")
-			.inputSchema(new McpSchema.JsonSchema("object",
-				Map.of(
-					"language", Map.of("type", "string", "description", "Script language (macro, JavaScript, Python)"),
-					"script", Map.of("type", "string", "description", "Script code to execute"),
-					"timeout", Map.of("type", "integer", "description", "Timeout in seconds (default: auto-detected)")
-				),
-				List.of("language", "script"), true, null, null))
 			.build();
 	}
 
@@ -55,11 +54,11 @@ public class RunScriptTool {
 		try {
 			String result = McpModule.callEvent(handler, "run_script", data);
 			return McpSchema.CallToolResult.builder()
-				.content(List.of(new McpSchema.TextContent(result)))
+				.content(List.of(McpSchema.TextContent.builder(result).build()))
 				.build();
 		} catch (Exception e) {
 			return McpSchema.CallToolResult.builder()
-				.content(List.of(new McpSchema.TextContent("Script error: " + e.getMessage())))
+				.content(List.of(McpSchema.TextContent.builder("Script error: " + e.getMessage()).build()))
 				.isError(true)
 				.build();
 		}

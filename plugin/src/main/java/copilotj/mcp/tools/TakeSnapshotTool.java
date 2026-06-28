@@ -24,12 +24,10 @@ public class TakeSnapshotTool {
 	}
 
 	public static McpSchema.Tool definition() {
-		return McpSchema.Tool.builder()
-			.name("take_snapshot")
+		return McpSchema.Tool.builder("take_snapshot", Map.of("type", "object"))
 			.description("Get a structured snapshot of the current Fiji UI state. "
 				+ "Returns open windows, available actions, current image name, and screen dimensions. "
 				+ "Use this to understand what's open before running commands.")
-			.inputSchema(new McpSchema.JsonSchema("object", Map.of(), null, true, null, null))
 			.build();
 	}
 
@@ -37,11 +35,11 @@ public class TakeSnapshotTool {
 		try {
 			String result = McpModule.callEvent(handler, "take_snapshot", null);
 			return McpSchema.CallToolResult.builder()
-				.content(List.of(new McpSchema.TextContent(result)))
+				.content(List.of(McpSchema.TextContent.builder(result).build()))
 				.build();
 		} catch (Exception e) {
 			return McpSchema.CallToolResult.builder()
-				.content(List.of(new McpSchema.TextContent("Failed to take snapshot: " + e.getMessage())))
+				.content(List.of(McpSchema.TextContent.builder("Failed to take snapshot: " + e.getMessage()).build()))
 				.isError(true)
 				.build();
 		}
