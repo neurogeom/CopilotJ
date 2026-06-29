@@ -57,19 +57,17 @@ class IjTextWindow(AwtWindowBase[TYPE]):
     results_table: ResultsTableSummary | None
 
     @override
+    def _node_name(self) -> str | None:
+        return self.title
+
+    @override
     def _describe(self, *, level: int, verbosity: Verbosity) -> list[str]:
-        if verbosity <= Verbosity.LOW:
-            if self.results_table is not None:
-                return [f"Text Window: {self.title} (id: {self.id}, with results table)"]
-            else:
-                return [f"Text Window: {self.title} (id: {self.id}, no results table present)"]
-
-        lines = [f"Text Window: {self.title} (id: {self.id})"]
+        lines = [self._yaml_head() + ":"]
         if self.results_table is not None:
-            lines.extend(self.results_table._describe(level=level + 1, verbosity=verbosity))
+            for line in self.results_table._describe(level=level + 1, verbosity=verbosity):
+                lines.append("  " + line)
         else:
-            lines.append("No results table present.")
-
+            lines.append("  no results table")
         return lines
 
 

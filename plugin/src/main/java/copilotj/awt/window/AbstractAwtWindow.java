@@ -27,6 +27,17 @@ public abstract class AbstractAwtWindow<T extends Window> extends AbstractContai
     return id;
   }
 
+  /**
+   * Windows are ref-eligible even though they extend
+   * {@link copilotj.awt.container.AbstractContainerNode} (which opts out): a
+   * window can carry window-level actions (e.g. capture) and is addressable by
+   * ref like any other element.
+   */
+  @Override
+  public boolean isRefEligible() {
+    return true;
+  }
+
   @Override
   public String getType() {
     return type;

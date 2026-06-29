@@ -305,6 +305,8 @@ public class IjImage extends AbstractAwtWindow<ImageWindow> {
 
   public IjImage(final WindowIdentifier identifier, final ImageWindow w) {
     super(identifier, w, TYPE);
+    this.actions = Collections.singletonList(
+        Action.builder(TYPE + ".capture", "Capture", "Capture image in current window").build());
 
     final ImagePlus imp = w.getImagePlus();
     // this.id = imp.getID(); // NOTE: we dont use Ij window id
@@ -409,31 +411,21 @@ public class IjImage extends AbstractAwtWindow<ImageWindow> {
   }
 
   @Override
-  public List<Action> getActions() {
-    final Action captureImage = Action
-        .builder(TYPE + ".capture", "Capture", "Capture image in current window")
-        .build();
-    return Collections.singletonList(captureImage);
-  }
-
-  @Override
-  public Object runAction(final List<String> path, final String type, final List<Object> parameters) {
+  public Object runAction(final String action, final List<Object> parameters) {
     if (!this.isActivate()) {
       throw new IllegalStateException("Window is not active");
-    } else if (path.size() != 0) {
-      throw new IllegalArgumentException("Path must be empty for IjImage");
     }
 
-    switch (type) {
-      case TYPE + ".capture":
+    switch (action) {
+      case "capture":
         if (parameters != null && parameters.size() != 0) {
-          throw new IllegalArgumentException("Action 'Capture' does not accept any parameters. Found: " + parameters);
+          throw new IllegalArgumentException("Action 'capture' does not accept any parameters. Found: " + parameters);
         }
 
         return captureImage(this.identifier, this.component.getImagePlus());
 
       default:
-        return super.runAction(path, type, parameters);
+        throw new IllegalArgumentException("Unknown action: " + action + " for IjImage");
     }
   }
 

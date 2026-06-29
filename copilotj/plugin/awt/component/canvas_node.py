@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import Literal
+from typing import Literal, override
 
 from copilotj.plugin.awt._base import ComponentBase
 
@@ -10,5 +10,6 @@ __all__ = ["CanvasNode"]
 
 
 class CanvasNode(ComponentBase[Literal["java.awt.Canvas"]]):
-    def _describe_one_line(self) -> str:
-        return "Canvas"
+    @override
+    def role(self) -> str:
+        return "canvas"

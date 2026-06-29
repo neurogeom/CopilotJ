@@ -33,6 +33,12 @@ public class TextAreaNode extends AbstractComponentNode<TextArea> {
   public TextAreaNode(final TextArea component) {
     super(TYPE, component);
     this.text = component.getText() != null ? component.getText().trim() : null;
+    if (component.isEditable()) {
+      this.actions = Collections.singletonList(Action
+          .builder(TYPE + ".setText", "Set Text", "Sets the text of the text area.")
+          .addStringParameter("text", "The text to set")
+          .build());
+    }
   }
 
   @Override
@@ -43,28 +49,13 @@ public class TextAreaNode extends AbstractComponentNode<TextArea> {
   }
 
   @Override
-  public List<Action> getActions() {
-    if (!this.component.isEditable()) {
-      return null;
-    }
-
-    final Action setTextAction = Action
-        .builder(TYPE + ".setText", "Set Text", "Sets the text of the text area.")
-        .addStringParameter("text", "The text to set")
-        .build();
-    return Collections.singletonList(setTextAction);
-  }
-
-  @Override
-  public Object runAction(final List<String> path, final String type, final List<Object> parameters) {
+  public Object runAction(final String action, final List<Object> parameters) {
     if (!this.isActivate()) {
       throw new IllegalStateException("TextArea is not activated");
-    } else if (path.size() != 0) {
-      throw new IllegalArgumentException("Path must be empty for TextAreaNode actions like 'setText'");
     }
 
-    switch (type) {
-      case TYPE + ".setText":
+    switch (action) {
+      case "setText":
         if (parameters == null || parameters.size() != 1) {
           throw new IllegalArgumentException(
               "Action 'setText' requires exactly one string 'text' parameter. Found: " +
@@ -83,13 +74,13 @@ public class TextAreaNode extends AbstractComponentNode<TextArea> {
         return setText((String) param);
 
       default:
-        throw new IllegalArgumentException("Unknown action type: " + type + " for TextAreaNode");
+        throw new IllegalArgumentException("Unknown action: " + action + " for TextAreaNode");
     }
   }
 
   /**
    * Sets the text of the text area component and notifies listeners.
-   * 
+   *
    * @param text The text to set.
    * @return null
    */

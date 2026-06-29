@@ -156,6 +156,12 @@ public class IjTextWindow extends AbstractAwtWindow<TextWindow> {
 
     final ResultsTable t = w.getResultsTable(); // Can be null
     this.resultsTable = t != null ? new ResultsTableSummary(t) : null;
+
+    this.actions = Collections.singletonList(Action
+        .builder(TYPE + ".getResultsTable", "Get Results Table", "Get detail rows of the results table")
+        .addIntegerParameter("offset", "Offset of the rows") // TODO: default to 0
+        .addIntegerParameter("limit", "Limit of the rows")
+        .build());
   }
 
   @Override
@@ -183,49 +189,37 @@ public class IjTextWindow extends AbstractAwtWindow<TextWindow> {
   }
 
   @Override
-  public List<Action> getActions() {
-    final Action getResultsTable = Action
-        .builder(TYPE + ".getResultsTable", "Get Results Table", "Get detail rows of the results table")
-        .addIntegerParameter("offset", "Offset of the rows") // TODO: default to 0
-        .addIntegerParameter("limit", "Limit of the rows")
-        .build();
-    return Collections.singletonList(getResultsTable);
-  }
-
-  @Override
-  public Object runAction(final List<String> path, final String type, final List<Object> parameters) {
+  public Object runAction(final String action, final List<Object> parameters) {
     if (!this.isActivate()) {
       throw new IllegalStateException("Window is not active");
-    } else if (path.size() != 0) {
-      throw new IllegalArgumentException("Path must be empty for IjImage");
     }
 
-    switch (type) {
-      case TYPE + ".get_results_table":
+    switch (action) {
+      case "getResultsTable":
         if (parameters == null || parameters.size() != 2) {
           throw new IllegalArgumentException(
-              "Action 'Get Results Table' requires exactly 2 parameters (offset, limit). Found: "
+              "Action 'getResultsTable' requires exactly 2 parameters (offset, limit). Found: "
                   + (parameters != null ? parameters.size() : "null"));
         }
 
         final Object offset = parameters.get(0);
         if (!(offset instanceof Integer)) {
           throw new IllegalArgumentException(
-              "Action 'Get Results Table' requires an int 'offset' parameter, but got " +
+              "Action 'getResultsTable' requires an int 'offset' parameter, but got " +
                   (offset != null ? offset.getClass().getSimpleName() : "null"));
         }
 
         final Object limit = parameters.get(1);
         if (!(limit instanceof Integer)) {
           throw new IllegalArgumentException(
-              "Action 'Get Results Table' requires an int 'limit' parameter, but got " +
+              "Action 'getResultsTable' requires an int 'limit' parameter, but got " +
                   (limit != null ? limit.getClass().getSimpleName() : "null"));
         }
 
         return getResultsTable((Integer) offset, (Integer) limit);
 
       default:
-        return super.runAction(path, type, parameters);
+        throw new IllegalArgumentException("Unknown action: " + action + " for IjTextWindow");
     }
   }
 

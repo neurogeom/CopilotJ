@@ -10,10 +10,7 @@ import java.awt.Component;
 import java.awt.Container;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
-import copilotj.awt.Action;
 import copilotj.awt.component.AbstractComponentNode;
 import copilotj.awt.component.ComponentNode;
 import copilotj.awt.component.ComponentNodeProvider;
@@ -42,6 +39,16 @@ public class AbstractContainerNode<T extends Container> extends AbstractComponen
     this.children = children.size() > 0 ? children : null;
   }
 
+  /**
+   * Intermediate (non-window) containers are not ref-eligible: they are
+   * recursed into during ref numbering but never receive a ref handle
+   * themselves, since actions are addressed to their leaf children.
+   */
+  @Override
+  public boolean isRefEligible() {
+    return false;
+  }
+
   @Override
   public boolean isActivate() {
     return super.isActivate() && (children == null || children.stream().allMatch(ComponentNode::isActivate));
@@ -53,66 +60,6 @@ public class AbstractContainerNode<T extends Container> extends AbstractComponen
     if (children != null) {
       children.forEach(ComponentNode::deactivate);
     }
-  }
-
-  @Override
-  public List<Action> getActions() {
-    if (children == null || children.size() == 0) {
-      return null;
-    }
-
-    final List<Action> actions = new ArrayList<>();
-    for (int i = 0; i < children.size(); i++) {
-      final ComponentNode child = children.get(i);
-      if (child == null) {
-        throw new IllegalStateException("Child node is null at index " + i);
-      }
-
-      final List<Action> childActions = child.getActions();
-      if (childActions != null && childActions.size() > 0) {
-        for (final Action action : childActions) {
-          action.path.add("children[" + i + "]");
-          actions.add(action);
-        }
-      }
-    }
-
-    if (actions.size() == 0) {
-      return null;
-    }
-    return actions;
-  }
-
-  @Override
-  public Object runAction(final List<String> path, final String type, final List<Object> parameters) {
-    if (!this.isActivate()) {
-      throw new IllegalStateException("Button is not activated");
-    } else if (children == null || children.size() == 0) {
-      throw new IllegalStateException("No children to run action on");
-    } else if (path.size() < 1) {
-      throw new IllegalArgumentException("Path must contain at least 1 element");
-    }
-
-    // Extract the index from the path
-    final String indexString = path.remove(path.size() - 1);
-    final Pattern pattern = Pattern.compile("children\\[(\\d+)\\]", Pattern.CASE_INSENSITIVE);
-    final Matcher matcher = pattern.matcher(indexString);
-    if (!matcher.find()) {
-      throw new IllegalArgumentException("Invalid path: " + indexString);
-    }
-
-    final int index;
-    try {
-      index = Integer.parseInt(matcher.group(1));
-    } catch (final NumberFormatException e) {
-      throw new IllegalArgumentException("Invalid index in path: " + indexString, e);
-    }
-
-    if (index < 0 || index >= children.size()) {
-      throw new IndexOutOfBoundsException("Index out of bounds: " + index);
-    }
-
-    return children.get(index).runAction(path, type, parameters);
   }
 
   @Override

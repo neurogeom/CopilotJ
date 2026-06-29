@@ -40,6 +40,12 @@ public class ListNode extends AbstractComponentNode<List> {
     super(TYPE, component);
     this.items = component.getItems();
     this.selectedItem = component.getSelectedItem();
+    if (component.isEnabled()) { // AWT List doesn't have isEditable
+      this.actions = Collections.singletonList(Action
+          .builder(this.type + ".select", "Select Item", "Selects an item in the list.")
+          .addStringParameter("item", "The item to select", Arrays.asList(this.items))
+          .build());
+    }
   }
 
   @Override
@@ -52,29 +58,13 @@ public class ListNode extends AbstractComponentNode<List> {
   }
 
   @Override
-  public java.util.List<Action> getActions() {
-    if (!this.component.isEnabled()) { // AWT List doesn't have isEditable
-      return null;
-    }
-
-    final Action selectAction = Action
-        .builder(this.type + ".select", "Select Item", "Selects an item in the list.")
-        .addStringParameter("item", "The item to select", Arrays.asList(this.items))
-        .build();
-    return Collections.singletonList(selectAction);
-  }
-
-  @Override
-  public Object runAction(final java.util.List<String> path, final String type,
-      final java.util.List<Object> parameters) {
+  public Object runAction(final String action, final java.util.List<Object> parameters) {
     if (!this.isActivate()) {
       throw new IllegalStateException("List is not activated");
-    } else if (path.size() != 0) {
-      throw new IllegalArgumentException("Path must be empty for ListNode actions like 'select'");
     }
 
-    switch (type) {
-      case TYPE + ".select":
+    switch (action) {
+      case "select":
         if (parameters == null || parameters.size() != 1) {
           throw new IllegalArgumentException(
               "Action 'select' requires exactly one string 'item' parameter. Found: " +
@@ -85,12 +75,12 @@ public class ListNode extends AbstractComponentNode<List> {
         if (!(param instanceof String)) {
           throw new IllegalArgumentException(
               "Action 'select' requires a string 'item' parameter, but got " +
-                  param.getClass().getSimpleName());
+                  (param != null ? param.getClass().getSimpleName() : "null"));
         }
         return selectItem((String) param);
 
       default:
-        throw new IllegalArgumentException("Unknown action type: " + type + " for ListNode");
+        throw new IllegalArgumentException("Unknown action: " + action + " for ListNode");
     }
   }
 

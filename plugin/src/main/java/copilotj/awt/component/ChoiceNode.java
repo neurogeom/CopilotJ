@@ -6,13 +6,13 @@
 
 package copilotj.awt.component;
 
-import java.awt.Component;
 import java.awt.Choice;
+import java.awt.Component;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Arrays;
 
 import copilotj.awt.Action;
 
@@ -43,6 +43,10 @@ public class ChoiceNode extends AbstractComponentNode<Choice> {
     for (int i = 0; i < component.getItemCount(); i++) {
       this.items[i] = component.getItem(i);
     }
+    this.actions = Collections.singletonList(Action
+        .builder(TYPE + ".selectItem", "Select Item", "Selects an item in the choice menu.")
+        .addStringParameter("item", "The item to select", Arrays.asList(this.items))
+        .build());
   }
 
   @Override
@@ -55,24 +59,13 @@ public class ChoiceNode extends AbstractComponentNode<Choice> {
   }
 
   @Override
-  public List<Action> getActions() {
-    final Action selectItemAction = Action
-        .builder(TYPE + ".selectItem", "Select Item", "Selects an item in the choice menu.")
-        .addStringParameter("item", "The item to select", Arrays.asList(this.items))
-        .build();
-    return Collections.singletonList(selectItemAction);
-  }
-
-  @Override
-  public Object runAction(final List<String> path, final String type, final List<Object> parameters) {
+  public Object runAction(final String action, final List<Object> parameters) {
     if (!this.isActivate()) {
       throw new IllegalStateException("Choice is not activated");
-    } else if (path.size() != 0) {
-      throw new IllegalArgumentException("Path must be empty for ChoiceNode actions like 'selectItem'");
     }
 
-    switch (type) {
-      case TYPE + ".selectItem":
+    switch (action) {
+      case "selectItem":
         if (parameters == null || parameters.size() != 1) {
           throw new IllegalArgumentException(
               "Action 'selectItem' requires exactly one string 'item' parameter. Found: " +
@@ -83,19 +76,19 @@ public class ChoiceNode extends AbstractComponentNode<Choice> {
         if (!(param instanceof String)) {
           throw new IllegalArgumentException(
               "Action 'selectItem' requires a string 'item' parameter, but got " +
-                  param.getClass().getSimpleName());
+                  (param != null ? param.getClass().getSimpleName() : "null"));
         }
 
         return selectItem((String) param);
 
       default:
-        throw new IllegalArgumentException("Unknown action type: " + type + " for ChoiceNode");
+        throw new IllegalArgumentException("Unknown action: " + action + " for ChoiceNode");
     }
   }
 
   /**
    * Selects an item in the choice component and notifies listeners.
-   * 
+   *
    * @param item The item to select.
    * @return null
    */

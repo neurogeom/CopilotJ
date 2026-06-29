@@ -14,47 +14,16 @@ __all__ = ["IjContrastAdjuster"]
 
 
 class IjContrastAdjuster(AwtWindowBase[Literal["ij.plugin.frame.ContrastAdjuster"]]):
-    """Window of Image > Adjust > Brightness/Contrast
+    """Window of Image > Adjust > Brightness/Contrast.
 
-    Original description:
+    Renders as a playwright-mcp-style YAML window: each widget carries a
+    ``[ref=eN]`` handle and its short action id inline (e.g. ``(setValue)``).
+    See ``copilotj/test/plugin/test_awt_snapshot.py`` for the exact grammar.
 
-    ```
-    - dialog1: id=1, type=ij.plugin.frame.ContrastAdjuster
-      ├── Canvas
-      ├── java.awt.Panel
-      │   ├── Label: text="0"
-      │   └── Label: text="255"
-      ├── Scrollbar: value=0, orientation=horizontal
-      ├── java.awt.Panel
-      │   └── Label: text="Minimum"
-      ├── Scrollbar: value=255, orientation=horizontal
-      ├── java.awt.Panel
-      │   └── Label: text="Maximum"
-      ├── Scrollbar: value=128, orientation=horizontal
-      ├── java.awt.Panel
-      │   └── Label: text="Brightness"
-      ├── Scrollbar: value=128, orientation=horizontal
-      ├── java.awt.Panel
-      │   └── Label: text="Contrast"
-      └── java.awt.Panel
-          ├── Button: label="Auto"
-          ├── Button: label="Reset"
-          ├── Button: label="Set"
-          └── Button: label="Apply"
-    ```
-
-    New description:
-
-    ```console
-    - dialog1: id=1, type=ij.plugin.frame.ContrastAdjuster
-      ├── Canvas
-      ├── Label: text="Min: 0, Max: 255"
-      ├── Scrollbar: label="Minimum", value=0, orientation=horizontal
-      ├── Scrollbar: label="Maximum", value=255, orientation=horizontal
-      ├── Scrollbar: label="Brightness", value=128, orientation=horizontal
-      ├── Scrollbar: label="Contrast", value=128, orientation=horizontal
-      └── Buttons: "Auto", "Reset", "Set", "Apply"
-    ```
+    The raw AWT tree is flattened: the two min/max labels are merged into one
+    ``Min/Max`` label, each scrollbar gets a descriptive label (Minimum, Maximum,
+    Brightness, Contrast) merged from its adjacent panel label, and the action
+    buttons are inlined as a transparent ``Buttons`` group.
     """
 
     @override

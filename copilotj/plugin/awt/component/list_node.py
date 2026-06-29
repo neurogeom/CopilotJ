@@ -2,17 +2,24 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import Literal
+from typing import Literal, override
 
-from copilotj.plugin.awt._base import ComponentBase, str_or_empty
+from copilotj.plugin.awt._base import ActionResponse, ComponentBase, format_items, str_or_empty
 
-__all__ = ["ListNode"]
+__all__ = ["ListNode", "ListSelectResponse"]
 
 
 class ListNode(ComponentBase[Literal["java.awt.List"]]):
     items: list[str]
     selected_item: str | None  # can be null in Java AWT List
 
-    def _describe_one_line(self) -> str:
-        items_str = ", ".join([str_or_empty(item) for item in self.items])
-        return f"List: selected={str_or_empty(self.selected_item)}, items=[{items_str}]"
+    @override
+    def role(self) -> str:
+        return "list"
+
+    @override
+    def _state_inline(self) -> str | None:
+        return f"selected={str_or_empty(self.selected_item)} items={format_items(self.items)}"
+
+
+ListSelectResponse = ActionResponse[Literal["java.awt.List.select"], None]

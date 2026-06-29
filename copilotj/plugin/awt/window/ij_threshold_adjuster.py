@@ -16,52 +16,15 @@ __all__ = ["IjThresholdAdjuster"]
 class IjThresholdAdjuster(AwtWindowBase[Literal["ij.plugin.frame.ThresholdAdjuster"]]):
     """Window of Image > Adjust > Threshold...
 
-    Original description:
+    Renders as a playwright-mcp-style YAML window: each widget carries a
+    ``[ref=eN]`` handle and its short action id inline (e.g. ``(selectItem)``).
+    See ``copilotj/test/plugin/test_awt_snapshot.py`` for the exact grammar.
 
-    ```
-    - dialog0: id=1, type=ij.plugin.frame.ThresholdAdjuster
-      ├── Canvas
-      ├── Label: text="below: 0.00 %,  above: 8.71 %"
-      ├── Scrollbar: value=0, orientation=horizontal
-      ├── TextField: text="0"
-      ├── Scrollbar: value=48, orientation=horizontal
-      ├── TextField: text="48"
-      ├── java.awt.Panel
-      │   ├── Choice: selected="Huang", items=["Default", "Huang", "Intermodes", "IsoData", "IJ_IsoData", "Li",
-    "MaxEntropy", "Mean", "MinError", "Minimum", "Moments", "Otsu", "Percentile", "RenyiEntropy", "Shanbhag",
-    "Triangle", "Yen"]
-      │   └── Choice: selected="Over/Under", items=["Red", "B&W", "Over/Under"]
-      ├── java.awt.Panel
-      │   ├── Checkbox: label="Dark background", state=False
-      │   ├── Checkbox: label="Stack histogram", state=False
-      │   ├── Checkbox: label="Don't reset range", state=False
-      │   ├── Checkbox: label="Raw values", state=False
-      │   └── Checkbox: label="16-bit histogram", state=False
-      └── java.awt.Panel
-          ├── Button: label="Auto"
-          ├── Button: label="Apply"
-          ├── Button: label="Reset"
-          └── Button: label="Set"
-    ```
-
-    New description:
-    ```console
-    - dialog1: id=1, type=ij.plugin.frame.ThresholdAdjuster
-      ├── Canvas: label="Histogram Canvas"
-      ├── Label: text="99.33 %"
-      ├── Scrollbar: label="Lower threshold", value=0, orientation=horizontal
-      ├── Scrollbar: label="Upper threshold", value=98, orientation=horizontal
-      ├── Choice: label="Method", selected="RenyiEntropy", items=["Default", "Huang", "Intermodes", "IsoData",
-    "IJ_IsoData", "Li", "MaxEntropy", "Mean", "MinError", "Minimum", "Moments", "Otsu", "Percentile", "RenyiEntropy",
-    "Shanbhag", "Triangle", "Yen"]
-      ├── Choice: label="Preview mode", selected="Red", items=["Red", "B&W", "Over/Under"]
-      ├── Checkbox: label="Dark background", state=False
-      ├── Checkbox: label="Stack histogram", state=False
-      ├── Checkbox: label="Don't reset range", state=False
-      ├── Checkbox: label="Raw values", state=False
-      ├── Checkbox: label="16-bit histogram", state=False
-      └── Buttons: "Auto", "Apply", "Reset", "Set"
-    ````
+    The raw AWT tree is flattened for readability: the histogram canvas and each
+    scrollbar/choice get a descriptive label merged from the adjacent ``Label``,
+    the redundant text fields mirroring the scrollbars are dropped, the two
+    ``Choice`` widgets and the checkboxes are pulled out of their panels, and the
+    four action buttons are inlined as a transparent ``Buttons`` group.
     """
 
     @override

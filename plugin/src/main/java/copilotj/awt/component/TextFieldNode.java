@@ -33,6 +33,12 @@ public class TextFieldNode extends AbstractComponentNode<TextField> {
   public TextFieldNode(final TextField component) {
     super(TYPE, component);
     this.text = component.getText() != null ? component.getText().trim() : null;
+    if (component.isEditable()) {
+      this.actions = Collections.singletonList(Action
+          .builder(TYPE + ".setText", "Set Text", "Sets the text of the text field.")
+          .addStringParameter("text", "The text to set")
+          .build());
+    }
   }
 
   @Override
@@ -41,27 +47,13 @@ public class TextFieldNode extends AbstractComponentNode<TextField> {
   }
 
   @Override
-  public List<Action> getActions() {
-    if (this.component.isEditable()) {
-      final Action setTextAction = Action
-          .builder(TYPE + ".setText", "Set Text", "Sets the text of the text field.")
-          .addStringParameter("text", "The text to set")
-          .build();
-      return Collections.singletonList(setTextAction);
-    }
-    return Collections.emptyList();
-  }
-
-  @Override
-  public Object runAction(final List<String> path, final String type, final List<Object> parameters) {
+  public Object runAction(final String action, final List<Object> parameters) {
     if (!this.isActivate()) {
       throw new IllegalStateException("TextField is not activated");
-    } else if (path.size() != 0) {
-      throw new IllegalArgumentException("Path must be empty for TextFieldNode actions like 'setText'");
     }
 
-    switch (type) {
-      case TYPE + ".setText":
+    switch (action) {
+      case "setText":
         if (parameters == null || parameters.size() != 1) {
           throw new IllegalArgumentException(
               "Action 'setText' requires exactly one string 'text' parameter. Found: " +
@@ -80,13 +72,13 @@ public class TextFieldNode extends AbstractComponentNode<TextField> {
         return setText((String) param);
 
       default:
-        throw new IllegalArgumentException("Unknown action type: " + type + " for TextFieldNode");
+        throw new IllegalArgumentException("Unknown action: " + action + " for TextFieldNode");
     }
   }
 
   /**
    * Sets the text of the text field component and notifies listeners.
-   * 
+   *
    * @param text The text to set.
    * @return null
    */

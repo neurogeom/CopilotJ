@@ -36,6 +36,8 @@ public class ButtonNode extends AbstractComponentNode<Button> {
   public ButtonNode(final Button component) {
     super(TYPE, component);
     this.label = component.getLabel() != null ? component.getLabel().trim() : null;
+    this.actions = Collections.singletonList(
+        Action.builder(TYPE + ".click", "Click", "Click on the button \"" + this.label + "\"").build());
   }
 
   @Override
@@ -44,31 +46,21 @@ public class ButtonNode extends AbstractComponentNode<Button> {
   }
 
   @Override
-  public List<Action> getActions() {
-    final Action click = Action
-        .builder(TYPE + ".click", "Click", "Click on the button \"" + this.label + "\"")
-        .build();
-    return Collections.singletonList(click);
-  }
-
-  @Override
-  public Object runAction(final List<String> path, final String type, final List<Object> parameters) {
+  public Object runAction(final String action, final List<Object> parameters) {
     if (!this.isActivate()) {
       throw new IllegalStateException("Button is not activated");
-    } else if (path.size() != 0) {
-      throw new IllegalArgumentException("Path must be empty for ButtonNode");
     }
 
-    switch (type) {
-      case TYPE + ".click":
+    switch (action) {
+      case "click":
         if (parameters != null && parameters.size() != 0) {
-          throw new IllegalArgumentException("Action 'Click' does not accept any parameters. Found: " + parameters);
+          throw new IllegalArgumentException("Action 'click' does not accept any parameters. Found: " + parameters);
         }
 
         return click();
 
       default:
-        throw new IllegalArgumentException("Unknown action type: " + type);
+        throw new IllegalArgumentException("Unknown action: " + action + " for ButtonNode");
     }
   }
 

@@ -24,8 +24,6 @@ import com.fasterxml.jackson.databind.node.NullNode;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import copilotj.EventHandler;
-import copilotj.mcp.resources.EnvironmentResource;
-import copilotj.mcp.resources.WindowsResource;
 import copilotj.mcp.prompts.AnalyzeBioimagePrompt;
 import copilotj.mcp.prompts.DebugMacroPrompt;
 import copilotj.mcp.tools.CallActionTool;
@@ -100,20 +98,18 @@ public class McpModule {
 		var listOperationsTool = new ListOperationsTool(handler);
 		var folderSummaryTool = new FolderSummaryTool();
 
-		var envResource = new EnvironmentResource(handler);
-		var windowsResource = new WindowsResource(handler);
-
 		var analyzePrompt = new AnalyzeBioimagePrompt();
 		var debugPrompt = new DebugMacroPrompt();
 
 		mcpServer = McpServer.sync(transport)
 			.serverInfo("CopilotJ", "0.1.0")
 			.instructions(
-				"CopilotJ provides Fiji/ImageJ2 bioimage analysis tools. "
-				+ "Use capture_fiji_screen to see the current Fiji state, "
-				+ "run_macro to execute ImageJ macros, and capture_image to "
-				+ "inspect specific images. Start by checking the environment "
-				+ "with fiji_environment.")
+				"CopilotJ drives Fiji/ImageJ2 for bioimage analysis. Start with "
+				+ "fiji_environment and capture_fiji_screen to see the current state. "
+				+ "Run macros with run_macro and inspect images with capture_image. "
+				+ "To operate Fiji's UI (dialogs, buttons, sliders, checkboxes), call "
+				+ "take_snapshot for a component tree where each widget has a ref handle and an actions "
+				+ "list, then call_action(ref, action, parameters) to drive it; re-snapshot after.")
 			// Tools — use method references for BiFunction compatibility
 			.toolCall(RunMacroTool.definition(), runMacroTool::handle)
 			.toolCall(RunScriptTool.definition(), runScriptTool::handle)
@@ -124,12 +120,6 @@ public class McpModule {
 			.toolCall(FijiEnvironmentTool.definition(), fijiEnvironmentTool::handle)
 			.toolCall(ListOperationsTool.definition(), listOperationsTool::handle)
 			.toolCall(FolderSummaryTool.definition(), folderSummaryTool::handle)
-			// Resources
-			.resources(
-				new McpServerFeatures.SyncResourceSpecification(
-					EnvironmentResource.definition(), envResource::handle),
-				new McpServerFeatures.SyncResourceSpecification(
-					WindowsResource.definition(), windowsResource::handle))
 			// Prompts
 			.prompts(
 				new McpServerFeatures.SyncPromptSpecification(
