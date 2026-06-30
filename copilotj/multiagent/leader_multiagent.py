@@ -784,6 +784,7 @@ User prompt to optimize:
                         "Reply with a single Thought + Action, or a Final Answer.",
                         trace_ctx=trace_ctx,
                     )
+                    syntax_error_counter = 0  # Reset syntax error counter on success
                 except ModelSyntaxError as e:
                     syntax_error_counter += 1
                     self.log_error(
