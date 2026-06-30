@@ -23,6 +23,15 @@ build-plugin:
 clean-plugin:
   cd plugin && mvn clean
 
+# Test: run the Java unit tests (surefire). No Fiji/ImageJ runtime needed.
+test-plugin:
+  cd plugin && mvn test
+
+# Test + coverage: JaCoCo prepare-agent is already bound by pom-scijava-base,
+# so `mvn test` produces jacoco.exec; invoke report explicitly for the HTML.
+test-cov-plugin:
+  cd plugin && mvn test jacoco:report
+
 copy-plugin-deps:
   cd plugin && mvn dependency:copy-dependencies -DoutputDirectory=target/deps
 
@@ -35,13 +44,15 @@ build-web:
 run-workflow:
   scripts/run-workflow.sh
 
-test:
+test: test-python test-plugin
+
+test-python:
   uv run --with pytest \
     pytest \
       --doctest-modules --ignore=examples \
       --pyargs copilotj
 
-test-cov:
+test-pythn-cov:
   uv run --with pytest --with pytest-cov \
     pytest \
       --doctest-modules --ignore=examples \
