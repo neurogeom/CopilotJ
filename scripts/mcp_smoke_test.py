@@ -26,7 +26,7 @@ from datetime import datetime, timedelta, timezone
 PROTOCOL_VERSION = "2025-06-18"
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 3001
-CLIENT_INFO = {"name": "copilotj-smoke", "version": "0.1.0"}
+CLIENT_INFO = {"name": "copilotj-smoke", "version": "1.1.0"}
 
 EXPECTED_TOOLS = {
     "run_macro",
