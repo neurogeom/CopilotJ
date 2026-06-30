@@ -261,7 +261,6 @@ public abstract class Trie<Word, Sentence> {
           childNode = onlyChild.getValue();
         }
       }
-      System.out.println(word);
       map.put(word, nodeToSimpleMap(childNode, combiner));
     }
     return map;
