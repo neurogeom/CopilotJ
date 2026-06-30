@@ -111,7 +111,7 @@ public class Action {
      * Validates the given value against this parameter's schema.
      *
      * @param value The value to validate.
-     * @return A list of error messages. An empty list indicates the value is valid.
+     * @return A list of error messages, or null if the value is valid.
      */
     public abstract List<String> validate(Object value);
   }
@@ -146,12 +146,13 @@ public class Action {
       // but for now, we'll assume it's a valid regex string if provided.
       this.pattern = pattern;
 
-      if (enumValues != null && enumValues.isEmpty()) {
-        // Ensure no nulls or empty strings in enumValues
+      if (enumValues != null) {
+        // Reject null entries. Blank strings are legitimate widget labels (e.g. an
+        // AWT Choice/List placeholder item passed via ChoiceNode/ListNode.getActions()),
+        // so they must NOT be rejected here.
         for (final String value : enumValues) {
-          if (value == null || value.isEmpty()) {
-            throw new IllegalArgumentException(
-                "Enum values cannot contain null or empty strings for parameter: " + name);
+          if (value == null) {
+            throw new IllegalArgumentException("Enum values cannot contain null for parameter: " + name);
           }
         }
       }
@@ -281,7 +282,7 @@ public class Action {
           errors.add("Invalid type. Expected boolean, got " + value.getClass().getSimpleName());
         }
       }
-      return errors;
+      return errors.isEmpty() ? null : errors;
     }
   }
 
