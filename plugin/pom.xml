@@ -248,6 +248,18 @@
       <artifactId>ij1-patcher</artifactId>
       <scope>provided</scope>
     </dependency>
+
+    <!-- Layer-A unit tests. pom-scijava does not manage the junit-jupiter
+         aggregator artifact, so the version is pinned via its inherited
+         junit-jupiter.version property (5.10.2). surefire 3.2.5 auto-activates
+         the JUnit Platform engine when junit-jupiter-engine is on the test
+         classpath — no plugin config needed. -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>${junit-jupiter.version}</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <repositories>

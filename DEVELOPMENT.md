@@ -31,15 +31,16 @@ Run `just` or `just --list` to see all available commands.
 
 You can also review the `justfile` to understand how each task is defined and configured, or refer to it directly if you prefer not to install [just](https://github.com/casey/just).
 
-| Command             | Description                    |
-| ------------------- | ------------------------------ |
-| `just dev-server`   | Run the bridge server          |
-| `just dev-plugin`   | Run the ImageJ plugin (debug)  |
-| `just dev-web`      | Run the web frontend           |
-| `just test`         | Run Python tests               |
-| `just test-cov`     | Run tests with coverage report |
-| `just build-plugin` | Build the plugin JAR           |
-| `just build-web`    | Build the web frontend         |
+| Command             | Description                   |
+| ------------------- | ----------------------------- |
+| `just dev-server`   | Run the bridge server         |
+| `just dev-plugin`   | Run the ImageJ plugin (debug) |
+| `just dev-web`      | Run the web frontend          |
+| `just test`         | Run tests                     |
+| `just test-python`  | Run Python tests only         |
+| `just test-plugin`  | Run ImageJ plugin tests only  |
+| `just build-plugin` | Build the plugin JAR          |
+| `just build-web`    | Build the web frontend        |
 
 ## Running the components
 
@@ -286,8 +287,9 @@ and register any custom tools.
 ## Testing
 
 ```bash
-just test        # Run Python tests
-just test-cov    # Run tests with coverage report (HTML + XML)
+just test         # Run tests
+just test-python  # Run Python tests only
+just test-plugin  # Run ImageJ plugin tests only
 ```
 
 ## Observability (optional)
