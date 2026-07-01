@@ -37,9 +37,22 @@ public class SnapshotManager {
   private int nextId = 1;
 
   public SnapshotManager(final LogService log, final boolean debug) {
+    this(log, new ImagejListener(10240, debug), new WindowIdentifier());
+  }
+
+  // Package-private: lets tests inject mock collaborators (a mock ImagejListener bypasses
+  // the real constructor's ij.* static registration) and override newSnapshot().
+  SnapshotManager(final LogService log, final ImagejListener listener,
+      final WindowIdentifier identifier) {
     this.log = log;
-    this.listener = new ImagejListener(10240, debug);
-    this.identifier = new WindowIdentifier();
+    this.listener = listener;
+    this.identifier = identifier;
+  }
+
+  // Overridable factory so tests can substitute a Snapshot double without invoking the
+  // real Snapshot constructor (which hits WindowManager/IJ statics).
+  protected Snapshot newSnapshot(final int id) {
+    return new Snapshot(log, identifier, id);
   }
 
   // FIXME: remove this method
@@ -58,7 +71,7 @@ public class SnapshotManager {
 
   private Snapshot capture(final boolean save) {
     final int id = nextId++;
-    final Snapshot snapshot = new Snapshot(log, identifier, id);
+    final Snapshot snapshot = newSnapshot(id);
     if (!save) {
       return snapshot;
     }
@@ -103,7 +116,7 @@ public class SnapshotManager {
 
     // TODO: use old snapshot as reference
     final int id = nextId++;
-    final Snapshot newSnapshot = new Snapshot(log, identifier, id);
-    return newSnapshot.runAction(request.actionId, request.parameters);
+    final Snapshot created = newSnapshot(id);
+    return created.runAction(request.actionId, request.parameters);
   }
 }
