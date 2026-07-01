@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import re
 from typing import Literal, override
 
 from copilotj.plugin._base import FromTo, Response, Verbosity
@@ -46,11 +47,42 @@ class DescribedRoi(Response):
         return [self._describe_one_line(level=level, verbosity=verbosity)]
 
 
+# Values of these metadata keys duplicate the structured fields rendered by IjImage._describe
+# (width/height/depth/channels/frames, calibration, units, bit depth). They are skipped on the
+# perception/display path only — the stored `info` keeps the full raw metadata. Note that `info`
+# also participates in IjImage.equals and is rendered verbatim on the diff path
+# (IjImageDifference via FromTo), so volatile metadata can still surface as snapshot diffs; that
+# tradeoff is intentional (see the matching note on the Java side, IjImage.buildImageMetadata).
+_INFO_REDUNDANT_KEYS = frozenset(
+    {
+        "SizeX",
+        "SizeY",
+        "SizeZ",
+        "SizeC",
+        "SizeT",
+        "PhysicalSizeX",
+        "PhysicalSizeY",
+        "PhysicalSizeZ",
+        "PhysicalSizeXUnit",
+        "PhysicalSizeYUnit",
+        "PhysicalSizeZUnit",
+        "BitsPerSample",
+        "BitsPerPixel",
+        "SignificantBits",
+        "PixelType",
+    }
+)
+# Matches Bio-Formats/TIFF-style "Key: Value" lines; non-matching lines (prose, OME-XML, "key=value"
+# headers from FileInfo.description) are left intact.
+_INFO_KV_RE = re.compile(r"^([A-Za-z0-9_]+)\s*:\s*(.+)$")
+
+
 class IjImage(AwtWindowBase[TYPE]):
     title: str
     image_type: str
     size: str
     path: str | None
+    info: str | None = None
 
     bit_depth: int
     stack_size: int
@@ -121,6 +153,17 @@ class IjImage(AwtWindowBase[TYPE]):
         if self.roi:
             lines.append(self.roi._describe_one_line(level=level, verbosity=verbosity))
 
+        if self.info:
+            kept = []
+            for ln in self.info.splitlines():
+                m = _INFO_KV_RE.match(ln.strip())
+                if m and m.group(1) in _INFO_REDUNDANT_KEYS:
+                    continue  # already shown via the structured fields above
+                kept.append(ln)
+            if kept:  # don't emit an empty "Metadata:" block when every line was redundant
+                lines.append("Metadata:")
+                lines.extend(kept)
+
         return lines
 
 
@@ -129,6 +172,7 @@ class IjImageDifference(AwtWindowDifferenceBase[TYPE]):
     image_type: FromTo[str] | None = None
     size: FromTo[str] | None = None
     path: FromTo[str | None] | None = None
+    info: FromTo[str | None] | None = None
 
     bit_depth: FromTo[int] | None = None
     stack_size: FromTo[int] | None = None

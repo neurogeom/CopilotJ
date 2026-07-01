@@ -10,8 +10,10 @@ import java.awt.Rectangle;
 import java.awt.Window;
 import java.awt.image.BufferedImage;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Properties;
 
 import ij.ImagePlus;
 import ij.gui.ImageWindow;
@@ -46,6 +48,7 @@ public class IjImage extends AbstractAwtWindow<ImageWindow> {
     public final FromTo<String> imageType;
     public final FromTo<String> size;
     public final FromTo<String> path;
+    public final FromTo<String> info;
 
     public final FromTo<Integer> bitDepth;
     public final FromTo<Integer> stackSize;
@@ -81,6 +84,7 @@ public class IjImage extends AbstractAwtWindow<ImageWindow> {
       this.imageType = !Objects.equals(from.imageType, to.imageType) ? new FromTo<>(from.imageType, to.imageType) : null;
       this.size =      !Objects.equals(from.size,      to.size)      ? new FromTo<>(from.size,      to.size)      : null;
       this.path =      !Objects.equals(from.path,      to.path)      ? new FromTo<>(from.path,      to.path)      : null;
+      this.info =      !Objects.equals(from.info,      to.info)      ? new FromTo<>(from.info,      to.info)      : null;
 
       this.bitDepth =  !Objects.equals(from.bitDepth,  to.bitDepth)  ? new FromTo<>(from.bitDepth,  to.bitDepth)  : null;
       this.stackSize = !Objects.equals(from.stackSize, to.stackSize) ? new FromTo<>(from.stackSize, to.stackSize) : null;
@@ -277,6 +281,7 @@ public class IjImage extends AbstractAwtWindow<ImageWindow> {
   public final String imageType;
   public final String size;
   public final String path;
+  public final String info;
 
   public final int bitDepth;
   public final int stackSize;
@@ -328,6 +333,7 @@ public class IjImage extends AbstractAwtWindow<ImageWindow> {
       }
     }
     this.path = path;
+    this.info = buildImageMetadata(imp);
 
     this.bitDepth = imp.getBitDepth();
     this.stackSize = imp.getStackSize();
@@ -362,12 +368,60 @@ public class IjImage extends AbstractAwtWindow<ImageWindow> {
     }
   }
 
+  /** Maximum characters captured for the image metadata block. Bounds leader context and snapshot
+   *  diff churn from volatile or large metadata (e.g. OME-XML stored in the "Info" property). */
+  private static final int INFO_MAX_CHARS = 4000;
+  private static final String INFO_TRUNCATION_MARKER = "\n... [truncated, full metadata omitted]";
+
+  /** Assemble a readable, multi-line metadata block from the image's "Info" property, every other
+   *  String-valued property, and the FileInfo description. Sources are deduped by exact whole-string
+   *  equality (Info first); returns null when no metadata is present so the field stays absent. */
+  private static String buildImageMetadata(final ImagePlus imp) {
+    final LinkedHashSet<String> blocks = new LinkedHashSet<>();
+
+    // 1. The "Info" property — full text, no line filtering.
+    final String infoProp = (String) imp.getProperty("Info");
+    if (infoProp != null && !infoProp.trim().isEmpty()) {
+      blocks.add(infoProp.trim());
+    }
+
+    // 2. Every other String-valued property (skip "Info", already captured; "HideInfo" is a UI flag).
+    final Properties props = imp.getProperties();
+    if (props != null) {
+      for (final String key : props.stringPropertyNames()) {
+        if ("Info".equals(key) || "HideInfo".equals(key)) {
+          continue;
+        }
+        final String value = props.getProperty(key);
+        if (value != null && !value.isEmpty()) {
+          blocks.add(key + ": " + value);
+        }
+      }
+    }
+
+    // 3. FileInfo.description — the raw file header; independent of the "Info" property.
+    final FileInfo fi = imp.getOriginalFileInfo();
+    if (fi != null && fi.description != null && !fi.description.trim().isEmpty()) {
+      blocks.add(fi.description.trim());
+    }
+
+    if (blocks.isEmpty()) {
+      return null;
+    }
+    String result = String.join("\n", blocks);
+    if (result.length() > INFO_MAX_CHARS) {
+      result = result.substring(0, INFO_MAX_CHARS) + INFO_TRUNCATION_MARKER;
+    }
+    return result;
+  }
+
   public boolean equals(final IjImage other) {
     return this.id == other.id
         && Objects.equals(this.title, other.title)
         && Objects.equals(this.type, other.type)
         && Objects.equals(this.size, other.size)
         && Objects.equals(this.path, other.path)
+        && Objects.equals(this.info, other.info)
 
         && this.bitDepth == other.bitDepth
         && this.stackSize == other.stackSize
