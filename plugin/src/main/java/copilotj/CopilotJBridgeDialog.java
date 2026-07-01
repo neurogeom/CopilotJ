@@ -895,7 +895,7 @@ public class CopilotJBridgeDialog
     // Single '#' so java.net.URI accepts it: a second '#' (anchor-in-fragment) makes
     // URI.create throw "Illegal character in fragment", silently breaking the link.
     // The ?section= form is read by Manual.vue's deep-link handler.
-    final String manualUrl = "https://copilotj.chat/#/manual?section=why-is-my-mcp-server-not-available";
+    final String manualUrl = "https://copilotj.chat/#/manual?section=faq-general-ai";
     final String currentJava = System.getProperty("java.version");
     final String text;
     switch (result.status()) {
