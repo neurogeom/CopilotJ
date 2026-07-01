@@ -238,18 +238,27 @@ public class ImagejListener implements PlugIn, IJEventListener, ImageListener, R
   }
 
   public ImagejListener(final int maxSize, final boolean debug) {
+    this(maxSize, debug, true);
+  }
+
+  // Package-private: lets unit tests construct a non-registering listener
+  // (autoStart=false) so the pure message-queue logic can be exercised without
+  // triggering ImageJ static registration (run(null) calls ij.* statics).
+  ImagejListener(final int maxSize, final boolean debug, final boolean autoStart) {
     this.debug = debug;
     this.maxSize = maxSize;
-    this.run(null);
+    if (autoStart) {
+      this.run(null);
+    }
   }
 
   // --- Message Management ---
 
-  private void push(final String message) {
+  void push(final String message) {
     push(new LogMessage(message));
   }
 
-  private void push(final Message message) {
+  void push(final Message message) {
     if (debug) {
       System.out.println(LocalDateTime.now() + ": " + message.getMessage());
     }
