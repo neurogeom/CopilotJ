@@ -249,15 +249,22 @@
       <scope>provided</scope>
     </dependency>
 
-    <!-- Layer-A unit tests. pom-scijava does not manage the junit-jupiter
-         aggregator artifact, so the version is pinned via its inherited
-         junit-jupiter.version property (5.10.2). surefire 3.2.5 auto-activates
-         the JUnit Platform engine when junit-jupiter-engine is on the test
-         classpath — no plugin config needed. -->
+    <!-- Unit tests. pom-scijava does not manage the junit-jupiter
+         aggregator artifact, so its version is pinned via the inherited
+         junit-jupiter.version property (resolves to 5.11.2 under pom-scijava
+         40). surefire 3.5.1 auto-activates the JUnit Platform engine when
+         junit-jupiter-engine is on the test classpath — no plugin config
+         needed. mockito-core is managed by pom-scijava (4.11.0), so no
+         version is pinned here. -->
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
       <version>${junit-jupiter.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

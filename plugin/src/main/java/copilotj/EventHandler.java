@@ -74,11 +74,16 @@ public class EventHandler {
   private final SnapshotManager snapshotManager;
   private final Summerizer summerizer;
 
-  private final ObjectMapper objectMapper = new ObjectMapper()
-      .registerModule(new JavaTimeModule())
-      .configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true)
-      .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
-      .setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE);
+  // Package-private so protocol tests reuse the exact production config (no drift
+  // between the wire format and the assertions that guard it).
+  static ObjectMapper configureMapper(final ObjectMapper mapper) {
+    return mapper.registerModule(new JavaTimeModule())
+        .configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true)
+        .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
+        .setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE);
+  }
+
+  private final ObjectMapper objectMapper = configureMapper(new ObjectMapper());
 
   public EventHandler(final Context context, final LogService log, final boolean debug) {
     this.log = log;
@@ -126,10 +131,17 @@ public class EventHandler {
     }
   }
 
+  // Package-private so protocol tests assert the real connected-event construction
+  // (the id branch, event names, and data shape) rather than a hand-built reconstruction.
+  static Payload buildConnectedPayload(final String currentId, final ObjectMapper mapper) {
+    if (currentId != null && !currentId.isEmpty()) {
+      return new Payload("negotiate_id", mapper.valueToTree(new IdChanged(currentId)));
+    }
+    return new Payload("query_id", null);
+  }
+
   public String newConnectedEvent() {
-    final Payload payload = this.id != null && !this.id.isEmpty()
-        ? new Payload("negotiate_id", objectMapper.valueToTree(new IdChanged(this.id)))
-        : new Payload("query_id", null);
+    final Payload payload = buildConnectedPayload(this.id, objectMapper);
 
     try {
       final String respStr = objectMapper.writeValueAsString(payload);

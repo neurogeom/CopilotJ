@@ -68,7 +68,7 @@ public class Summerizer {
 
   // --- Plugins --
 
-  private Map<String, Trie.SentenceTrie> listPlugins() {
+  Map<String, Trie.SentenceTrie> listPlugins() {
     final ArrayList<Class<? extends SciJavaPlugin>> pluginTypes = listPluginTypes();
     final Map<String, Trie.SentenceTrie> result = new LinkedHashMap<>();
 
@@ -84,7 +84,7 @@ public class Summerizer {
     return result;
   }
 
-  private ArrayList<Class<? extends SciJavaPlugin>> listPluginTypes() {
+  ArrayList<Class<? extends SciJavaPlugin>> listPluginTypes() {
     // compute the set of known plugin types
     final List<PluginInfo<?>> plugins = context.getPluginIndex().getAll();
     final HashSet<Class<? extends SciJavaPlugin>> pluginTypeSet = new HashSet<>();
@@ -105,7 +105,7 @@ public class Summerizer {
     return pluginTypes;
   }
 
-  private <PT extends SciJavaPlugin> Trie.SentenceTrie listPluginsByType(final Class<PT> pluginType) {
+  <PT extends SciJavaPlugin> Trie.SentenceTrie listPluginsByType(final Class<PT> pluginType) {
     final Trie.SentenceTrie trie = new Trie.SentenceTrie(new char[] { '.', '$' });
     final List<PluginInfo<PT>> plugins = context.getPluginIndex().getPlugins(pluginType);
 

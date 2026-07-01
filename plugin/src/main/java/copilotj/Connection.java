@@ -35,7 +35,15 @@ class Connection {
   private final LogService log;
 
   private final int maxRetryWaitSecond;
-  private final int retryWaitSecondIncreasedAfter = 3;
+  private static final int RETRY_WAIT_INCREASED_AFTER = 3;
+
+  // Package-private so the reconnect backoff curve can be unit-tested in isolation
+  // (without driving the real WebSocketClient / Timer, which is Layer C).
+  static int backoffSeconds(final int retryCount, final int maxRetryWaitSecond) {
+    return Math.min(
+        (int) Math.pow(2, Math.max(retryCount - RETRY_WAIT_INCREASED_AFTER + 1, 0)),
+        maxRetryWaitSecond);
+  }
 
   private WebSocketClient webSocketClient;
   private int retryCount = 0;
@@ -187,8 +195,7 @@ class Connection {
       return;
     }
 
-    final int k = this.retryWaitSecondIncreasedAfter;
-    final int wait = Math.min((int) Math.pow(2, Math.max(retryCount - k + 1, 0)), maxRetryWaitSecond);
+    final int wait = backoffSeconds(retryCount, maxRetryWaitSecond);
     final String reconnectMsg = "Will attempt to reconnect #" + (retryCount + 1) + " after " + wait + " second...";
     log.debug(reconnectMsg);
     Connection.notifyStateChange(this, State.RECONNECTING, reconnectMsg);
@@ -201,7 +208,7 @@ class Connection {
           return;
         }
 
-        if (retryCount < k) {
+        if (retryCount < RETRY_WAIT_INCREASED_AFTER) {
           log.info("Attempting to reconnect #" + (retryCount + 1));
         }
         timer = null;
