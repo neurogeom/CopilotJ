@@ -21,6 +21,15 @@ CopilotJ comprises three major components:
 
 **Visit [copilotj.chat](https://copilotj.chat/#/) for more information and demos.**
 
+## Branches
+
+- **`main`** — active development (the default branch).
+- **`stable`** — the latest stable release line; [copilotj.chat](https://copilotj.chat)
+  builds from here.
+
+For ready-to-use releases (plugin JAR, Docker images), see
+[Releases](https://github.com/neurogeom/CopilotJ/releases).
+
 ## Installation & Configuration
 
 For full installation and configuration instructions, including environment setup, API key configuration, and how to run each component, please refer to the [User Manual](https://copilotj.chat/#/manual).
