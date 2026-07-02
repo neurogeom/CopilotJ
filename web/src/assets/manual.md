@@ -32,14 +32,14 @@ CopilotJ can be installed with just a few clicks. You can refer to the video bel
 
 ### Install the CopilotJ Bridge plugin
 
-The ImageJ Updater is the recommended way to install and update the CopilotJ plugin. Simply add the CopilotJ update site (https://sites.imagej.net/CopilotJ/), and the plugin will be installed automatically.
+The ImageJ Updater is the recommended way to install and update the CopilotJ plugin. CopilotJ is included in the default list of update sites, so you can enable it in the Fiji Updater and the plugin will be installed automatically.
 
 <details>
 <summary>Step-by-step instructions for using the ImageJ Updater</summary>
 
 1. Open Fiji and go to `Help` -> `Update...` to open the Fiji Updater.
 2. Click `Manage Update Sites` in the lower-left corner.
-3. Click “Add Unlisted Site”, add a new update site named CopilotJ with the URL https://sites.imagej.net/CopilotJ/, and then make sure the checkbox on the left is selected.
+3. Find **CopilotJ** in the list and tick the checkbox on the left to enable it. CopilotJ is included in the default list of update sites; if your Fiji is out of date and CopilotJ does not appear, click “Add Unlisted Site” and add a site named CopilotJ with the URL <https://sites.imagej.net/CopilotJ/>.
 4. Click `Apply and Close` to close the `Manage Update Sites` window.
 5. Click `Apply Changes` in the main `Fiji Updater` window to install the plugin.
 6. Restart Fiji, you should now see _Plugins -> CopilotJ_ in the menu.
@@ -381,7 +381,7 @@ It is almost always caused by one of the following:
 
 1. Download a fresh Fiji from [fiji.sc](https://fiji.sc/).
 2. Start it and run `Help` -> `Update...` to bring everything to the latest version.
-3. Re-add the CopilotJ update site (`https://sites.imagej.net/CopilotJ/`) — and any other update sites you need — then `Apply Changes` and restart Fiji.
+3. In `Manage Update Sites`, tick the **CopilotJ** checkbox — it is included in the default list (if you do not see it, add it as an unlisted site with URL <https://sites.imagej.net/CopilotJ/>) — and re-enable any other update sites you need, then `Apply Changes` and restart Fiji.
 4. Confirm CopilotJ loads **before** adding more plugins. If you re-enable several third-party update sites, enable them **one at a time**, testing after each, so you can tell which site reintroduces the conflict.
 
 **Fix 2 — only if Fix 1 is not possible: remove or correct the offending JAR by hand.**
