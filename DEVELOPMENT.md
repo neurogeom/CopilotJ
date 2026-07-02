@@ -9,6 +9,14 @@ This project contains three parts:
 3. **Bridge server**: A communication hub that facilitates interaction between the Python-based Agent and the
    Java-based ImageJ plugin. It typically uses WebSockets to relay messages and commands.
 
+## Repository layout
+
+- **`main`** — active development and the repository default branch. All pull requests and
+  Dependabot updates target `main`.
+- **`stable`** — the latest stable release line; source of the [copilotj.chat](https://copilotj.chat)
+  site (built by `.github/workflows/deploy-pages.yml`).
+- **Releases** — tagged `vX.Y.Z`; `release.yml` builds the plugin JAR and web Docker image.
+
 ## Prerequisites
 
 - **Python 3.12+** with [uv](https://docs.astral.sh/uv/)
