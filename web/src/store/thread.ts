@@ -251,6 +251,12 @@ export function useThread(): {
             break;
 
           case "new:error": {
+            // An error mid-stream can leave a prior agent post with streaming=true.
+            // The EOF fallback only inspects the last post (now this error post), so
+            // finalize any streaming agent posts here to avoid a hanging spinner.
+            for (const p of posts.value) {
+              if (p.type === "agent" && p.streaming) p.streaming = false;
+            }
             const createAt = dayjs();
             posts.value.push({
               id: generatePostId(),
