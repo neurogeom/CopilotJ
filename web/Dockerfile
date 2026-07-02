@@ -16,7 +16,7 @@ ENV PNPM_HOME=/pnpm \
 WORKDIR /app
 
 # Copy dependency files (for better layer caching)
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Install dependencies
 RUN --mount=type=cache,target=/pnpm/store \
