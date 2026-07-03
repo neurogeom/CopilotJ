@@ -27,6 +27,13 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    # pnpm 11 enforces minimumReleaseAge = 1 day by default, so any lockfile
+    # entry published within the last day fails `pnpm install` in CI with
+    # ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION. Hold Dependabot back for 2 days
+    # (1-day margin over pnpm's window) so its PRs never propose a version the
+    # supply-chain policy will reject. Security updates bypass cooldown by design.
+    cooldown:
+      default-days: 2
     groups:
       minor-and-patch:
         update-types: ["minor", "patch"]
