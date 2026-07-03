@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import textwrap
+from pathlib import Path
 from typing import Annotated
 from unittest.mock import MagicMock
 
@@ -11,7 +12,7 @@ import pytest
 from copilotj.core import FunctionTool
 from copilotj.core.config import Config
 from copilotj.multiagent import agent_loader as _loader_module
-from copilotj.multiagent.agent_loader import _load_agent_configs
+from copilotj.multiagent.agent_loader import _load_agent_configs, load_agent_configs, sync_agent_configs
 
 
 # ---------------------------------------------------------------------------
@@ -327,3 +328,148 @@ def make_echo_api_key(cfg: Config):
         return cfg.tavily_api_key or ""
 
     return _echo
+
+
+# ---------------------------------------------------------------------------
+# Tests — sync_agent_configs (dpkg-style refresh into $COPILOTJ_HOME/agents)
+# ---------------------------------------------------------------------------
+
+_AGENT_TOML = """
+name = "Sync Agent"
+class = "copilotj.test.multiagent.test_agent_loader._FakeExecutor"
+description = ""
+prompt = ""
+"""
+
+
+def _seed(src: Path, name: str, body: str) -> None:
+    src.mkdir(parents=True, exist_ok=True)
+    (src / name).write_text(textwrap.dedent(body), encoding="utf-8")
+
+
+def test_sync_first_run_copies_seed(tmp_path):
+    src, dst = tmp_path / "seed", tmp_path / "home" / "agents"
+    _seed(src, "sync_agent.toml", _AGENT_TOML)
+    sync_agent_configs(source=src, target=dst)
+    assert (dst / "sync_agent.toml").read_text().strip() != ""
+    assert (dst / ".seed-versions.json").exists()
+
+
+def test_sync_dev_guard_when_source_is_target(tmp_path):
+    src = tmp_path / "agents"
+    _seed(src, "sync_agent.toml", _AGENT_TOML)
+    # source and target resolve to the same path -> dev mode, no marker, no copy churn
+    sync_agent_configs(source=src, target=src)
+    assert not (src / ".seed-versions.json").exists()
+
+
+def test_sync_unrelated_seed_change_preserves_unrelated_customization(tmp_path):
+    """Codex P1: a seed bump to ONE file must not back up + revert a DIFFERENT file the
+    user customized, when that other file's own default did not change."""
+    src, dst = tmp_path / "seed", tmp_path / "home" / "agents"
+    _seed(src, "a_agent.toml", _AGENT_TOML)
+    _seed(src, "b_agent.toml", _AGENT_TOML)
+    sync_agent_configs(source=src, target=dst)
+    # User customizes a_agent; then upstream ships a change to b_agent ONLY.
+    (dst / "a_agent.toml").write_text("USER A", encoding="utf-8")
+    (src / "b_agent.toml").write_text("# new b default\n", encoding="utf-8")
+    sync_agent_configs(source=src, target=dst)
+    assert (dst / "a_agent.toml").read_text() == "USER A"  # untouched: its seed didn't change
+    assert not list(dst.glob("a_agent.toml.bak.*"))  # ...and not backed up
+    assert (dst / "b_agent.toml").read_text() == "# new b default\n"  # b refreshed
+
+
+def test_sync_noop_when_source_missing(tmp_path):
+    dst = tmp_path / "home" / "agents"
+    sync_agent_configs(source=tmp_path / "does_not_exist", target=dst)
+    assert dst.exists()  # target is still ensured
+    assert not (dst / ".seed-versions.json").exists()
+
+
+def test_sync_marker_match_preserves_user_edit(tmp_path):
+    """When the shipped seed is unchanged, a user's live edit is NOT touched."""
+    src, dst = tmp_path / "seed", tmp_path / "home" / "agents"
+    _seed(src, "sync_agent.toml", _AGENT_TOML)
+    sync_agent_configs(source=src, target=dst)  # initial seed + marker
+    # User now edits the live file.
+    (dst / "sync_agent.toml").write_text("USER CUSTOMIZATION", encoding="utf-8")
+    sync_agent_configs(source=src, target=dst)  # marker still matches -> no-op
+    assert (dst / "sync_agent.toml").read_text() == "USER CUSTOMIZATION"
+    assert not list(dst.glob("*.bak.*"))  # no backup created
+
+
+def test_sync_seed_changed_backs_up_user_edit(tmp_path):
+    """On upgrade, a customized file is backed up (.bak.YYYYMMDD) then replaced."""
+    src, dst = tmp_path / "seed", tmp_path / "home" / "agents"
+    _seed(src, "sync_agent.toml", _AGENT_TOML)
+    sync_agent_configs(source=src, target=dst)
+    # User customizes; then upstream ships a new default.
+    (dst / "sync_agent.toml").write_text("USER CUSTOMIZATION", encoding="utf-8")
+    (src / "sync_agent.toml").write_text("# new default\n", encoding="utf-8")
+    sync_agent_configs(source=src, target=dst)
+    backups = list(dst.glob("sync_agent.toml.bak.*"))
+    assert len(backups) == 1
+    assert backups[0].read_text() == "USER CUSTOMIZATION"  # edit preserved
+    assert (dst / "sync_agent.toml").read_text() == "# new default\n"  # new default live
+
+
+def test_sync_same_day_second_refresh_preserves_second_edit(tmp_path):
+    """A second seed bump the same day must back up a NEW user edit, not silently
+    overwrite it just because a .bak from the first refresh already exists."""
+    src, dst = tmp_path / "seed", tmp_path / "home" / "agents"
+    _seed(src, "sync_agent.toml", _AGENT_TOML)
+    sync_agent_configs(source=src, target=dst)
+    # First customization + first same-day seed bump -> .bak captures it.
+    (dst / "sync_agent.toml").write_text("USER EDIT 1", encoding="utf-8")
+    (src / "sync_agent.toml").write_text("# default v2\n", encoding="utf-8")
+    sync_agent_configs(source=src, target=dst)
+    # Second customization + second same-day seed bump -> must NOT be lost.
+    (dst / "sync_agent.toml").write_text("USER EDIT 2", encoding="utf-8")
+    (src / "sync_agent.toml").write_text("# default v3\n", encoding="utf-8")
+    sync_agent_configs(source=src, target=dst)
+    backup_contents = sorted(p.read_text() for p in dst.glob("sync_agent.toml.bak.*"))
+    assert "USER EDIT 1" in backup_contents
+    assert "USER EDIT 2" in backup_contents  # second edit preserved, not overwritten
+    assert (dst / "sync_agent.toml").read_text() == "# default v3\n"
+
+
+def test_sync_identical_file_not_backed_up(tmp_path):
+    src, dst = tmp_path / "seed", tmp_path / "home" / "agents"
+    _seed(src, "sync_agent.toml", _AGENT_TOML)
+    sync_agent_configs(source=src, target=dst)
+    # Second sync with identical seed -> no backup, no change.
+    sync_agent_configs(source=src, target=dst)
+    assert not list(dst.glob("*.bak.*"))
+
+
+def test_sync_new_seed_file_copied(tmp_path):
+    src, dst = tmp_path / "seed", tmp_path / "home" / "agents"
+    _seed(src, "sync_agent.toml", _AGENT_TOML)
+    sync_agent_configs(source=src, target=dst)
+    _seed(src, "extra_agent.toml", _AGENT_TOML)
+    sync_agent_configs(source=src, target=dst)
+    assert (dst / "extra_agent.toml").exists()
+
+
+def test_sync_orphan_logged_at_debug(tmp_path, caplog):
+    src, dst = tmp_path / "seed", tmp_path / "home" / "agents"
+    _seed(src, "sync_agent.toml", _AGENT_TOML)
+    dst.mkdir(parents=True)
+    (dst / "ghost_agent.toml").write_text("orphan", encoding="utf-8")  # not in seed
+    import logging as _logging
+
+    with caplog.at_level(_logging.DEBUG, logger=_loader_module._log.name):
+        sync_agent_configs(source=src, target=dst)
+    assert any("ghost_agent.toml" in r.message for r in caplog.records)
+
+
+def test_load_agent_configs_reads_from_home(tmp_path, monkeypatch):
+    """Regression: the public loader reads from $COPILOTJ_HOME/agents, not __file__."""
+    monkeypatch.setenv("COPILOTJ_HOME", str(tmp_path))
+    monkeypatch.setattr(_loader_module, "_synced", False)
+    monkeypatch.setattr(_loader_module, "sync_agent_configs", lambda *a, **k: None)  # don't copy real seed
+    cfgs = tmp_path / "agents"
+    cfgs.mkdir()
+    _seed(cfgs, "home_agent.toml", _AGENT_TOML.replace("Sync Agent", "Home Agent"))
+    agents = load_agent_configs(model_client=_make_model_client(), cfg=_make_cfg())
+    assert "Home Agent" in agents
