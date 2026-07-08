@@ -65,10 +65,11 @@ def new_vlm_model_client(cfg: Config) -> ModelClient:
     return _new_model_client(
         cfg.vlm_model,
         cfg.vlm_api_key,
-        proxy=cfg.llm_proxy,
+        proxy=cfg.vlm_proxy or cfg.cij_proxy,
         base_url=cfg.vlm_base_url,
         cfg=cfg,
         provider=cfg.vlm_provider or cfg.llm_provider,
+        allow_llm_proxy_fallback=False,
     )
 
 
@@ -127,9 +128,13 @@ def _new_model_client(
     base_url: str | None = None,
     cfg: Config | None = None,
     provider: str | None = None,
+    allow_llm_proxy_fallback: bool = True,
 ) -> ModelClient:
     cfg = cfg or load_config()
-    proxy = proxy or cfg.llm_proxy
+    if allow_llm_proxy_fallback:
+        proxy = proxy or cfg.llm_proxy or cfg.cij_proxy
+    else:
+        proxy = proxy or cfg.cij_proxy
 
     # If provider is explicitly given, use it directly.
     if provider is not None:

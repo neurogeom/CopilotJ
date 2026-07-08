@@ -69,6 +69,11 @@ class Config:
     vlm_proxy: str | None = None
     vlm_provider: str | None = None
 
+    # Global download proxy — passed explicitly to all backend download clients (HF,
+    # model DB, bioimage zoo, research/Tavily/DDGS, cellpose/stardist). Also the
+    # fallback proxy for the LLM/VLM API clients when their own proxy is unset.
+    cij_proxy: str | None = None
+
     # Tool keys
     tavily_api_key: str | None = None
 
@@ -142,6 +147,7 @@ def load_config() -> Config:
         llm_provider=os.getenv("COPILOTJ_LLM_PROVIDER", None),
         vlm_proxy=os.getenv("COPILOTJ_VLM_PROXY", None),
         vlm_provider=os.getenv("COPILOTJ_VLM_PROVIDER", None),
+        cij_proxy=os.getenv("CIJ_PROXY"),
         tavily_api_key=os.getenv("COPILOTJ_TAVILY_API_KEY", None),
         kb_autosave=os.getenv("COPILOTJ_KB_AUTOSAVE", "0") == "1",
         dev=os.getenv("COPILOTJ_DEV") is not None,
@@ -176,7 +182,7 @@ def resolve_vision_config(cfg: Config) -> Config:
     from copilotj.core.model_info import get_model_capabilities
 
     # Detect main model vision capability
-    main_caps = get_model_capabilities(cfg.llm_model) if cfg.llm_model else None
+    main_caps = get_model_capabilities(cfg.llm_model, cfg) if cfg.llm_model else None
     llm_supports_vision = bool(main_caps and main_caps.supports_vision)
 
     # Check if a separate VLM is explicitly configured

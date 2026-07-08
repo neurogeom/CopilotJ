@@ -23,7 +23,7 @@ from typing import Any
 
 import aiohttp
 
-from copilotj.core.config import get_home
+from copilotj.core.config import Config, get_home, load_config
 
 __all__ = [
     "CatalogModel",
@@ -232,7 +232,7 @@ def _store_db(data: dict[str, Any]) -> None:
 # ---------------------------------------------------------------------------
 
 
-async def download_db(*, force: bool = False) -> Path | None:
+async def download_db(*, force: bool = False, cfg: Config | None = None) -> Path | None:
     """Download the model database from GitHub.
 
     Skips the download if the cache is fresh (unless *force* is ``True``).
@@ -250,9 +250,10 @@ async def download_db(*, force: bool = False) -> Path | None:
     _log.info("Downloading model DB from %s", LITELLM_DB_URL)
 
     try:
+        proxy = (cfg or load_config()).cij_proxy
         timeout = aiohttp.ClientTimeout(total=_DOWNLOAD_TIMEOUT)
         async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.get(LITELLM_DB_URL) as resp:
+            async with session.get(LITELLM_DB_URL, proxy=proxy) as resp:
                 resp.raise_for_status()
                 data = await resp.json(content_type=None)
 
@@ -268,12 +269,17 @@ async def download_db(*, force: bool = False) -> Path | None:
         return path if path.exists() else None
 
 
-def _download_db_sync() -> dict[str, Any]:
+def _download_db_sync(cfg: Config | None = None) -> dict[str, Any]:
     """Synchronous fallback download using ``urllib`` (for CLI / first-run)."""
     _log.info("Downloading model DB (sync) from %s", LITELLM_DB_URL)
     try:
+        proxy = (cfg or load_config()).cij_proxy
         req = urllib.request.Request(LITELLM_DB_URL)
-        with urllib.request.urlopen(req, timeout=_DOWNLOAD_TIMEOUT) as resp:
+        if proxy:
+            opener = urllib.request.build_opener(urllib.request.ProxyHandler({"http": proxy, "https": proxy}))
+        else:
+            opener = urllib.request.build_opener()
+        with opener.open(req, timeout=_DOWNLOAD_TIMEOUT) as resp:
             data = json.loads(resp.read().decode("utf-8"))
 
         if isinstance(data, dict) and len(data) >= 100:
@@ -382,7 +388,7 @@ def _ollama_vision_heuristic(model: str) -> bool:
 # ---------------------------------------------------------------------------
 
 
-def get_model_capabilities(model: str) -> ModelCapabilities:
+def get_model_capabilities(model: str, cfg: Config | None = None) -> ModelCapabilities:
     """Return capabilities for *model*.
 
     Loads the cached model database, looks up the model (with normalisation),
@@ -402,7 +408,7 @@ def get_model_capabilities(model: str) -> ModelCapabilities:
     db = _load_db()
     if not db:
         # No cache available — try a blocking download on first use.
-        db = _download_db_sync()
+        db = _download_db_sync(cfg)
 
     entry = _lookup_model(db, model) if db else None
 
@@ -464,7 +470,7 @@ def _merge_supplements(provider: str, catalog_models: list[CatalogModel]) -> lis
     return merged
 
 
-def list_catalog_models(provider: str) -> list[CatalogModel]:
+def list_catalog_models(provider: str, cfg: Config | None = None) -> list[CatalogModel]:
     """Return chat models from the cached LiteLLM catalog for *provider*.
 
     Filters entries whose ``litellm_provider`` equals *provider* and whose
@@ -479,7 +485,7 @@ def list_catalog_models(provider: str) -> list[CatalogModel]:
     """
     db = _load_db()
     if not db:
-        db = _download_db_sync()
+        db = _download_db_sync(cfg)
     if not db:
         return _merge_supplements(provider, [])
 
@@ -514,11 +520,11 @@ def list_catalog_models(provider: str) -> list[CatalogModel]:
     return _merge_supplements(provider, models)
 
 
-async def ensure_model_db_async() -> bool:
+async def ensure_model_db_async(cfg: Config | None = None) -> bool:
     """Ensure the model DB is available (download if stale).
 
     Called at server startup as a background task.  Returns ``True``
     if the DB is available (fresh or stale).
     """
-    path = await download_db()
+    path = await download_db(cfg=cfg)
     return path is not None and path.exists()

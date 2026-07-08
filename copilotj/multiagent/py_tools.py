@@ -15,11 +15,12 @@ from skimage import io
 from skimage.util import img_as_float32, img_as_ubyte
 from stardist.models import StarDist2D
 
-from copilotj.core.config import get_home
+from copilotj.core.config import Config, get_home, load_config
+from copilotj.util import temporary_proxy
 
 __all__ = [
-    "cellpose_segmentation",
-    "stardist_segmentation",
+    "make_cellpose_segmentation",
+    "make_stardist_segmentation",
     "biapy_tool",
     # Segmentation tools
     "gauss_otsu_labeling_tool",
@@ -51,218 +52,236 @@ def get_project_templates_dir() -> Path:
     return templates_dir
 
 
-async def cellpose_segmentation(
-    image_path: Annotated[str | None, "Path to the input image or directory (use forward slashes)"] = None,
-    model_type: Annotated[str, "Type of model to use (nuclei, cyto, cyto2)"] = "nuclei",
-    diameter: Annotated[int | None, "Expected cell diameter (if None, will be estimated)"] = None,
-    channels: Annotated[list[int], "List of channels to use [0,0] for grayscale"] = [0, 0],
-    flow_threshold: Annotated[float, "Flow error threshold"] = 0.4,
-    cellprob_threshold: Annotated[float, "Cell probability threshold"] = 0.0,
-    min_size: Annotated[int, "Minimum cell size"] = 15,
-    gpu: Annotated[bool, "Whether to use GPU for processing"] = False,
-    normalize: Annotated[bool, "Whether to normalize image intensities"] = True,
-    norm_range_low: Annotated[float, "Lower percentile for normalization"] = 1.0,
-    norm_range_high: Annotated[float, "Upper percentile for normalization"] = 99.8,
-    save_path: Annotated[
-        str | None,
-        'Path to save segmentation results (if None, uses original image directory with _cellpose_segmented suffix). Path end must with "/"',
-    ] = None,
-) -> dict[str, str]:
-    try:
-        from cellpose import io as cellpose_io
-        from cellpose import models
+def make_cellpose_segmentation(cfg: Config):
+    """Factory: return a ``cellpose_segmentation`` callable bound to *cfg*."""
 
-        if image_path is None:
-            return "No image path provided, please provide an image path"
-
-        # Handle directory vs file paths using cellpose's own functions
-        path_obj = Path(image_path)
-        if path_obj.is_dir():
-            logger.info(f"Directory provided: {image_path}")
-            # Use cellpose's function to get image files from directory
-            image_files = await asyncio.to_thread(cellpose_io.get_image_files, image_path, mask_filter="")
-            if not image_files:
-                raise FileNotFoundError(f"No image files found in directory: {image_path}")
-
-            # Use the first image file found
-            actual_image_path = image_files[0]
-            logger.info(f"Using first image from directory: {actual_image_path}")
-        else:
-            actual_image_path = image_path
-
-        # Use cellpose's native image loading function
-        logger.info(f"Loading image using cellpose.io.imread: {actual_image_path}")
-        image = await asyncio.to_thread(cellpose_io.imread, actual_image_path)
-
-        if save_path is None:
-            actual_path = Path(actual_image_path)
-            save_dir = actual_path.parent
-            base_name = actual_path.stem
-            save_path = str(save_dir / f"{base_name}_cellpose_segmented.png")
-
-        # Validate image
-        if not _validate_image(image):
-            raise ValueError("Invalid input image")
-
-        # Apply normalization if requested
-        if normalize:
-            logger.info(f"Normalizing image using {norm_range_low}-{norm_range_high} percentile range")
-            image = await asyncio.to_thread(_normalize_image, image, norm_range_low, norm_range_high)
-
-        # Run Cellpose
-        logger.info(f"Running Cellpose model: {model_type}")
-        model = models.CellposeModel(gpu=gpu, model_type=model_type)
-
-        # Run model evaluation in a thread pool to avoid blocking
-        masks, flows, styles = await asyncio.to_thread(
-            model.eval,
-            image,
-            diameter=diameter,
-            channels=channels,
-            flow_threshold=flow_threshold,
-            cellprob_threshold=cellprob_threshold,
-            min_size=min_size,
-        )
-
-        save_path_obj = Path(save_path)
-
-        # Determine if save_path is a directory or file path
-        # Consider it a directory if: ends with /, has no suffix, or is an existing directory
-        is_directory = str(save_path).endswith(("/", "\\")) or not save_path_obj.suffix or save_path_obj.is_dir()
-
-        if is_directory:
-            # save_path is a directory
-            save_dir = save_path_obj
-            save_dir.mkdir(parents=True, exist_ok=True)
-            # Use image filename as base for output files
-            base_name = Path(actual_image_path).stem
-            final_save_path = save_dir / f"{base_name}_cellpose_segmented.png"
-        else:
-            # save_path is a file path
-            save_dir = save_path_obj.parent
-            save_dir.mkdir(parents=True, exist_ok=True)
-            base_name = save_path_obj.stem
-            final_save_path = save_path_obj
-
-        logger.info(f"Save directory: {save_dir}")
-
+    async def cellpose_segmentation(
+        image_path: Annotated[str | None, "Path to the input image or directory (use forward slashes)"] = None,
+        model_type: Annotated[str, "Type of model to use (nuclei, cyto, cyto2)"] = "nuclei",
+        diameter: Annotated[int | None, "Expected cell diameter (if None, will be estimated)"] = None,
+        channels: Annotated[list[int], "List of channels to use [0,0] for grayscale"] = [0, 0],
+        flow_threshold: Annotated[float, "Flow error threshold"] = 0.4,
+        cellprob_threshold: Annotated[float, "Cell probability threshold"] = 0.0,
+        min_size: Annotated[int, "Minimum cell size"] = 15,
+        gpu: Annotated[bool, "Whether to use GPU for processing"] = False,
+        normalize: Annotated[bool, "Whether to normalize image intensities"] = True,
+        norm_range_low: Annotated[float, "Lower percentile for normalization"] = 1.0,
+        norm_range_high: Annotated[float, "Upper percentile for normalization"] = 99.8,
+        save_path: Annotated[
+            str | None,
+            'Path to save segmentation results (if None, uses original image directory with _cellpose_segmented suffix). Path end must with "/"',
+        ] = None,
+    ) -> dict[str, str]:
         try:
-            # Save original image
-            original_path = save_dir / f"{base_name}_original.png"
-            await asyncio.to_thread(io.imsave, str(original_path), img_as_ubyte(image))
-            logger.info(f"Saved original image to {original_path}")
+            from cellpose import io as cellpose_io
+            from cellpose import models
 
-            # Create and save colored segmentation result
-            colored_masks = await asyncio.to_thread(create_colored_masks, masks)
-            await asyncio.to_thread(io.imsave, str(final_save_path), colored_masks)
-            logger.info(f"Saved colored segmentation to {final_save_path}")
+            if image_path is None:
+                return "No image path provided, please provide an image path"
 
-            # Save ROIs
-            rois_save_path = save_dir / f"{base_name}_rois.zip"
-            await asyncio.to_thread(cellpose_io.save_rois, masks, str(rois_save_path))
+            # Handle directory vs file paths using cellpose's own functions
+            path_obj = Path(image_path)
+            if path_obj.is_dir():
+                logger.info(f"Directory provided: {image_path}")
+                # Use cellpose's function to get image files from directory
+                image_files = await asyncio.to_thread(cellpose_io.get_image_files, image_path, mask_filter="")
+                if not image_files:
+                    raise FileNotFoundError(f"No image files found in directory: {image_path}")
+
+                # Use the first image file found
+                actual_image_path = image_files[0]
+                logger.info(f"Using first image from directory: {actual_image_path}")
+            else:
+                actual_image_path = image_path
+
+            # Use cellpose's native image loading function
+            logger.info(f"Loading image using cellpose.io.imread: {actual_image_path}")
+            image = await asyncio.to_thread(cellpose_io.imread, actual_image_path)
+
+            if save_path is None:
+                actual_path = Path(actual_image_path)
+                save_dir = actual_path.parent
+                base_name = actual_path.stem
+                save_path = str(save_dir / f"{base_name}_cellpose_segmented.png")
+
+            # Validate image
+            if not _validate_image(image):
+                raise ValueError("Invalid input image")
+
+            # Apply normalization if requested
+            if normalize:
+                logger.info(f"Normalizing image using {norm_range_low}-{norm_range_high} percentile range")
+                image = await asyncio.to_thread(_normalize_image, image, norm_range_low, norm_range_high)
+
+            # Run Cellpose
+            logger.info(f"Running Cellpose model: {model_type}")
+            # cellpose downloads pretrained weights via raw urllib (no proxy param) on first
+            # use, so temporarily expose CIJ_PROXY through env vars for this call only.
+            with temporary_proxy(cfg):
+                model = models.CellposeModel(gpu=gpu, model_type=model_type)
+
+            # Run model evaluation in a thread pool to avoid blocking
+            masks, flows, styles = await asyncio.to_thread(
+                model.eval,
+                image,
+                diameter=diameter,
+                channels=channels,
+                flow_threshold=flow_threshold,
+                cellprob_threshold=cellprob_threshold,
+                min_size=min_size,
+            )
+
+            save_path_obj = Path(save_path)
+
+            # Determine if save_path is a directory or file path
+            # Consider it a directory if: ends with /, has no suffix, or is an existing directory
+            is_directory = str(save_path).endswith(("/", "\\")) or not save_path_obj.suffix or save_path_obj.is_dir()
+
+            if is_directory:
+                # save_path is a directory
+                save_dir = save_path_obj
+                save_dir.mkdir(parents=True, exist_ok=True)
+                # Use image filename as base for output files
+                base_name = Path(actual_image_path).stem
+                final_save_path = save_dir / f"{base_name}_cellpose_segmented.png"
+            else:
+                # save_path is a file path
+                save_dir = save_path_obj.parent
+                save_dir.mkdir(parents=True, exist_ok=True)
+                base_name = save_path_obj.stem
+                final_save_path = save_path_obj
+
+            logger.info(f"Save directory: {save_dir}")
+
+            try:
+                # Save original image
+                original_path = save_dir / f"{base_name}_original.png"
+                await asyncio.to_thread(io.imsave, str(original_path), img_as_ubyte(image))
+                logger.info(f"Saved original image to {original_path}")
+
+                # Create and save colored segmentation result
+                colored_masks = await asyncio.to_thread(create_colored_masks, masks)
+                await asyncio.to_thread(io.imsave, str(final_save_path), colored_masks)
+                logger.info(f"Saved colored segmentation to {final_save_path}")
+
+                # Save ROIs
+                rois_save_path = save_dir / f"{base_name}_rois.zip"
+                await asyncio.to_thread(cellpose_io.save_rois, masks, str(rois_save_path))
+
+                return {
+                    "original_image": str(original_path),
+                    "segmentation_image": str(final_save_path),
+                    "rois_path": str(rois_save_path),
+                    "num_cells": int(masks.max()),
+                    "save_directory": str(save_dir.resolve()),
+                }
+            except Exception as e:
+                logger.error(f"Error saving results: {str(e)}")
+                raise
+
+        except Exception as e:
+            logger.error(f"Error in cellpose_segmentation: {str(e)}")
+            raise
+
+    return cellpose_segmentation
+
+
+def make_stardist_segmentation(cfg: Config):
+    """Factory: return a ``stardist_segmentation`` callable bound to *cfg*."""
+
+    async def stardist_segmentation(
+        image_path: Annotated[str | None, "Path to the input image (use forward slashes)"] = None,
+        image_array: Annotated[Any | None, "Optional in-memory image; overrides image_path if provided"] = None,
+        image_type: Annotated[
+            str, "fluorescence | he | tissue | brightfield | phase | dapi | unknown"
+        ] = "fluorescence",
+        model: Annotated[
+            str | None,
+            "Override pretrained model name for 2D (e.g., '2D_versatile_fluo', '2D_versatile_he', '2D_demo')",
+        ] = None,
+        p_low: Annotated[float, "Lower percentile for normalization"] = 1.0,
+        p_high: Annotated[float, "Upper percentile for normalization"] = 99.8,
+        prob_thresh: Annotated[float | None, "StarDist probability threshold override"] = None,
+        nms_thresh: Annotated[float | None, "StarDist NMS threshold override"] = None,
+        save_path: Annotated[
+            str | None, "Output PNG path for colored labels; default saves near input or temp/stardist_results"
+        ] = None,
+    ) -> dict[str, Any]:
+        try:
+            if image_array is not None:
+                img = image_array
+                inferred_dir = get_project_temp_dir("stardist_segmentation_results")
+                inferred_name = "in_memory"
+                # Convert RGB to grayscale if needed
+                if img.ndim == 3 and img.shape[-1] in (3, 4):
+                    rgb = img[..., :3].astype(np.float32)
+                    img = 0.2126 * rgb[..., 0] + 0.7152 * rgb[..., 1] + 0.0722 * rgb[..., 2]
+            else:
+                if image_path is None:
+                    return "No image path provided, please provide an image path"
+                else:
+                    img = await asyncio.to_thread(load_image, image_path, to_gray=True)
+                    p = Path(image_path)
+                    inferred_dir = get_project_temp_dir("stardist_segmentation_results")
+                    inferred_name = p.stem
+
+            if not _validate_image(img):
+                raise ValueError("Invalid input image for StarDist")
+
+            ndim = img.ndim
+            if ndim != 2:
+                raise ValueError(f"Unsupported image ndim={ndim}; only 2D images are supported")
+
+            img_norm = normalize(img.astype(np.float32, copy=False), p_low, p_high)
+
+            if model is None:
+                key = (image_type or "fluorescence").lower()
+                model_name = "2D_versatile_he" if key in {"he", "tissue", "brightfield"} else "2D_versatile_fluo"
+            else:
+                model_name = model
+            # Lazy: download the standard pretrained model on first use and cache it
+            # under ~/.stardist/models/<name> (mirrors how cellpose fetches its
+            # weights). Keeps the plugin JAR free of bundled model weights.
+            # stardist/csbdeep fetch weights via raw urllib (no proxy param); expose
+            # CIJ_PROXY through env vars for the model load only.
+            with temporary_proxy(cfg):
+                model_instance = StarDist2D.from_pretrained(model_name)
+
+            kwargs = {}
+            if prob_thresh is not None:
+                kwargs["prob_thresh"] = prob_thresh
+            if nms_thresh is not None:
+                kwargs["nms_thresh"] = nms_thresh
+
+            labels, details = await asyncio.to_thread(model_instance.predict_instances, img_norm, **kwargs)
+
+            out_dir = inferred_dir if save_path is None else Path(save_path).parent
+            out_dir = Path(out_dir)
+            out_dir.mkdir(parents=True, exist_ok=True)
+
+            original_path = out_dir / f"{inferred_name}_stardist_input.png"
+            await asyncio.to_thread(io.imsave, original_path, (img_norm * 255).astype(np.uint8))
+
+            colored = await asyncio.to_thread(create_colored_masks, labels.astype(np.int32))
+            seg_png = out_dir / f"{inferred_name}_stardist_labels.png" if save_path is None else Path(save_path)
+            await asyncio.to_thread(io.imsave, seg_png, colored)
+
+            labels_tif = out_dir / f"{inferred_name}_stardist_labels.tif"
+            await asyncio.to_thread(io.imsave, labels_tif, labels.astype(np.uint16))
 
             return {
                 "original_image": str(original_path),
-                "segmentation_image": str(final_save_path),
-                "rois_path": str(rois_save_path),
-                "num_cells": int(masks.max()),
-                "save_directory": str(save_dir.resolve()),
+                "segmentation_image": str(seg_png),
+                "labels_path": str(labels_tif),
+                "num_instances": int(labels.max()),
+                "model_name": model_name,
             }
+
         except Exception as e:
-            logger.error(f"Error saving results: {str(e)}")
+            logger.error(f"Error in stardist_segmentation: {e}")
             raise
 
-    except Exception as e:
-        logger.error(f"Error in cellpose_segmentation: {str(e)}")
-        raise
-
-
-async def stardist_segmentation(
-    image_path: Annotated[str | None, "Path to the input image (use forward slashes)"] = None,
-    image_array: Annotated[Any | None, "Optional in-memory image; overrides image_path if provided"] = None,
-    image_type: Annotated[str, "fluorescence | he | tissue | brightfield | phase | dapi | unknown"] = "fluorescence",
-    model: Annotated[
-        str | None,
-        "Override pretrained model name for 2D (e.g., '2D_versatile_fluo', '2D_versatile_he', '2D_demo')",
-    ] = None,
-    p_low: Annotated[float, "Lower percentile for normalization"] = 1.0,
-    p_high: Annotated[float, "Upper percentile for normalization"] = 99.8,
-    prob_thresh: Annotated[float | None, "StarDist probability threshold override"] = None,
-    nms_thresh: Annotated[float | None, "StarDist NMS threshold override"] = None,
-    save_path: Annotated[
-        str | None, "Output PNG path for colored labels; default saves near input or temp/stardist_results"
-    ] = None,
-) -> dict[str, Any]:
-    try:
-        if image_array is not None:
-            img = image_array
-            inferred_dir = get_project_temp_dir("stardist_segmentation_results")
-            inferred_name = "in_memory"
-            # Convert RGB to grayscale if needed
-            if img.ndim == 3 and img.shape[-1] in (3, 4):
-                rgb = img[..., :3].astype(np.float32)
-                img = 0.2126 * rgb[..., 0] + 0.7152 * rgb[..., 1] + 0.0722 * rgb[..., 2]
-        else:
-            if image_path is None:
-                return "No image path provided, please provide an image path"
-            else:
-                img = await asyncio.to_thread(load_image, image_path, to_gray=True)
-                p = Path(image_path)
-                inferred_dir = get_project_temp_dir("stardist_segmentation_results")
-                inferred_name = p.stem
-
-        if not _validate_image(img):
-            raise ValueError("Invalid input image for StarDist")
-
-        ndim = img.ndim
-        if ndim != 2:
-            raise ValueError(f"Unsupported image ndim={ndim}; only 2D images are supported")
-
-        img_norm = normalize(img.astype(np.float32, copy=False), p_low, p_high)
-
-        if model is None:
-            key = (image_type or "fluorescence").lower()
-            model_name = "2D_versatile_he" if key in {"he", "tissue", "brightfield"} else "2D_versatile_fluo"
-        else:
-            model_name = model
-        # Lazy: download the standard pretrained model on first use and cache it
-        # under ~/.stardist/models/<name> (mirrors how cellpose fetches its
-        # weights). Keeps the plugin JAR free of bundled model weights.
-        model_instance = StarDist2D.from_pretrained(model_name)
-
-        kwargs = {}
-        if prob_thresh is not None:
-            kwargs["prob_thresh"] = prob_thresh
-        if nms_thresh is not None:
-            kwargs["nms_thresh"] = nms_thresh
-
-        labels, details = await asyncio.to_thread(model_instance.predict_instances, img_norm, **kwargs)
-
-        out_dir = inferred_dir if save_path is None else Path(save_path).parent
-        out_dir = Path(out_dir)
-        out_dir.mkdir(parents=True, exist_ok=True)
-
-        original_path = out_dir / f"{inferred_name}_stardist_input.png"
-        await asyncio.to_thread(io.imsave, original_path, (img_norm * 255).astype(np.uint8))
-
-        colored = await asyncio.to_thread(create_colored_masks, labels.astype(np.int32))
-        seg_png = out_dir / f"{inferred_name}_stardist_labels.png" if save_path is None else Path(save_path)
-        await asyncio.to_thread(io.imsave, seg_png, colored)
-
-        labels_tif = out_dir / f"{inferred_name}_stardist_labels.tif"
-        await asyncio.to_thread(io.imsave, labels_tif, labels.astype(np.uint16))
-
-        return {
-            "original_image": str(original_path),
-            "segmentation_image": str(seg_png),
-            "labels_path": str(labels_tif),
-            "num_instances": int(labels.max()),
-            "model_name": model_name,
-        }
-
-    except Exception as e:
-        logger.error(f"Error in stardist_segmentation: {e}")
-        raise
+    return stardist_segmentation
 
 
 # <BiaPy>
@@ -1466,4 +1485,4 @@ def create_colored_masks(masks: np.ndarray) -> np.ndarray:
 
 
 if __name__ == "__main__":
-    asyncio.run(cellpose_segmentation())
+    asyncio.run(make_cellpose_segmentation(load_config())())

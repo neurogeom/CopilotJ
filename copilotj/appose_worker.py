@@ -42,6 +42,7 @@ from urllib.parse import urlparse
 
 from copilotj.core import load_config
 from copilotj.core.config import bootstrap_assets, load_managed_config, save_managed_config
+from copilotj.core.embedding import configure_download_proxy
 from copilotj.core.lifecycle import run_cleanup as _run_cleanup
 from copilotj.server import Server
 
@@ -101,6 +102,8 @@ def start_server() -> None:
         saved_port = _extract_port(load_managed_config().get("server_url"))
 
         cfg = load_config()
+        configure_download_proxy(cfg)
+
         _server = Server(cfg)
         _loop = asyncio.new_event_loop()
 

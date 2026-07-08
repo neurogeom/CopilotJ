@@ -19,6 +19,7 @@ from typing import Any
 
 import aiohttp
 
+from copilotj.core.config import Config
 from copilotj.core.model_info import CatalogModel, get_model_capabilities, list_catalog_models
 
 __all__ = [
@@ -50,7 +51,9 @@ async def _fetch_ollama_tags(base_url: str, *, timeout: float) -> dict[str, Any]
         return None
 
 
-async def list_ollama_models(base_url: str, *, timeout: float = 2.0) -> list[CatalogModel] | None:
+async def list_ollama_models(
+    base_url: str, *, timeout: float = 2.0, cfg: Config | None = None
+) -> list[CatalogModel] | None:
     """List models installed on a local Ollama instance.
 
     Performs a live ``GET {base_url}/api/tags``.  Ollama runs locally, so we
@@ -69,7 +72,7 @@ async def list_ollama_models(base_url: str, *, timeout: float = 2.0) -> list[Cat
         name = entry.get("name") or entry.get("model")
         if not name:
             continue
-        caps = get_model_capabilities(f"ollama/{name}")
+        caps = get_model_capabilities(f"ollama/{name}", cfg)
         models.append(
             CatalogModel(
                 id=name,
@@ -94,7 +97,9 @@ def _model_to_dict(m: CatalogModel) -> dict[str, Any]:
     }
 
 
-async def list_provider_models(provider: str, *, base_url: str | None = None) -> dict[str, Any]:
+async def list_provider_models(
+    provider: str, *, base_url: str | None = None, cfg: Config | None = None
+) -> dict[str, Any]:
     """Resolve available models for *provider* into a uniform dict.
 
     - ``ollama`` → live ``/api/tags`` at ``base_url`` (default
@@ -107,7 +112,7 @@ async def list_provider_models(provider: str, *, base_url: str | None = None) ->
     Never raises — callers can ``asyncio.gather`` over providers safely.
     """
     if provider == "ollama":
-        models = await list_ollama_models(base_url or DEFAULT_OLLAMA_URL)
+        models = await list_ollama_models(base_url or DEFAULT_OLLAMA_URL, cfg=cfg)
         if models is None:
             return {"provider": provider, "source": "unreachable", "models": []}
         return {
@@ -116,5 +121,5 @@ async def list_provider_models(provider: str, *, base_url: str | None = None) ->
             "models": [_model_to_dict(m) for m in models],
         }
 
-    models = list_catalog_models(provider)
+    models = list_catalog_models(provider, cfg)
     return {"provider": provider, "source": "catalog", "models": [_model_to_dict(m) for m in models]}

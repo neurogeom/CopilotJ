@@ -147,7 +147,7 @@ Use this tool when you need to:
 
 [[tools]]
 display_name = "DuckDuckGo Search"
-function = "copilotj.multiagent.research_tools.ddg_search"
+factory = "copilotj.multiagent.research_tools.make_ddg_search"
 description = """
 Use this tool to search for current information and image links using DuckDuckGo.
 
