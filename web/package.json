@@ -30,7 +30,7 @@
     "vue-router": "^5.1.0"
   },
   "devDependencies": {
-    "@primevue/auto-import-resolver": "^4.5.5",
+    "@primevue/auto-import-resolver": "^5.0.0",
     "@types/node": "^26.1.1",
     "@types/uuid": "^11.0.0",
     "@vitejs/plugin-vue": "^6.0.7",
