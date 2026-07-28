@@ -21,7 +21,7 @@
     "marked": "^18.0.6",
     "marked-highlight": "^2.2.4",
     "pinia": "^4.0.2",
-    "primevue": "^4.5.5",
+    "primevue": "^5.0.0",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.2",
     "tailwindcss-primeui": "^0.6.1",
