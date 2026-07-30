@@ -25,7 +25,7 @@ from copilotj.multiagent.leader_prompts import (  # noqa: E402
     PROMPT_TOOL_RUN_MACRO,
 )
 from copilotj.plugin.api import HTTPPluginAPI  # noqa: E402
-from copilotj.workflow.contract import parse_interface  # noqa: E402
+from copilotj.workflow.contract import normalize_path, parse_interface  # noqa: E402
 from copilotj.workflow.executor import WorkflowExecutor  # noqa: E402
 from copilotj.workflow.manager import BASE_DIR, RUNS_DIR, Workflow, WorkflowMeta, WorkflowStep, read_json  # noqa: E402
 
@@ -129,7 +129,15 @@ def default_output_dir(workflow: Workflow) -> str:
 
 def prompt_file_inputs(specs: dict[str, Any]) -> dict[str, str]:
     names = [name for name, spec in specs.items() if isinstance(spec, dict) and spec.get("type") == "file"]
-    return {name: prompt_text(f"Input file/folder for '{name}'") for name in names}
+    return {name: prompt_path(f"Input file/folder for '{name}'") for name in names}
+
+
+def prompt_path(label: str) -> str:
+    """Prompt for a path; `input()` gets no shell expansion, so `~` arrives verbatim."""
+    path = normalize_path(prompt_text(label))
+    if not Path(path).exists():
+        raise ValueError(f"{label}: path does not exist: {path}")
+    return path
 
 
 def parse_override(override: str) -> tuple[str, str]:

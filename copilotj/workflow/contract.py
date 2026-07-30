@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import os
 import re
 import time
 from dataclasses import dataclass
@@ -81,6 +82,7 @@ def bind_workflow_context(
     if interface is None:
         return WorkflowExecutionContext(inputs=provided, outputs={}, run_dir=run_dir)
     inputs = _bind_inputs(interface.inputs, provided, run_dir)
+    verify_declared_inputs(interface.inputs, inputs)
     _ensure_directory_inputs(interface.inputs, inputs)
     scope = {"inputs": inputs, "run_dir": run_dir}
     outputs = render_templates(interface.outputs, scope)
@@ -110,6 +112,31 @@ def render_templates(value: Any, scope: dict[str, Any]) -> Any:
     if isinstance(value, dict):
         return {key: render_templates(item, scope) for key, item in value.items()}
     return value
+
+
+def normalize_path(value: str) -> str:
+    """Expand ``~`` and make the path absolute; ImageJ resolves neither.
+
+    >>> normalize_path("~") == Path.home().as_posix()
+    True
+    """
+    if not value:
+        return value
+    return Path(os.path.abspath(os.path.expanduser(value))).as_posix()
+
+
+def verify_declared_inputs(specs: dict[str, Any], inputs: dict[str, Any]):
+    """Fail before the first step when a declared ``file`` input does not exist."""
+    missing = {}
+    for name, spec in specs.items():
+        if not isinstance(spec, dict) or spec.get("type") != "file":
+            continue
+        path = inputs.get(name)
+        if isinstance(path, str) and path and not Path(path).exists():
+            missing[name] = path
+    if missing:
+        detail = ", ".join(f"{name}: {path}" for name, path in missing.items())
+        raise WorkflowContractError(f"Workflow input files were not found: {detail}")
 
 
 def verify_declared_outputs(outputs: dict[str, Any]) -> dict[str, str]:
@@ -223,8 +250,11 @@ def _ensure_directory_inputs(specs: dict[str, Any], inputs: dict[str, Any]):
 def _folder_file_input(specs: dict[str, Any], inputs: dict[str, Any]) -> tuple[str, Path] | None:
     for name in _file_input_names(specs):
         value = inputs.get(name)
-        if isinstance(value, str) and Path(value).is_dir():
-            return name, Path(value)
+        if not isinstance(value, str) or not value:
+            continue
+        folder = Path(normalize_path(value))
+        if folder.is_dir():
+            return name, folder
     return None
 
 
@@ -319,4 +349,4 @@ def _normalize_input_value(spec: Any, value: Any) -> Any:
         return value
     if not isinstance(value, str):
         return value
-    return value.replace("\\", "/")
+    return normalize_path(value)
