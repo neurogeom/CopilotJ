@@ -31,6 +31,7 @@ declare module 'vue' {
     Logo: typeof import('./src/components/Logo.vue')['default']
     ManualTabs: typeof import('./src/components/ManualTabs.vue')['default']
     ModelAutoComplete: typeof import('./src/components/ModelAutoComplete.vue')['default']
+    ModelQuickPicks: typeof import('./src/components/ModelQuickPicks.vue')['default']
     Navbar: typeof import('./src/components/Navbar.vue')['default']
     ProgressSpinner: typeof import('primevue/progressspinner')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

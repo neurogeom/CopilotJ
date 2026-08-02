@@ -20,6 +20,25 @@ export const PROVIDER_OPTIONS = [
 ];
 
 /**
+ * One-click recommended model presets. Clicking a chip fills the Provider and
+ * Model fields together so users skip the manual two-step. Surfaced as chips on
+ * the Model and Vision settings tabs (and anywhere else SettingsModel/VLM are
+ * reused). The catalog need not list a model — the picker shows a "Current"
+ * fallback for any value it does not recognise — so this works even for models
+ * the cached LiteLLM DB has not caught up to.
+ */
+export interface ModelPreset {
+  label: string;
+  provider: string;
+  model: string;
+}
+
+export const RECOMMENDED_MODEL_PRESETS: ModelPreset[] = [
+  { label: "Claude Opus 4.8", provider: "openrouter", model: "anthropic/claude-opus-4.8" },
+  { label: "GPT-5.6 Sol", provider: "openrouter", model: "openai/gpt-5.6-sol" },
+];
+
+/**
  * Default API base URL for OpenAI-compatible providers whose endpoint is fixed
  * and publicly known (DeepSeek / SiliconFlow / OpenRouter) plus Ollama's local
  * host. Cloud providers whose SDK picks its own endpoint (OpenAI / Anthropic /
