@@ -15,7 +15,9 @@ import {
   hasCustomBaseUrl,
   persistBaseUrl,
   getDefaultBaseUrl,
+  type ModelPreset,
 } from "../composables";
+import ModelQuickPicks from "./ModelQuickPicks.vue";
 
 const props = defineProps<{
   useMainModel: boolean;
@@ -87,6 +89,15 @@ function onProviderChange() {
   baseUrl.value = getDefaultBaseUrl(provider.value);
 }
 
+// One-click: fill both the provider and the recommended model from a preset,
+// then settle on the provider's default endpoint (Advanced stays collapsed).
+function applyPreset(preset: ModelPreset) {
+  provider.value = preset.provider;
+  model.value = preset.model;
+  baseUrl.value = getDefaultBaseUrl(preset.provider);
+  showAdvanced.value = false;
+}
+
 function getVlmValue() {
   return {
     useMainModel: useMainModel.value,
@@ -132,6 +143,8 @@ defineExpose({ isValid, getVlmValue });
     </p>
 
     <template v-if="!useMainModel">
+      <ModelQuickPicks @pick="applyPreset" />
+
       <FormItem for="vlmProvider" label="Provider" required>
         <Select
           v-model="provider"
