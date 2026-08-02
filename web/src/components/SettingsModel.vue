@@ -16,7 +16,9 @@ import {
   hasCustomBaseUrl,
   persistBaseUrl,
   getDefaultBaseUrl,
+  type ModelPreset,
 } from "../composables";
+import ModelQuickPicks from "./ModelQuickPicks.vue";
 
 const props = withDefaults(
   defineProps<{
@@ -93,6 +95,16 @@ function onProviderChange() {
   baseUrl.value = getDefaultBaseUrl(provider.value);
 }
 
+// One-click: fill both the provider and the recommended model from a preset,
+// then settle on the provider's default endpoint (Advanced stays collapsed).
+function applyPreset(preset: ModelPreset) {
+  if (useDefaultModel.value) return;
+  provider.value = preset.provider;
+  model.value = preset.model;
+  baseUrl.value = getDefaultBaseUrl(preset.provider);
+  showAdvanced.value = false;
+}
+
 function getModelValue(): ThreadConfigModel {
   if (useDefaultModel.value) {
     return { use_server: true };
@@ -115,6 +127,8 @@ defineExpose({ isValid, getModelValue });
 <template>
   <div class="flex flex-col gap-6">
     <p class="text-sm text-slate-500 dark:text-slate-400">Choose the primary language model for your conversations.</p>
+
+    <ModelQuickPicks @pick="applyPreset" />
 
     <!-- "Use Default Model" toggle — hidden; the option must never be enabled (strict BYO). TODO: temporarily disabled -->
     <!-- <FormItem for="defaultModel" label="Use Default Model" layout="row">
