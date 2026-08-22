@@ -184,7 +184,7 @@ To use OpenRouter with CopilotJ, select **OpenRouter** as the provider, enter yo
 [Ollama](https://ollama.com) runs models locally on your own hardware, with no data sent to external servers and no per-request cost.
 
 **Model recommendations:** When using Ollama with CopilotJ, we recommend choosing models with strong multi-step reasoning, vision capability, and reliable tool use.
-As of early 2026, capable options for agentic tasks include _gemma4_ (Google), _qwen3.6_ (Alibaba), and _kimi-k2.6_ (Kimi).
+As of early 2026, capable options for agentic tasks include _qwen3.6_ (Alibaba), _kimi-k2.6_ (Kimi), and _gemma4_ (Google).
 In general, prefer the largest variant your hardware can comfortably run, as larger models tend to perform better on complex workflows.
 You can also check the [Ollama model library](https://ollama.com/library) for newer releases.
 If a smaller model lacks sufficient reasoning, vision, or tool-calling capability, it may not be able to reliably support complex agentic applications.
@@ -193,7 +193,7 @@ If a smaller model lacks sufficient reasoning, vision, or tool-calling capabilit
 
 ```bash
 # Install Ollama from https://ollama.com if not already installed
-ollama pull qwen3:30b   # or whichever model you want to use
+ollama pull qwen3.6   # or whichever model you want to use
 ```
 
 Note: Ollama models generally do not support image input. If image understanding is needed, configure a separate vision model using a cloud provider from the options above.
