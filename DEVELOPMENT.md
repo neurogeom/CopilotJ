@@ -217,7 +217,7 @@ COPILOTJ_VLM_API_KEY=AIza-xxxxxxxx
 ### Ollama (local, offline)
 
 ```env
-COPILOTJ_LLM_MODEL=ollama/qwen3:30b
+COPILOTJ_LLM_MODEL=ollama/qwen3.6
 COPILOTJ_LLM_BASE_URL=http://localhost:11434
 ```
 
