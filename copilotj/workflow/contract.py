@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from copilotj.multiagent.py_tools import get_project_temp_dir
+from copilotj.multiagent.py_tools import get_project_workspace_dir
 
 SCHEMA_VERSION = "2.0"
 RUN_DIR_REF = "run_dir"
@@ -31,7 +31,7 @@ DEFAULT_IMAGE_INPUT_FORMATS = {
     "tiff",
 }
 
-RUNS_DIR = get_project_temp_dir("workflow_runs")
+RUNS_DIR = get_project_workspace_dir("workflow_runs")
 
 
 class WorkflowContractError(ValueError):
