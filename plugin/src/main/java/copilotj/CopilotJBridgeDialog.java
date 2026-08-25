@@ -517,8 +517,10 @@ public class CopilotJBridgeDialog
           envStatusLabel.setText("Ready");
           appendProgressLog("Environment installed successfully.\n");
         } catch (final Exception e) {
+          final String reason = getRootCauseMessage(e);
           envStatusLabel.setText("Failed");
-          appendProgressLog("Installation failed: " + getRootCauseMessage(e) + "\n");
+          appendProgressLog("Installation failed: " + reason + "\n");
+          appendProgressLog(retryHint(reason, "Install"));
         }
         syncUIState();
       }
@@ -554,8 +556,10 @@ public class CopilotJBridgeDialog
           envStatusLabel.setText("Ready");
           appendProgressLog("Environment synced successfully.\n");
         } catch (final Exception e) {
+          final String reason = getRootCauseMessage(e);
           envStatusLabel.setText("Sync failed");
-          appendProgressLog("Sync failed: " + getRootCauseMessage(e) + "\n");
+          appendProgressLog("Sync failed: " + reason + "\n");
+          appendProgressLog(retryHint(reason, "Sync"));
         }
         syncUIState();
       }
@@ -656,6 +660,56 @@ public class CopilotJBridgeDialog
       cause = cause.getCause();
     }
     return message != null ? message : t.getClass().getSimpleName();
+  }
+
+  /**
+   * Builds the follow-up hint appended to the Progress Log after a failed
+   * {@code Install}/{@code Sync}. Downloading Python and the dependency wheels is the
+   * long, network-bound part of the build, so a dropped connection or a proxy closing
+   * the stream mid-transfer surfaces as a truncated-download error (for example
+   * "Unexpected end of file from server"). Retrying is the fix in that case, so say so
+   * instead of leaving the user with a bare stack-trace message.
+   *
+   * @param reason  root-cause message of the failure, as shown to the user.
+   * @param button  label of the button to press again ("Install" or "Sync").
+   * @return hint text, newline-terminated, ready to append to the Progress Log.
+   */
+  // Package-private for CopilotJBridgeDialogTest.
+  static String retryHint(final String reason, final String button) {
+    if (isLikelyNetworkFailure(reason)) {
+      return "\nThis looks like an interrupted download rather than a real installation problem:\n"
+          + "the connection to the package server dropped before the file was complete.\n"
+          + "Click " + button + " again to retry - already-downloaded files are reused, and the\n"
+          + "second attempt usually succeeds. If it keeps failing, check your internet\n"
+          + "connection, VPN, or proxy settings and try once more.\n";
+    }
+    return "\nClick " + button + " again to retry - already-downloaded files are reused.\n"
+        + "If the same error keeps appearing, report it with the Progress Log above at\n"
+        + "https://github.com/neurogeom/CopilotJ/issues\n";
+  }
+
+  /**
+   * Heuristic: does {@code reason} look like a transient network/transfer failure
+   * (truncated download, reset connection, timeout, DNS or TLS trouble) rather than a
+   * genuine environment problem? Matching is on the message text because the original
+   * exception type is lost by the time Appose reports the build failure.
+   */
+  static boolean isLikelyNetworkFailure(final String reason) {
+    if (reason == null)
+      return false;
+    final String text = reason.toLowerCase(java.util.Locale.ROOT);
+    final String[] markers = {
+        "unexpected end of file", "unexpected eof", "premature", "incomplete",
+        "connection reset", "connection refused", "connection closed", "connection aborted",
+        "timed out", "timeout", "unknownhost", "unknown host", "name resolution",
+        "network is unreachable", "no route to host", "proxy", "ssl", "tls", "handshake",
+        "socket", "failed to fetch", "failed to download", "download failed",
+        "error sending request", "temporary failure"};
+    for (final String marker : markers) {
+      if (text.contains(marker))
+        return true;
+    }
+    return false;
   }
 
   /** Opens {@code url} in the system default browser, if supported. */

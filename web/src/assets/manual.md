@@ -52,6 +52,8 @@ The ImageJ Updater is the recommended way to install and update the CopilotJ plu
 2. Wait for the installation to complete. This may take **5–10 minutes** depending on your network speed. Progress is shown in the **Progress Log** area.
 3. Once the status shows **Ready**, the installation is complete and does not need to be repeated.
 
+> **If the installation fails, click Install again.** Because everything is downloaded over the network, a brief connection drop can truncate a file and abort the install (for example `Installation failed: Unexpected end of file from server`). This is not a corrupted setup — retrying reuses what was already downloaded and normally succeeds. See [the FAQ entry below](#faq-install-failed) if it keeps failing.
+
 ## Launch CopilotJ
 
 1. **Open the CopilotJ plugin dialog**
@@ -365,6 +367,29 @@ The `<copilotj_home>/temp` folder serves as a centralized location for artifacts
 The temporary folder is managed by the CopilotJ core server and updates in real time as workflows execute. Unless explicitly cleaned or overwritten, it preserves outputs from the current session for debugging, validation, and reproducibility.
 
 ## FAQ
+
+<details id="faq-install-failed">
+<summary>Installing the Core Server fails with "Unexpected end of file from server" or another download error</summary>
+
+Clicking **Install** in the **Managed Server** tab downloads a Python interpreter and every Python dependency from the network — several hundred megabytes in total, over several minutes. If the connection is interrupted at any point during that transfer (an unstable Wi-Fi link, a VPN reconnecting, a corporate proxy closing an idle connection, or the package server dropping the request), the file arrives incomplete and the install stops with an error such as:
+
+```text
+Installing Python environment...
+Installation failed: Unexpected end of file from server
+```
+
+**This is a transfer problem, not a broken installation.** The fix is simply to **click Install again**: files that were downloaded completely are reused, so the retry picks up the remaining work and usually finishes. Repeating the whole sequence — open **Plugins → CopilotJ → Managed Server**, click **Install**, wait for **Ready** — is all that is needed.
+
+If retrying does not help:
+
+- **Check the connection.** Try again on a different or more stable network; disable the VPN for the duration of the install if you can.
+- **Check your proxy.** On a corporate network, downloads may need proxy settings configured for Fiji/Java (see the ImageJ [proxy settings](https://imagej.net/learn/troubleshooting) guidance).
+- **Retry later.** Package servers occasionally throttle or fail under load; waiting a few minutes often resolves it.
+- **Start clean if the environment looks half-installed.** Click **Uninstall** and choose **Keep my data (Recommended)**, then **Install** again.
+
+If the same error persists after several attempts, please open an issue with the contents of the **Progress Log** at [github.com/neurogeom/CopilotJ/issues](https://github.com/neurogeom/CopilotJ/issues).
+
+</details>
 
 <details id="faq-jar-conflict">
 <summary>CopilotJ fails to load after installation or after installing other plugins</summary>
