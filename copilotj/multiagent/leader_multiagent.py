@@ -5,7 +5,7 @@
 import asyncio
 import json
 import os
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import replace
 from typing import Annotated, Any
 
@@ -62,6 +62,7 @@ from copilotj.multiagent.leader_prompts import (
     build_observation_message,
     build_tool_prompt,
     make_summary_prompt,
+    make_summary_tail,
 )
 from copilotj.multiagent.tools import system_info
 from copilotj.plugin import ClientPluginAPI
@@ -115,6 +116,10 @@ class LeaderAgent(ChatAgent):
 
         # Per-dialog conversation state. Populated by begin_dialog() and
         # extended by continue_dialog(). Reset at the start of each dialog.
+        # INVARIANT: append-only within a dialog — existing entries are never
+        # mutated in place. Helper calls snapshot this (see dialog_messages /
+        # LeaderDriven._leader_dialog_snapshot) to reuse it as a cache prefix,
+        # which relies on entries being stable once written.
         self._dialog_messages: list[TextMessage] = []
 
         self._apis = apis
@@ -149,6 +154,18 @@ class LeaderAgent(ChatAgent):
             ),
         ]
         self.agents = agents if agents else {}
+
+    @property
+    def dialog_messages(self) -> Sequence[TextMessage]:
+        """Read-only view of the cached conversation turns.
+
+        The underlying ``_dialog_messages`` is append-only within a dialog and
+        reset by ``begin_dialog``; existing entries are never mutated in place.
+        Returns the live reference typed as a read-only ``Sequence`` — callers
+        must not mutate it; for a mutable copy use
+        ``LeaderDriven._leader_dialog_snapshot``.
+        """
+        return self._dialog_messages
 
     def set_save_workflow_handler(
         self,
@@ -669,15 +686,37 @@ User prompt to optimize:
         except Exception as kb_e:
             self.log_error(f"[WARNING] KB build failed for dialog {dialog_id}: {kb_e}")
 
+    def _leader_dialog_snapshot(self) -> list[TextMessage]:
+        """Shallow copy of the leader's cached conversation, for reuse as a
+        prompt-cache prefix by helper calls.
+
+        Returns a new list; the ``TextMessage`` entries are shared by reference,
+        which is safe because ``_dialog_messages`` is append-only. Empty when no
+        dialog has started (``begin_dialog`` not yet called) — callers fall back
+        to a standalone prompt in that case.
+        """
+        return list(self.leader_agent.dialog_messages)
+
     async def _generate_dialog_summary(self, dialog_context: dict) -> str | None:
         steps = dialog_context["steps"]
         self.log_info(f"[SUMMARY] Generating dialog summary from {len(steps)} dialog steps...")
 
-        steps_text = json.dumps(steps, indent=2, ensure_ascii=False)
-        summary_prompt = make_summary_prompt(dialog_context["task"], steps_text)
+        # Reuse the leader's cached conversation as the prefix (cache hit on the
+        # whole dialog) and append a short summary instruction; only the tail is
+        # fresh. Falls back to the standalone re-serialized-steps prompt when no
+        # dialog has been cached yet (e.g. pre-begin_dialog edge case).
+        snapshot = self._leader_dialog_snapshot()
+        if snapshot:
+            messages = [
+                *snapshot,
+                TextMessage(role="user", text=make_summary_tail(dialog_context["task"])),
+            ]
+        else:
+            steps_text = json.dumps(steps, indent=2, ensure_ascii=False)
+            messages = [TextMessage(role="user", text=make_summary_prompt(dialog_context["task"], steps_text))]
 
         try:
-            response = await self.model_client.create([TextMessage(role="user", text=summary_prompt)])
+            response = await self.model_client.create(messages)
         except Exception as e:
             self.log_error(f"[ERROR] Error generating dialog context summary: {e}")
             return None
