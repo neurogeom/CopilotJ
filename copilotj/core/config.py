@@ -9,6 +9,7 @@ import logging
 import os
 import shutil
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 from pathlib import Path
 
@@ -18,6 +19,8 @@ _logger = logging.getLogger(__name__)
 
 __all__ = [
     "Config",
+    "ConfigLike",
+    "ConfigProvider",
     "load_config",
     "SINGLE_CLIENT_ID",
     "get_home",
@@ -27,6 +30,7 @@ __all__ = [
     "load_managed_config",
     "save_managed_config",
     "bootstrap_assets",
+    "resolve_config",
     "resolve_vision_config",
 ]
 
@@ -90,6 +94,25 @@ class Config:
     def vision_available(self) -> bool:
         """Whether vision can actually work (main model supports it or separate VLM configured)."""
         return self.llm_supports_vision or self.vlm_configured
+
+
+# A live config source: a zero-arg callable returning the current ``Config``.
+# ``LeaderDriven`` passes one of these to factory tools / ``PluginTools`` so they
+# observe ``update_config()`` changes without being rebuilt. A static ``Config``
+# is always accepted too (``resolve_config`` returns it unchanged).
+ConfigProvider = Callable[[], Config]
+ConfigLike = Config | ConfigProvider
+
+
+def resolve_config(cfg: ConfigLike) -> Config:
+    """Resolve a config that may be a static ``Config`` or a zero-arg callable returning one.
+
+    Factory-built tools and ``PluginTools`` receive either a ``Config`` instance (snapshot)
+    or a ``ConfigProvider`` (live) and resolve it at execution time, so a tool observes
+    config changes performed via ``update_config`` without being rebuilt. A frozen
+    ``Config`` is not callable, so ``callable(cfg)`` cleanly distinguishes the two forms.
+    """
+    return cfg() if callable(cfg) else cfg
 
 
 def load_config() -> Config:

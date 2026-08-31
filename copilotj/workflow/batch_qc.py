@@ -17,7 +17,7 @@ import numpy as np
 from skimage import io, transform
 
 from copilotj.core import ImageMessage, TextMessage, new_vlm_model_client
-from copilotj.core.config import Config
+from copilotj.core.config import Config, ConfigLike, resolve_config
 from copilotj.multiagent.py_tools import get_project_temp_dir
 
 logger = logging.getLogger(__name__)
@@ -34,10 +34,7 @@ UINT8_MAX = 255
 MAX_IMAGE_METADATA_LINES = 20
 
 
-def make_batch_precheck(cfg: Config | Callable[[], Config], on_result: Callable[[str], None] | None = None):
-    def current_cfg() -> Config:
-        return cfg() if callable(cfg) else cfg
-
+def make_batch_precheck(cfg: ConfigLike, on_result: Callable[[str], None] | None = None):
     async def batch_precheck(
         folder_path: Annotated[str, "Path to the image folder to check before batch processing"],
         *,
@@ -54,7 +51,7 @@ def make_batch_precheck(cfg: Config | Callable[[], Config], on_result: Callable[
             output_dir=output_dir,
             skip_analysis=skip_analysis,
             montage_count=montage_count,
-            cfg=current_cfg(),
+            cfg=resolve_config(cfg),
         )
         if on_result is not None:
             on_result(result)
