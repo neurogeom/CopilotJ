@@ -2,11 +2,11 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import json
 from typing import Any
 
 from copilotj.core import ChatAgent, ModelClient, ModelSyntaxError, TextMessage, Tool
 from copilotj.multiagent.leader_prompts import build_tool_prompt
+from copilotj.multiagent.react_format import reconstruct_react_text
 
 __all__ = ["Executor"]
 
@@ -27,11 +27,22 @@ class Executor(ChatAgent):
         self.max_iterations = 15
         self.tool_retry_counter = 0
         self.max_tool_retry = 3
+        # Mirror LeaderAgent's malformed-ReAct budget so a stuck model can't
+        # spam the prompt with correction turns (which would bloat the very
+        # prefix we want cache-stable).
+        self.max_syntax_errors = 3
 
         self.system_prompt = self._build_enhanced_system_prompt(prompt)
 
     def _build_enhanced_system_prompt(self, base_prompt: str) -> str:
-        """Build system prompt that includes available tools information from config"""
+        """Build system prompt that includes available tools information from config.
+
+        The tool descriptions embedded here are the ONLY way the model sees the
+        tools: the ReAct wrapper strips the ``tools=`` API param before the
+        provider call (see ``react_parser.py`` — "dont send tools since we are
+        parsing the response manually"). Do NOT remove this text expecting the
+        ``tools=`` param to cover it; it won't reach the provider.
+        """
         if not self.tools:
             return base_prompt
 
@@ -51,78 +62,107 @@ Action: {"name": "<tool_name>", "args": <tool_args_in_json_format>}
         return "\n".join((base_prompt, tools_info, tools_usage))
 
     async def run(self, task: str) -> str:
-        """Execute the agent task with tool usage and reflection"""
+        """Execute the agent task with tool usage and reflection.
+
+        Uses an append-only dialog — the static system prompt plus the initial
+        user task, then one assistant turn (reconstructed ReAct text) plus one
+        user observation turn per step — so the prompt prefix stays
+        byte-stable and provider-side prefix caching hits on every iteration
+        (only the newest turn is uncached). ``steps`` is a side-channel used
+        solely to build the fallback summary on loop exhaustion; it never
+        enters the prompt.
+        """
         self.log_info(f"🟢 {self.name} is executing: {task}")
         self.log_info(f"📋 Available tools: {[t.name for t in self.tools]}")
 
-        try:
-            # Initialize conversation with system prompt and task
-            conversation_context = {
-                "task": task,
-                "status": "in_progress",
-                "last_tool_response": None,
-                "steps": [],
-            }
+        # Reset per-call counters. tool_retry_counter is instance state and the
+        # executor instance is reused across delegated tasks
+        # (LeaderAgent.delegate_task), so it must be reset here or one failed
+        # task can poison the next.
+        self.tool_retry_counter = 0
+        syntax_error_counter = 0
 
+        steps: list[dict[str, Any]] = []
+        messages: list[TextMessage] = [
+            TextMessage(role="system", text=self.system_prompt),
+            TextMessage(role="user", text=task),
+        ]
+
+        try:
             for iteration in range(self.max_iterations):
                 self.log_info(f"Iteration {iteration + 1}/{self.max_iterations}")
 
-                # Build prompt with context
-                execution_context = self._build_execution_context(conversation_context, iteration)
-
-                # Get agent response
                 try:
-                    response = await self._create(
-                        TextMessage(role="system", text=self.system_prompt),
-                        TextMessage(role="user", text=execution_context),
-                        tools=self.tools,
-                    )
+                    response = await self._create(*messages, tools=self.tools)
                 except ModelSyntaxError as e:
                     self.log_error("Agent generated invalid ReAct syntax. Retrying...")
-                    conversation_context["last_tool_response"] = e.message
-
-                    thought = ((e.chat_completion and e.chat_completion.reasoning_content) or "No thought provided",)
-                    conversation_context["steps"].append(
+                    syntax_error_counter += 1
+                    if syntax_error_counter >= self.max_syntax_errors:
+                        return (
+                            f"❌ {self.name} aborted: too many invalid ReAct responses "
+                            f"({syntax_error_counter}/{self.max_syntax_errors})."
+                        )
+                    steps.append(
                         {
-                            "thought": thought,
-                            "action": "",
+                            "thought": getattr(e.chat_completion, "reasoning_content", None),
                             "error": e.message,
                             "iteration": iteration + 1,
                         }
                     )
+                    # NOTE(cache trade-off, deferred fix): appending this correction
+                    # as a second consecutive `user` turn means the provider formatter
+                    # (Anthropic/Gemini) merges same-role messages — it tacks this block
+                    # onto the previous user message, mutating that message's content. So
+                    # the prefix cached up to the previous observation no longer matches
+                    # and THIS retry eats one cache miss (re-cached at the new trailing
+                    # block; subsequent iterations resume cache hits). Rare (only on
+                    # malformed ReAct) and self-healing, so not fixed here. The fix would
+                    # be to first append the model's malformed output as an `assistant`
+                    # turn (via reconstruct_react_text(e.chat_completion)) so roles
+                    # alternate and no merge occurs.
+                    messages.append(TextMessage(role="user", text=self._correction_text(e, iteration)))
                     continue
+
+                # Turn parsed cleanly — reset the malformed-ReAct budget so only a
+                # truly stuck model (3 CONSECUTIVE bad turns) aborts, not 3 slips
+                # scattered across a long run.
+                syntax_error_counter = 0
 
                 if not response.content and not response.tool_calls and not response.reasoning_content:
                     await self.print_error("No response from agent")
                     break
 
-                # Check for Final Answer
+                # Final answer?
                 if response.content or self._is_task_complete(response.reasoning_content or ""):
-                    conversation_context["steps"].append(
+                    steps.append(
                         {
                             "thought": response.reasoning_content or "Task completed",
                             "final_answer": response.content,
                             "iteration": iteration + 1,
                         }
                     )
-                    conversation_context["status"] = "completed"
                     return response.content or response.reasoning_content or ""
 
-                # Parse and execute action if present
+                # Record + append the assistant turn (frozen from here on).
+                assistant_text = reconstruct_react_text(response)
+                if assistant_text:
+                    messages.append(TextMessage(role="assistant", text=assistant_text))
+
+                # No action produced → append a reflection/suggestion user turn.
                 if not response.tool_calls:
-                    # No valid action found, add reflection prompt
                     suggestion = self._suggest_tool_based_on_context(response.reasoning_content or "", task)
-                    conversation_context["last_tool_response"] = f"No valid action identified. {suggestion}"
-                    conversation_context["steps"].append(
+                    steps.append(
                         {
-                            "thought": response.reasoning_content or "No clear thought provided",
+                            "thought": response.reasoning_content or "No clear thought",
                             "reflection_needed": True,
                             "tool_suggestion": suggestion,
                             "iteration": iteration + 1,
                         }
                     )
+                    messages.append(TextMessage(role="user", text=self._reflection_text(suggestion, iteration)))
                     continue
 
+                # Execute the tool, then append a user observation turn.
                 tool_call = response.tool_calls[0]  # TODO: handle multiple tool calls
                 action_summary = f"{tool_call.tool.name} with args: {str(tool_call.args)[:100]}"
                 self.log_info(f"🔧 Executing tool: {action_summary}...")
@@ -130,8 +170,7 @@ Action: {"name": "<tool_name>", "args": <tool_args_in_json_format>}
                     tool_response = await self._call_tool(tool_call)
                     self.tool_retry_counter = 0  # Reset on success
 
-                    conversation_context["last_tool_response"] = tool_response
-                    conversation_context["steps"].append(
+                    steps.append(
                         {
                             "thought": response.reasoning_content or "No thought provided",
                             "action": action_summary,
@@ -139,6 +178,7 @@ Action: {"name": "<tool_name>", "args": <tool_args_in_json_format>}
                             "iteration": iteration + 1,
                         }
                     )
+                    messages.append(TextMessage(role="user", text=self._observation_text(tool_response, iteration)))
 
                 except Exception as e:
                     error_msg = f"❌ Error executing action: {str(e)}"
@@ -148,8 +188,7 @@ Action: {"name": "<tool_name>", "args": <tool_args_in_json_format>}
                     if self.tool_retry_counter >= self.max_tool_retry:
                         return f"❌ {self.name} failed after {self.max_tool_retry} attempts: {error_msg}"
 
-                    conversation_context["last_tool_response"] = error_msg
-                    conversation_context["steps"].append(
+                    steps.append(
                         {
                             "thought": response.reasoning_content or "No thought provided",
                             "action": action_summary,
@@ -157,12 +196,37 @@ Action: {"name": "<tool_name>", "args": <tool_args_in_json_format>}
                             "iteration": iteration + 1,
                         }
                     )
+                    messages.append(TextMessage(role="user", text=self._observation_text(error_msg, iteration)))
 
-            return self._generate_final_summary(conversation_context)
+            return self._generate_final_summary({"task": task, "status": "in_progress", "steps": steps})
 
         except Exception as e:
             self.log_error(f"Executor error: {e}")
             return f"❌ {self.name} encountered an error: {str(e)}"
+
+    def _observation_text(self, tool_response: str, iteration: int) -> str:
+        """User-turn text for a tool observation.
+
+        Volatile content (the response, the step counter) lives only in this
+        newest turn, so the cached prefix (system + prior turns) is never
+        invalidated.
+        """
+        return f"Observation:\n{tool_response}\n\nProgress: step {iteration + 1}/{self.max_iterations}"
+
+    def _reflection_text(self, suggestion: str, iteration: int) -> str:
+        """User-turn text when the model produced a thought but no action."""
+        return (
+            f"{self._generate_reflection_prompt(iteration)}\n\n{suggestion}\n\n"
+            f"Progress: step {iteration + 1}/{self.max_iterations}"
+        )
+
+    def _correction_text(self, e: ModelSyntaxError, iteration: int) -> str:
+        """User-turn corrective prompt appended after a malformed ReAct response."""
+        return (
+            f"Your previous response was not valid ReAct format. Error: {e.message}\n"
+            f'Reply with Thought: then Action: {{"name": ..., "args": ...}} (or Final Answer:).\n'
+            f"Progress: step {iteration + 1}/{self.max_iterations}"
+        )
 
     def _suggest_tool_based_on_context(self, thought: str, task: str) -> str:
         """Suggest appropriate tool based on context and descriptions"""
@@ -171,6 +235,12 @@ Action: {"name": "<tool_name>", "args": <tool_args_in_json_format>}
         # Use the tool descriptions from config to make suggestions
         suggested_tools = []
         for tool in self.tools:
+            # FIXME(pre-existing): `tool.name` is a str tested against self.tools (a
+            # list[Tool]), so this is always False — the keyword-matching body below
+            # never runs, and this method always returns the generic "choose from all
+            # tools" fallback. Unrelated to caching; intentionally left unchanged in
+            # the append-only refactor. Likely meant `if tool in self.tools:` (a
+            # tautology) or to drop the guard entirely so matching actually fires.
             if tool.name in self.tools:
                 # Check if context matches tool description keywords
                 desc_words = tool.description.lower().split()
@@ -191,28 +261,6 @@ Action: {"name": "<tool_name>", "args": <tool_args_in_json_format>}
         else:
             TEMPLATE = 'Please choose from available tools: {{TOOLS}}. Format: {"name": "tool_name", "args": <tool_args_in_json_format>}'
             return TEMPLATE.replace("{{TOOLS}}", self._tool_names())
-
-    def _build_execution_context(self, conversation_context: dict[str, Any], iteration: int) -> str:
-        """Build the execution context for the current iteration"""
-        context = f"""
-Task: {conversation_context["task"]}
-
-Current Status: {conversation_context["status"]}
-Iteration: {iteration + 1}/{self.max_iterations}
-
-Available Tools: {self._tool_names()}
-
-Previous Steps:
-{json.dumps(conversation_context["steps"], indent=2) if conversation_context["steps"] else "No previous steps"}
-"""
-
-        if conversation_context["last_tool_response"]:
-            context += f"\n\nLast Tool Response:\n{conversation_context['last_tool_response']}"
-
-        if iteration > 0:
-            context += f"\n\n{self._generate_reflection_prompt(iteration)}"
-
-        return context
 
     def _is_task_complete(self, response: str) -> bool:
         """Check if the task appears to be complete"""
@@ -273,7 +321,8 @@ Iteration: {{CURRENT_ITERATION}}/{{MAX_ITERATIONS}}
                 summary += f"Thought: {step['thought']}\n   "
 
             if step.get("action"):
-                summary += f"Action: Used {step['action'].get('name', 'unknown')} tool\n   "
+                # action is the string action_summary ("tool with args: ...")
+                summary += f"Action: {step['action']}\n   "
 
             if step.get("response"):
                 response = step["response"][:200] + "..." if len(step["response"]) > 200 else step["response"]
