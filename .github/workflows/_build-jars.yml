@@ -36,7 +36,7 @@ jobs:
       # assembly plugin embeds lib/mcp-bundle.jar. The resulting JAR runs on both
       # Java 8 Fiji (core only) and Java 17+ Fiji (full MCP).
       - name: Set up JDK 21
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: zulu
           java-version: "21"
