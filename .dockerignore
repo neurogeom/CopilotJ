@@ -61,6 +61,7 @@ flake.nix
 # Logs and temp files
 logs/
 temp/
+workspace/
 scripts/
 frameless/
 plugin/
