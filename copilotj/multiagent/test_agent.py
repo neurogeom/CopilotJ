@@ -14,7 +14,7 @@ class LeaderDriven(Pattern):
         super().__init__("copilotj.leader_driven")
         self.dialog_counter = 1
 
-        # Load all agents from agent_configs and store in a dictionary
+        # Load all agents and store in a dictionary
         cfg = load_config()
         self.agents = load_agent_configs(model_client=new_model_client(cfg), cfg=cfg)
         for agent in self.agents.values():
