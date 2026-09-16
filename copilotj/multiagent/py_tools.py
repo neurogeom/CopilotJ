@@ -35,14 +35,14 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(level
 logger = logging.getLogger("stable_templates")
 
 
-def get_project_temp_dir(subdir: str | None = None) -> Path:
-    temp_dir = get_home() / "temp"
+def get_project_workspace_dir(subdir: str | None = None) -> Path:
+    workspace_dir = get_home() / "workspace"
     if subdir:
-        temp_dir = temp_dir / subdir
+        workspace_dir = workspace_dir / subdir
 
-    temp_dir.mkdir(parents=True, exist_ok=True)
+    workspace_dir.mkdir(parents=True, exist_ok=True)
 
-    return temp_dir
+    return workspace_dir
 
 
 def get_project_templates_dir() -> Path:
@@ -190,13 +190,13 @@ async def stardist_segmentation(
     prob_thresh: Annotated[float | None, "StarDist probability threshold override"] = None,
     nms_thresh: Annotated[float | None, "StarDist NMS threshold override"] = None,
     save_path: Annotated[
-        str | None, "Output PNG path for colored labels; default saves near input or temp/stardist_results"
+        str | None, "Output PNG path for colored labels; default saves near input or workspace/stardist_results"
     ] = None,
 ) -> dict[str, Any]:
     try:
         if image_array is not None:
             img = image_array
-            inferred_dir = get_project_temp_dir("stardist_segmentation_results")
+            inferred_dir = get_project_workspace_dir("stardist_segmentation_results")
             inferred_name = "in_memory"
             # Convert RGB to grayscale if needed
             if img.ndim == 3 and img.shape[-1] in (3, 4):
@@ -208,7 +208,7 @@ async def stardist_segmentation(
             else:
                 img = await asyncio.to_thread(load_image, image_path, to_gray=True)
                 p = Path(image_path)
-                inferred_dir = get_project_temp_dir("stardist_segmentation_results")
+                inferred_dir = get_project_workspace_dir("stardist_segmentation_results")
                 inferred_name = p.stem
 
         if not _validate_image(img):
@@ -601,8 +601,8 @@ async def biapy_tool(
         raise ValueError("mode must be one of: train | predict | eval")
 
     # Prepare output directory and template path
-    temp_root = get_project_temp_dir("biapy_runs")
-    run_dir = temp_root / model_name
+    workspace_root = get_project_workspace_dir("biapy_runs")
+    run_dir = workspace_root / model_name
     run_dir.mkdir(parents=True, exist_ok=True)
 
     # Resolve template
@@ -905,15 +905,15 @@ async def gauss_otsu_labeling_tool(
         labels, info_dict = await asyncio.to_thread(_gauss_otsu_segmentation, image, gaussian_sigma, min_object_size)
 
         # Save results
-        temp_dir = get_project_temp_dir("segmentation_results")
-        temp_dir.mkdir(exist_ok=True)
+        workspace_dir = get_project_workspace_dir("segmentation_results")
+        workspace_dir.mkdir(exist_ok=True)
 
         # Save original image
-        original_path = temp_dir / "original.png"
+        original_path = workspace_dir / "original.png"
         await asyncio.to_thread(io.imsave, original_path, img_as_ubyte(image))
 
         # Save segmentation result
-        seg_path = temp_dir / "gauss_otsu_segmentation.png"
+        seg_path = workspace_dir / "gauss_otsu_segmentation.png"
         colored_labels = await asyncio.to_thread(create_colored_masks, labels)
         await asyncio.to_thread(io.imsave, seg_path, colored_labels)
 
@@ -952,15 +952,15 @@ async def voronoi_otsu_labeling_tool(
         )
 
         # Save results
-        temp_dir = get_project_temp_dir("segmentation_results")
-        temp_dir.mkdir(exist_ok=True)
+        workspace_dir = get_project_workspace_dir("segmentation_results")
+        workspace_dir.mkdir(exist_ok=True)
 
         # Save original image
-        original_path = temp_dir / "original.png"
+        original_path = workspace_dir / "original.png"
         await asyncio.to_thread(io.imsave, original_path, img_as_ubyte(image))
 
         # Save segmentation result
-        seg_path = temp_dir / "voronoi_otsu_segmentation.png"
+        seg_path = workspace_dir / "voronoi_otsu_segmentation.png"
         colored_labels = await asyncio.to_thread(create_colored_masks, labels)
         await asyncio.to_thread(io.imsave, seg_path, colored_labels)
 
@@ -999,15 +999,15 @@ async def eroded_otsu_labeling_tool(
         )
 
         # Save results
-        temp_dir = get_project_temp_dir("segmentation_results")
-        temp_dir.mkdir(exist_ok=True)
+        workspace_dir = get_project_workspace_dir("segmentation_results")
+        workspace_dir.mkdir(exist_ok=True)
 
         # Save original image
-        original_path = temp_dir / "original.png"
+        original_path = workspace_dir / "original.png"
         await asyncio.to_thread(io.imsave, original_path, img_as_ubyte(image))
 
         # Save segmentation result
-        seg_path = temp_dir / "eroded_otsu_segmentation.png"
+        seg_path = workspace_dir / "eroded_otsu_segmentation.png"
         colored_labels = await asyncio.to_thread(create_colored_masks, labels)
         await asyncio.to_thread(io.imsave, seg_path, colored_labels)
 
@@ -1066,15 +1066,15 @@ async def deconvolution_tool(
         )
 
         # Save results
-        temp_dir = get_project_temp_dir("deconvolution_results")
-        temp_dir.mkdir(exist_ok=True)
+        workspace_dir = get_project_workspace_dir("deconvolution_results")
+        workspace_dir.mkdir(exist_ok=True)
 
         # Save original image
-        original_path = temp_dir / "original.png"
+        original_path = workspace_dir / "original.png"
         await asyncio.to_thread(io.imsave, original_path, img_as_ubyte(image))
 
         # Save deconvolved result
-        deconv_path = temp_dir / f"deconvolved_{method}.png"
+        deconv_path = workspace_dir / f"deconvolved_{method}.png"
         await asyncio.to_thread(io.imsave, deconv_path, img_as_ubyte(deconvolved))
 
         logger.info(
@@ -1259,15 +1259,15 @@ async def super_resolution_tool(
         upscaled, info_dict = await asyncio.to_thread(_super_resolve_image, image, model_name, scale_factor)
 
         # Save results
-        temp_dir = get_project_temp_dir("deconvolution_results")
-        temp_dir.mkdir(exist_ok=True)
+        workspace_dir = get_project_workspace_dir("deconvolution_results")
+        workspace_dir.mkdir(exist_ok=True)
 
         # Save original image
-        original_path = temp_dir / "original.png"
+        original_path = workspace_dir / "original.png"
         await asyncio.to_thread(io.imsave, original_path, img_as_ubyte(image))
 
         # Save upscaled result
-        upscaled_path = temp_dir / f"upscaled_{model_name}_{scale_factor}x.png"
+        upscaled_path = workspace_dir / f"upscaled_{model_name}_{scale_factor}x.png"
         await asyncio.to_thread(io.imsave, upscaled_path, img_as_ubyte(upscaled))
 
         logger.info(f"Super resolution completed: {image.shape} -> {upscaled.shape}")

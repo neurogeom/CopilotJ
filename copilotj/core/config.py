@@ -152,7 +152,7 @@ def load_config() -> Config:
         ),
         bioimage_model_zoo_cache=os.getenv(
             "BIOIMAGE_MODEL_ZOO_CACHE",
-            str(Path(__file__).resolve().parent.parent.parent / "temp" / "bioimage_model_zoo"),
+            str(Path(__file__).resolve().parent.parent.parent / "workspace" / "bioimage_model_zoo"),
         ),
         bioimage_model_zoo_cache_ttl=int(os.getenv("BIOIMAGE_MODEL_ZOO_CACHE_TTL", "86400")),
     )
