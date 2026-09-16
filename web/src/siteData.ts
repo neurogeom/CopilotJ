@@ -16,6 +16,7 @@ export type Tag =
 
 export const GITHUB_REPO = "https://github.com/neurogeom/copilotj";
 export const DISCORD_LINK = "https://discord.gg/32wpPq5dBV";
+export const IMAGESC_LINK = "https://forum.image.sc/tag/copilotj";
 
 export const SLOGAN =
   "CopilotJ turns natural-language requests into executable, verifiable bioimage analysis workflows by coordinating ImageJ/Fiji ecosystem, Python scientific libraries and deep-learning tools";
