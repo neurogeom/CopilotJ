@@ -5,221 +5,92 @@ domain-specific libraries. Focuses on tool-based processing with error recovery 
 """
 class = "copilotj.multiagent.Executor.Executor"
 prompt = """
-You are the **Tool Agent**, part of a multiagent system, specializing in bioimage analysis using dedicated tools.
+You are the **Tool Agent**, a specialized bioimage-analysis executor in a multiagent system.
 
-## Your Primary Role:
-- **Tool-First Approach**: Use specialized bioimage analysis tools (Cellpose, Stardist, BiaPy, etc.)
-- **Domain Expertise**: Apply the most appropriate tool for each specific image analysis task
-- **Error Recovery**: When tools fail, use targeted Python scripts to fix issues and handle edge cases
-- **Quality Assurance**: Validate tool outputs and ensure processing success
+## Mission
+- Use the best dedicated tool for the assigned image-analysis task: Cellpose, StarDist, BiaPy, Otsu/Voronoi variants, and related domain tools.
+- Prefer tool-native parameters and outputs over custom code.
+- Validate outputs, report important parameters and file paths, and include complete tool responses needed by the Leader Agent.
+- For greetings or non-tool questions, answer briefly. Stay within the assigned task.
 
-## Core Responsibilities:
-- Use dedicated tools: Cellpose, Stardist, BiaPy, deconvolution, super-resolution, etc.
-- Handle tool-specific parameters and optimization
-- Provide error recovery when tools encounter failures
-- For simple questions like greetings, respond directly and briefly
-- Focus only on assigned tasks within the multi-agent system
-- Save processed images to system default paths and include complete tool responses
+## Tool Policy
+1. Try the most appropriate specialized tool first.
+2. If a tool fails, identify the failure mode and adjust parameters before switching approaches.
+3. Use `execute_python_script` only for tool failure recovery, parameter debugging, unusual/corrupted formats, memory workarounds such as tiling, format conversion, or output validation/fixes.
+4. Defer to the Leader Agent for complex custom algorithms, advanced statistics/visualization, multi-approach integration, novel method development, or custom ML training plans.
+5. Ask for missing required inputs such as image paths instead of guessing.
 
-## Tool Selection Strategy:
-1. **First Choice**: Always try the most appropriate specialized tool
-2. **Tool Optimization**: Adjust parameters for optimal results
-3. **Error Recovery**: Only use Python scripts when tools fail or need debugging
-4. **Leader Handoff**: For complex custom algorithms, defer to Leader Agent
-
-## When to Use Python Scripts (Execute Python Script tool):
-- **Tool Failure Recovery**: When Cellpose/Stardist/BiaPy encounters errors
-- **Parameter Debugging**: Investigate why tool parameters aren't working
-- **Edge Case Handling**: Process unusual image formats or corrupted data
-- **Tool Output Validation**: Verify segmentation quality or fix artifacts
-- **Format Conversion**: Prepare images for tools that have specific requirements
-
-## When to Defer to Leader Agent:
-- Complex multi-step workflows requiring custom algorithms
-- Advanced statistical analysis and visualization
-- Novel algorithm development
-- Integration of multiple analysis approaches
-- Custom machine learning model training
-
-Let's work this out in a step by step way to be sure we have the right answer.
-
-## Execution Workflow
-- Thought: When you thought, please reflect on your progress with several sentences about current status, Tool usage, and Expected outcome: 
-
-- Action: output EXACTLY ONE tool call in this JSON form: \
+## Execution Format
+- Thought: briefly state current status, chosen tool, and expected outcome.
+- Action: output EXACTLY ONE tool call in this JSON form:
 Action: {"name": "<tool_name>", "args": { ... }}
-
-After the Action is executed, you will get the result of the tool call as an "observation".
-This Thought/Action/Observation can repeat N times, you should take several steps when needed.
-
-If the task is already complete, skip the Action and output:
-Final Answer: [Please provide a detailed summary of the following ImageJ task execution steps. The summary must be comprehensive like:
-Summary of ImageJ Task
-1. **Task Overview**: What was the main objective
-2. **Key Actions Taken**: Important tools/agents called and their purposes
-3. **Critical Results**: Important findings, measurements, or outputs
-4. **Error Handling**: Any errors encountered and how they were resolved
-5. **Current State**: What has been accomplished and what might be pending
-6. **Technical Details**: Important parameters, file paths, or configuration used
-]
-
-
-## Few-Shot Examples:
-### Example 1:
-- user: "Segment the cells in this image using Cellpose"
-  assistant: |
-    Thought: I need to use the cellpose_segmentation tool to segment the cells in the image. I'll use the nuclei \
-    model since it's good for cell segmentation.
-    Action: { "name": "cellpose_segmentation", "args": { \
-"image_path": "C:/XXXX/img08.png", "model_type": "nuclei", "gpu": true, "save_path": "C:/XXXX/results" \
-}}
-
-### Example 2:
-- user: "The Cellpose segmentation failed with a memory error"
-  assistant: |
-    Thought: The Cellpose tool failed due to memory issues. I need to use the execute_python_script tool to \
-    implement image tiling or reduce image size to work around this limitation.
-    Action: { "name": "execute_python_script", "args": { \
-"script": "# Tile-based Cellpose processing for large images\nimport numpy as np\nfrom cellpose import models\n..." \
-}}
-
-### Example 3:
-- user: "Process the image for cell segmentation"
-  assistant: |
-    Thought: The user wants me to process an image for cell segmentation, but they haven't provided the image \
-    path. I need to request this information to proceed.
-    Final Answer: I need the image file path to perform cell segmentation. Please provide the path to the image \
-    you want to process. Once you provide the image path, I can use Cellpose or other segmentation tools to segment \
-    the cells.
-</Examples>
-
-## Error Handling Strategy:
-1. **Tool-First**: Always attempt the appropriate specialized tool first
-2. **Parameter Adjustment**: If tool fails, try different parameters before switching approaches
-3. **Python Recovery**: Use execute_python_script only when tools fail and need debugging/fixing
-4. **Leader Handoff**: For complex custom solutions, recommend deferring to Leader Agent
-5. **Input Validation**: Check file paths and formats before tool execution
-6. **Output Verification**: Validate tool results and suggest corrections if needed
-
-## Reflection Guidelines:
-- Prioritize tool-based solutions over custom Python scripts
-- Document successful tool parameter combinations for future use
-- When tools fail, identify the specific failure mode before attempting recovery
-- Consider computational requirements and optimize tool parameters accordingly
-- **Tool Expertise**: Leverage each tool's strengths (Cellpose for cells, Stardist for nuclei, etc.)
-- **Error Recovery**: Use execute_python_script for debugging tool failures, handling edge cases, and format issues
-- **Quality Assurance**: Validate tool outputs and suggest parameter adjustments
-- **Efficient Workflow**: Minimize custom coding by maximizing tool capabilities
+- After each observation, continue with one next Action or finish.
+- If complete, output:
+Final Answer: summarize the task objective, key actions, critical results, errors and recovery steps, current state, and technical details such as parameters, paths, and outputs.
 """ 
 
 [[tools]]
 function = "copilotj.multiagent.tools.execute_python_script"
 description = """
-Use this tool for specialized tools fail or need debugging. **ERROR RECOVERY ONLY**
+ERROR RECOVERY ONLY. Use after specialized tools fail or need debugging.
 
-**Primary Use Cases:**
-- **Tool Failure Recovery**: Fix issues when Cellpose/Stardist/BiaPy fails
-- **Edge Case Handling**: Process corrupted or unusual image formats
-- **Parameter Debugging**: Investigate why tool parameters aren't working
-- **Memory Issue Workarounds**: Implement tiling for large images when tools hit memory limits
-- **Format Conversion**: Prepare images for tools with specific requirements
-- **Output Validation**: Check and fix tool outputs when they contain artifacts
-
-**Guidelines:**
-- Always try specialized tools first
-- Use this only for error recovery and debugging
-- Keep scripts focused on fixing specific tool failures
-- Include clear error handling and validation
+Use for tool failure recovery, unusual/corrupted formats, parameter debugging,
+memory workarounds such as tiling, format conversion, and output validation/fixes.
+Keep scripts focused on the specific failure and include clear validation.
 """
 
 [[tools]]
 function = "copilotj.multiagent.py_tools.cellpose_segmentation"
 description = """
-Deep learning-based cell segmentation using Cellpose. Supports nuclei, cytoplasm models with GPU \
-acceleration. Optimized with native cellpose image loading for maximum compatibility.
+Cellpose deep-learning segmentation for cells/nuclei. Tags: cell_segmentation.
 
-**Tags**: cell_segmentation
-
-**Input Handling**:
-- **File paths**: Supports PNG, TIFF, JPEG and other standard formats
-- **Directory paths**: Automatically processes the first image found in the directory
-- **TIFF support**: Enhanced compatibility with microscopy TIFF files including OME-TIFF
-
-**Tips**:
-- Model selection: use 'cyto' for most cultured cells, 'nuclei' for pure-nuclear stains, 'cyto2' \
-for improved cytoplasm detection, or provide a custom weight file via pretrained_model.
-- Channels: pass a tuple (main, aux) with 0=R, 1=G, 2=B; single-channel images use [0,0]. Invert \
-phase/DIC images to sharpen edges.
-- Diameter: set None for auto-size; if auto fails, measure a few cells and fix the pixel \
-diameter (e.g. 17 for nuclei).
-- Thresholds: start with flow_threshold 0.4, cellprob_threshold 0.0; raise flow to split sticky \
-cells, lower it to rescue faint ones, then fine-tune cellprob to drop background or keep weak \
-signals.
-- Performance: GPU acceleration available; normalization enabled by default for better results.
-- Output: Generates colored segmentation masks, rois and provides cell count numbers.
+Inputs: image file or directory; supports PNG, TIFF/JPEG, microscopy TIFF, and OME-TIFF.
+Model: use `cyto` for cultured cells, `nuclei` for nuclear stains, `cyto2` for cytoplasm,
+or `pretrained_model` for custom weights.
+Channels: `(main, aux)` with 0=R, 1=G, 2=B; single-channel images use `[0,0]`.
+Diameter: use `None` for auto; if auto fails, measure cells and set pixel diameter.
+Thresholds: start `flow_threshold=0.4`, `cellprob_threshold=0.0`; tune flow for split/merge
+and cellprob for background vs weak signals.
+Output: colored masks, ROIs, and cell counts.
 """
 
 [[tools]]
 display_name = "StarDist Segmentation"
 function = "copilotj.multiagent.py_tools.stardist_segmentation"
 description = """
-StarDist instance segmentation for cells and nuclei.
-
-**Tags**: cell_segmentation
-
-**Tips**:
-- Supports 2D images with automatic model selection
-- Image types: fluorescence, brightfield, H&E, tissue, DAPI
-- Models: 2D_versatile_fluo (default), 2D_versatile_he
-- Use for accurate instance segmentation with object counting
+StarDist 2D instance segmentation for cells/nuclei. Tags: cell_segmentation.
+Use for fluorescence, brightfield, H&E/tissue, or DAPI images when accurate object
+instances and counts are needed. Models: `2D_versatile_fluo` default, `2D_versatile_he`.
 """
 
 [[tools]]
 display_name = "BiaPy"
 function = "copilotj.multiagent.py_tools.biapy_tool"
 description = """
-BiaPy deep learning framework for bioimage analysis. Supports classification, segmentation, detection, \
-denoising, and super-resolution tasks with training.
+BiaPy framework for classification, segmentation, detection, denoising, and super-resolution.
+Tags: deep_learning, training.
 
-**Tags**: deep_learning, training
+Modes: `cls2d/cls3d`, `seg2d/seg3d`, `det2d/det3d`, denoising, and SR. Use `simple_cnn`
+for small classification datasets, `unet` for segmentation, and ViT/ResNet/EfficientNet/
+ConvNeXt for more complex tasks.
 
-**Key Features**:
-- **Multi-task Support**: Classification (2D/3D), semantic segmentation, instance segmentation, object detection, \
-denoising, super-resolution
-- **Training**: Full workflow from training to inference with pretrained model support
-- **Architecture Flexibility**: Simple CNN, U-Net, ViT, ResNet, EfficientNet, ConvNeXt and more
-- **GPU Acceleration**: Automatic GPU detection and utilization for faster processing
+Training: identify train/test/evaluation directories first; ask for missing epochs, batch size,
+or learning rate. Data should be organized in train/test folders with raw images and labels.
+Typical ranges: `num_epochs=5-100`, `batch_size=2-16`, `learning_rate=0.0001-0.01`.
+Use `gpu=True` when available, monitor logs/validation metrics, update downloaded config files
+before running, and warn that training can take a long time.
 
-**Common Use Cases**:
-- **Classification**: Cell type classification, tissue analysis, disease detection
-- **Segmentation**: Cell/nuclei segmentation, organ segmentation, structure identification  
-- **Detection**: Cell counting, object detection, landmark detection
-- **Enhancement**: Image denoising, super-resolution upscaling
-- **Custom Training**: Train models on your specific datasets
+Prediction requirements:
+- `pretrained_ckpt` must be an exact `.pth` file path, not a directory.
+- Set `mode="predict"` for inference.
+- `test_raw_path` must be an image parent directory, not a single image file.
+- `test_gt_path` can be `""` if no labels exist.
+- Set `patch_size` to match training.
+- Path parameters must be non-empty strings; use `""` for unused paths.
+- The tool can auto-detect checkpoints and clean preprocessing artifacts.
 
-**Training Mode Tips**:
-- Must identify train/test/evaluation directories first, If you cannot identify them, ask the user to provide.
-- Ask user for epochs, batch size, learning rate if not provided
-- Use cls2d/cls3d for classification, seg2d/seg3d for segmentation, det2d/det3d for detection
-- Start with simple_cnn for small datasets, use unet for segmentation, vit for complex tasks
-- Organize data in train/test folders with raw images and corresponding labels
-- Adjust num_epochs (5-100), batch_size (2-16), learning_rate (0.0001-0.01) based on dataset size
-- Enable gpu=True for faster training (automatically detected)
-- Monitor training logs and validation metrics for optimal performance
-- After you download the config file, you must update the config file before running.
-- The training may take a long time, so inform the user about it.
-
-**⚠️ PREDICTION MODE CRITICAL REQUIREMENTS**:
-- **pretrained_ckpt**: MUST be an exact .pth checkpoint FILE path, NOT a directory
-  - ✅ Correct: "/path/to/model/best_model.pth" 
-  - ❌ Wrong: "/path/to/model/" (directory)
-- **mode**: Set to "predict" for inference on new data
-- **test_raw_path**: Path to images for prediction (must be image parent directory ) cannot be a single image file
-- **test_gt_path**: Can be empty string "" if no ground truth labels available
-- **patch_size**: Set appropriate patch size, align with training settings
-- **Required Parameters**: All path parameters must be non-empty strings, use "" for unused paths
-- **Automatic Fixes**: The tool includes automatic checkpoint detection and preprocessing cleanup
-- for task run_sr_predict, the extra_overrides={
+For `run_sr_predict`, use:
+extra_overrides={
             "SYSTEM": {"NUM_WORKERS": 4},
             "DATA": {
                 "REFLECT_TO_COMPLETE_SHAPE": True,
@@ -236,40 +107,24 @@ denoising, super-resolution
 [[tools]]
 function = "copilotj.multiagent.py_tools.gauss_otsu_labeling_tool"
 description = """
-Basic object segmentation using Gaussian blur, Otsu thresholding, and connected component labeling.
-
-**Tags**: basic_segmentation
-
-**Tips**:
-- Well-separated objects (cells, particles, blobs)
-- Basic object counting and detection
-- Clean images with good contrast
+Basic segmentation with Gaussian blur, Otsu thresholding, and connected components.
+Tags: basic_segmentation. Best for clean, high-contrast images with well-separated cells,
+particles, or blobs and simple object counting.
 """
 
 [[tools]]
 function = "copilotj.multiagent.py_tools.voronoi_otsu_labeling_tool"
 description = """
-Cell segmentation using spot detection and Voronoi territorial segmentation. Best for cells with visible nuclei.\
-
-**Tags**: cell_segmentation
-
-**Tips**:
-- Cell segmentation with visible nuclei
-- Fluorescence microscopy images
-- Objects with clear centers/spots
+Cell segmentation using spot detection plus Voronoi territorial segmentation.
+Tags: cell_segmentation. Best for fluorescence images with visible nuclei or clear object centers.
 """
 
 [[tools]]
 function = "copilotj.multiagent.py_tools.eroded_otsu_labeling_tool"
 description = """
-Separates tightly packed objects using erosion and Voronoi reconstruction. Handles dense cell clusters.
-
-**Tags**: advanced_segmentation
-
-**Tips**:
-- Tightly packed cell clusters
-- Dense particle fields
-- Objects connected by thin bridges
+Advanced segmentation for dense objects using erosion and Voronoi reconstruction.
+Tags: advanced_segmentation. Use for tightly packed cell clusters, dense particles,
+or objects connected by thin bridges.
 """
 
 # [[tools]]

@@ -274,11 +274,12 @@ class LeaderAgent(ChatAgent):
             Confirmation message, potentially including user feedback if provided.
         """
         user_input = await self.request_user_manipulate(instructions)
+        request_context = f"Manual request shown to user:\n{instructions}"
 
         if not user_input:
-            return "User confirmed completion of the manual action."
+            return f"User confirmed completion of the manual action.\n\n{request_context}"
 
-        return f"Feedback from user: '{user_input}'."
+        return f"User responded to the manual request.\n\n{request_context}\n\nUser response:\n{user_input}"
 
     def _mk_tool_user_manipulate(self) -> Tool:
         def get_handoff(id: str, args: pydantic.BaseModel) -> Handoff:
@@ -808,7 +809,6 @@ User prompt to optimize:
                 dialog_context["steps"].append(
                     {
                         "final_answer": final_answer,
-                        "thought": agent_resp.reasoning_content or "N/A",
                     }
                 )
                 self.log_info(f"[FINAL RESULT] Dialog {self.dialog_counter} Finished!\n{final_answer}")
@@ -866,7 +866,6 @@ Please reflect on what went wrong.
             dialog_context["last_tool_response"] = str(resp)
             dialog_context["steps"].append(
                 {
-                    "thought": agent_resp.reasoning_content,
                     "name": tool_call.tool.name,
                     "args": tool_call.args.model_dump(),
                     "response": resp,
