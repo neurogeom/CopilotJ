@@ -274,15 +274,24 @@ COPILOTJ_KB_AUTOSAVE=0
 
 ### Agent configuration (advanced)
 
-CopilotJ uses a configurable multi-agent architecture. Agent configuration files are located in
-`copilotj/multiagent/agent_configs/`. Each configuration file defines an agent's system prompt, role description,
-and optional constraints.
+CopilotJ uses a configurable multi-agent architecture. The shipped defaults live in the repo-root
+`agents/` directory (sibling of `knowledge_bank/`). At runtime the active configs are read from
+`$COPILOTJ_HOME/agents/`. In dev mode (`COPILOTJ_HOME` unset → repo root) the two paths coincide,
+so editing `agents/*.toml` directly takes effect after restarting the server. In production the
+defaults are synced into `$COPILOTJ_HOME/agents/` from the bundled seed.
 
-**Customizing existing agents:** Modify prompt files in `agent_configs/` to adjust reasoning style, constrain
-responsibilities, or tune domain-specific behavior. Changes take effect after restarting the server.
+**Customizing existing agents:** Edit the TOML in `$COPILOTJ_HOME/agents/` to adjust reasoning
+style, constrain responsibilities, or tune domain-specific behavior. Changes take effect after
+restarting the server.
 
-**Adding new agents:** Copy an existing configuration file, define a unique agent name and role, write a system prompt,
-and register any custom tools.
+**Adding new agents:** Drop a new `*_agent.toml` file into `$COPILOTJ_HOME/agents/` (a unique
+agent name, role, system prompt, and any custom tools). User-added configs are never touched by the
+sync logic.
+
+**Upgrades:** When a release ships changed default configs, each file you have customized is first
+backed up as `<name>.bak.YYYYMMDD` inside `$COPILOTJ_HOME/agents/`, then overwritten with the
+new default (so your edits are recoverable, not lost). Re-apply your edits from the `.bak` if needed.
+Do not modify or delete those `.bak` files by hand.
 
 ## Testing
 
