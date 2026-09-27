@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Annotated, Any, Optional
 
 from copilotj.core import ModelClient, TextMessage, Tool, ToolCall
-from copilotj.multiagent.leader_prompts import make_workflow_definition_prompt
+from copilotj.multiagent.prompts.workflow_definition import make_workflow_definition_prompt
 from copilotj.multiagent.py_tools import get_project_temp_dir
 from copilotj.workflow.converter import DialogToWorkflowConverter
 from copilotj.workflow.executor import WorkflowExecutor
