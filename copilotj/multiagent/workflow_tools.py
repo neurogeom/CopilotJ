@@ -8,14 +8,14 @@ from typing import Annotated, Any, Optional
 
 from copilotj.core import ModelClient, TextMessage, Tool, ToolCall
 from copilotj.multiagent.leader_prompts import make_workflow_definition_prompt
-from copilotj.multiagent.py_tools import get_project_temp_dir
+from copilotj.multiagent.py_tools import get_project_workspace_dir
 from copilotj.workflow.converter import DialogToWorkflowConverter
 from copilotj.workflow.executor import WorkflowExecutor
 from copilotj.workflow.manager import WorkflowManager
 
 WORKFLOW_ABOUT_PREVIEW_CHARS = 500
 OUTPUT_DIR_INPUT = "output_dir"
-PROJECT_TEMP_DIR = get_project_temp_dir()
+PROJECT_WORKSPACE_DIR = get_project_workspace_dir()
 
 
 def _preview_text(text: str, limit: int) -> str:
@@ -306,17 +306,17 @@ async def execute_workflow(
 
 
 def _normalized_inputs(inputs: dict[str, Any] | None) -> dict[str, Any] | None:
-    if not isinstance(inputs, dict) or not _is_project_temp_dir(inputs.get(OUTPUT_DIR_INPUT)):
+    if not isinstance(inputs, dict) or not _is_project_workspace_dir(inputs.get(OUTPUT_DIR_INPUT)):
         return inputs
     normalized = dict(inputs)
     normalized.pop(OUTPUT_DIR_INPUT)
     return normalized
 
 
-def _is_project_temp_dir(value: Any) -> bool:
+def _is_project_workspace_dir(value: Any) -> bool:
     if not isinstance(value, str) or not value:
         return False
     try:
-        return Path(value).expanduser().resolve() == PROJECT_TEMP_DIR.resolve()
+        return Path(value).expanduser().resolve() == PROJECT_WORKSPACE_DIR.resolve()
     except OSError:
         return False

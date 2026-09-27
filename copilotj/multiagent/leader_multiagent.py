@@ -191,7 +191,7 @@ class LeaderAgent(ChatAgent):
             tool_list=tool_list,
             plugins_text=plugins_text,
             system_info_text=system_info_text,
-            default_image_path=str(py_tools.get_project_temp_dir()),
+            default_image_path=str(py_tools.get_project_workspace_dir()),
         )
 
     async def begin_dialog(self, main_task: str, *, trace_ctx: Langfuse | None = None) -> ModelResponse:

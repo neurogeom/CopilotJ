@@ -18,7 +18,7 @@ from skimage import io, transform
 
 from copilotj.core import ImageMessage, TextMessage, new_vlm_model_client
 from copilotj.core.config import Config
-from copilotj.multiagent.py_tools import get_project_temp_dir
+from copilotj.multiagent.py_tools import get_project_workspace_dir
 
 logger = logging.getLogger(__name__)
 
@@ -120,7 +120,7 @@ def _chunks(paths: list[Path], size: int) -> list[list[Path]]:
 def _create_montages(
     sampled_paths: list[Path], sample_size: int, montage_count: int, output_dir: str | None
 ) -> list[dict[str, Any]]:
-    output_base = Path(output_dir) if output_dir else get_project_temp_dir("batch_qc")
+    output_base = Path(output_dir) if output_dir else get_project_workspace_dir("batch_qc")
     montage_items: list[dict[str, Any]] = []
     for index, chunk in enumerate(_chunks(sampled_paths, sample_size), start=1):
         name = "batch_montage.png" if montage_count == 1 else f"batch_montage_{index}.png"
@@ -353,7 +353,7 @@ def _combine_montage_metadata(items: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def _save_montage(montage: np.ndarray, output_path: Path | None) -> Path:
-    output_path = output_path or get_project_temp_dir("batch_qc") / "batch_montage.png"
+    output_path = output_path or get_project_workspace_dir("batch_qc") / "batch_montage.png"
     output_path.parent.mkdir(parents=True, exist_ok=True)
     io.imsave(str(output_path), montage)
     return output_path
