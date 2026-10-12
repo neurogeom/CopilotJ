@@ -7,6 +7,7 @@ from typing import Any
 
 from copilotj.core import ChatAgent, ModelClient, ModelSyntaxError, TextMessage, Tool
 from copilotj.multiagent.leader_prompts import build_tool_prompt
+from copilotj.plugin.api import PluginNotConnectedError
 
 __all__ = ["Executor"]
 
@@ -140,6 +141,12 @@ Action: {"name": "<tool_name>", "args": <tool_args_in_json_format>}
                         }
                     )
 
+                except PluginNotConnectedError:
+                    # No ImageJ plugin connected: propagate immediately so the leader's
+                    # tool-exec short-circuit surfaces the curated message instead of
+                    # burning retries here.
+                    raise
+
                 except Exception as e:
                     error_msg = f"❌ Error executing action: {str(e)}"
                     self.log_error(error_msg)
@@ -160,6 +167,9 @@ Action: {"name": "<tool_name>", "args": <tool_args_in_json_format>}
 
             return self._generate_final_summary(conversation_context)
 
+        except PluginNotConnectedError:
+            # Let it propagate to the leader's tool-exec short-circuit (do not stringify).
+            raise
         except Exception as e:
             self.log_error(f"Executor error: {e}")
             return f"❌ {self.name} encountered an error: {str(e)}"

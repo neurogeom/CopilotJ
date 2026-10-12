@@ -13,6 +13,7 @@ import aiohttp.web as web
 import pydantic
 
 from copilotj.core.config import SINGLE_CLIENT_ID, is_single_client
+from copilotj.plugin.api import CLIENT_NOT_FOUND_ERR, PluginRequestError
 from copilotj.util import Base64ImageTruncator, IndentedRawJson
 
 __all__ = ["BridgeRequest", "BridgeResponse", "Bridge"]
@@ -141,7 +142,10 @@ class _Client:
                 return await asyncio.wait_for(future, timeout=timeout)
             except asyncio.TimeoutError:
                 _log.warning("Timeout waiting for response to event: %s (id: %s)", event, event_id)
-                raise Exception(f"Timeout waiting for response to event: {event} (id: {event_id})")
+                # Normalize into the plugin-error hierarchy so callers that tolerate
+                # PluginRequestError (e.g. optional window-info lookups) also tolerate
+                # timeouts, instead of getting a bare Exception.
+                raise PluginRequestError(f"Timeout waiting for response to event: {event} (id: {event_id})") from None
 
         finally:
             # Clean up the registered event
@@ -256,8 +260,8 @@ class Bridge:
 
         client = self._clients.get(client_id)
         if client is None:
-            _log.error(f"Client not found: {req.client_id}")
-            return BridgeResponse(err="Client not found")
+            _log.error(f"{CLIENT_NOT_FOUND_ERR}: {req.client_id}")
+            return BridgeResponse(err=CLIENT_NOT_FOUND_ERR)
 
         # Forward the event
         timeout = req.timeout or DEFAULT_TIMEOUT
