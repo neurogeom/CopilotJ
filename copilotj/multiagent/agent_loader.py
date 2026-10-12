@@ -9,7 +9,7 @@ import os
 import tomllib
 
 from copilotj.core import FunctionTool, ModelClient, Tool
-from copilotj.core.config import Config
+from copilotj.core.config import ConfigLike
 from copilotj.multiagent.Executor import Executor
 
 __all__ = ["load_agent_configs"]
@@ -19,11 +19,11 @@ _log = logging.getLogger(__name__)
 GLOB_PATTERN = os.path.join(os.path.dirname(__file__), "agent_configs", "*_agent.toml")
 
 
-def load_agent_configs(*, model_client: ModelClient, cfg: Config):
+def load_agent_configs(*, model_client: ModelClient, cfg: ConfigLike):
     return _load_agent_configs(GLOB_PATTERN, model_client=model_client, cfg=cfg)
 
 
-def _load_agent_configs(glob_pattern: str, *, model_client: ModelClient, cfg: Config):
+def _load_agent_configs(glob_pattern: str, *, model_client: ModelClient, cfg: ConfigLike):
     agents = {}
     configs = glob.glob(glob_pattern)
     _log.info("Found %d configs in %s.", len(configs), glob_pattern)

@@ -30,7 +30,7 @@ from copilotj.core import (
     Tool,
     new_model_client,
 )
-from copilotj.core.config import Config
+from copilotj.core.config import Config, ConfigLike
 from copilotj.multiagent.agent_loader import load_agent_configs
 from copilotj.multiagent.Executor import Executor
 from copilotj.multiagent.kb_tools import (
@@ -106,7 +106,7 @@ class LeaderAgent(ChatAgent):
         agents: dict[str, Executor] | None = None,
         model_client: ModelClient,
         apis: ClientPluginAPI,
-        cfg: Config,
+        cfg: ConfigLike,
     ):
         super().__init__(name, description, model_client=model_client)
 
@@ -142,7 +142,7 @@ class LeaderAgent(ChatAgent):
             FunctionTool(workflow_tools.export_workflow, PROMPT_TOOL_EXPORT_WORKFLOW),
             FunctionTool(self.execute_workflow, PROMPT_TOOL_EXECUTE_WORKFLOW),
             FunctionTool(
-                batch_qc.make_batch_precheck(lambda: self._cfg),
+                batch_qc.make_batch_precheck(self._cfg),
                 PROMPT_TOOL_BATCH_PRECHECK,
                 name="batch_precheck",
                 display_name="Batch Pre-check QC",
@@ -424,7 +424,9 @@ class LeaderDriven(Pattern):
 
         # Load agents defined in configurations
         try:
-            self.specialized_agents = load_agent_configs(model_client=wrapped_model_client, cfg=cfg)
+            # Pass a live config provider (not the snapshot) so factory-built tools observe
+            # config changes from update_config() without being rebuilt.
+            self.specialized_agents = load_agent_configs(model_client=wrapped_model_client, cfg=self.get_config)
             for agent in self.specialized_agents.values():
                 self.register(agent)
 
@@ -451,11 +453,15 @@ class LeaderDriven(Pattern):
             model_client=wrapped_model_client,
             agents=self.specialized_agents,
             apis=apis,
-            cfg=cfg,
+            cfg=self.get_config,
         )
         self.workflow_saver.chat_history = self.leader_agent.chat_history
         self.leader_agent.set_save_workflow_handler(self.workflow_saver.save)
         self.log_info("Leader Agent initialized.")
+
+    def get_config(self) -> Config:
+        """Return the current live config (reflects ``update_config()``)."""
+        return self._cfg
 
     def update_config(
         self,

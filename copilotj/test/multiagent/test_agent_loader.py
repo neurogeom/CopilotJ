@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from copilotj.core import FunctionTool
-from copilotj.core.config import Config
+from copilotj.core.config import Config, ConfigLike, resolve_config
 from copilotj.multiagent import agent_loader as _loader_module
 from copilotj.multiagent.agent_loader import _load_agent_configs
 
@@ -202,6 +202,64 @@ def test_factory_tool_receives_config(tmp_path):
     asyncio.run(_run())
 
 
+def test_factory_tool_sees_live_config_update():
+    """A factory-built tool reads config via the provider, so updating the provider's
+    config is visible without rebuilding the tool."""
+
+    async def _run():
+        holder = {"cfg": Config(tavily_api_key="OLD")}
+
+        def provider():
+            return holder["cfg"]
+
+        tool = FunctionTool(make_echo_api_key(provider), "echo")
+        args = tool.args_type()(query="x")
+        assert await tool.run(args) == "OLD"
+        # Mutate the config the provider returns — same tool, no rebuild.
+        holder["cfg"] = Config(tavily_api_key="NEW")
+        assert await tool.run(args) == "NEW"
+
+    import asyncio
+
+    asyncio.run(_run())
+
+
+def test_factory_tool_static_config_still_works():
+    """Passing a static Config (no provider) still resolves correctly (backward compat)."""
+
+    async def _run():
+        tool = FunctionTool(make_echo_api_key(Config(tavily_api_key="STATIC")), "echo")
+        args = tool.args_type()(query="x")
+        assert await tool.run(args) == "STATIC"
+
+    import asyncio
+
+    asyncio.run(_run())
+
+
+def test_plugin_tools_cfg_resolves_live_provider():
+    """PluginTools.cfg resolves a live provider and reflects config updates."""
+    from copilotj.multiagent.tools import PluginTools
+
+    holder = {"cfg": Config(vision_enabled=False)}
+
+    def provider():
+        return holder["cfg"]
+
+    pt = PluginTools(MagicMock(), cfg=provider)
+    assert pt.cfg.vision_enabled is False
+    holder["cfg"] = Config(vision_enabled=True)
+    assert pt.cfg.vision_enabled is True
+
+
+def test_plugin_tools_cfg_static_config_passthrough():
+    """PluginTools.cfg returns a static Config unchanged (backward compat)."""
+    from copilotj.multiagent.tools import PluginTools
+
+    pt = PluginTools(MagicMock(), cfg=Config(vision_enabled=True))
+    assert pt.cfg.vision_enabled is True
+
+
 # ---------------------------------------------------------------------------
 # Tests — error handling & edge cases
 # ---------------------------------------------------------------------------
@@ -311,19 +369,20 @@ async def _sample_tool(query: Annotated[str, "Search query"]) -> str:
     return f"result: {query}"
 
 
-def make_sample_tool(cfg: Config):
-    """Factory that returns a closure with access to cfg."""
+def make_sample_tool(cfg: ConfigLike):
+    """Factory that returns a closure with access to cfg (static or live provider)."""
 
     async def _tool(query: Annotated[str, "Search query"]) -> str:
-        return f"result: {query}, key={cfg.tavily_api_key}"
+        _cfg = resolve_config(cfg)
+        return f"result: {query}, key={_cfg.tavily_api_key}"
 
     return _tool
 
 
-def make_echo_api_key(cfg: Config):
-    """Factory that echoes the tavily_api_key — for verifying config binding."""
+def make_echo_api_key(cfg: ConfigLike):
+    """Factory that echoes the tavily_api_key — for verifying config binding (static or live provider)."""
 
     async def _echo(query: Annotated[str, "Ignored"]) -> str:
-        return cfg.tavily_api_key or ""
+        return resolve_config(cfg).tavily_api_key or ""
 
     return _echo
