@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import json
+import logging
 import re
 import shutil
 import time
@@ -11,10 +12,60 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from copilotj.multiagent.py_tools import get_project_temp_dir
+from copilotj.core.config import get_home
 from copilotj.workflow.contract import RUNS_DIR, SCHEMA_VERSION, WorkflowInterface, parse_interface
 
-BASE_DIR = get_project_temp_dir("workflows")
+_log = logging.getLogger(__name__)
+
+
+def migrate_workflow_layout() -> None:
+    """Relocate the workflow library from ``<home>/temp/workflows`` to ``<home>/workflows``.
+
+    The library previously lived under the ``temp/`` subtree even though it is
+    long-lived, user-curated data. Moves each child of the old directory into the new
+    directory, skipping name collisions (never clobbering an existing workflow).
+    Idempotent and resilient to interruption: there is no early-out on a partially
+    populated ``new`` dir, so a previously-interrupted migration completes on the next
+    run instead of stranding the remaining children under ``temp/``. Cross-device
+    renames fall back to copy+delete.
+    """
+    home = get_home()
+    old = home / "temp" / "workflows"
+    new = home / "workflows"
+    if not old.exists():
+        return
+    new.mkdir(parents=True, exist_ok=True)
+    for child in list(old.iterdir()):
+        dst = new / child.name
+        if dst.exists():
+            continue  # Name collision with an existing workflow; leave both in place.
+        try:
+            child.rename(dst)
+        except OSError:
+            # Cross-device link or permission issue: fall back to copy + delete.
+            try:
+                shutil.move(str(child), str(dst))
+            except OSError as e:
+                _log.warning("Could not migrate workflow %s -> %s: %s", child, dst, e)
+                continue
+    # Everything moved out -> remove the now-empty old directory.
+    if not any(old.iterdir()):
+        try:
+            old.rmdir()
+        except OSError:
+            pass
+
+
+# Migrate BEFORE creating the new dir structure, so the "absent or empty" guard
+# above still holds (BASE_DIR/shared creation would otherwise make 'new' look
+# populated and silently skip migration). Runs at every entry point that imports
+# this module (appose_worker, scripts/run-workflow.py, copilotj/server/__main__).
+try:
+    migrate_workflow_layout()
+except Exception as e:  # noqa: BLE001 - never block startup on migration
+    _log.warning("Workflow library migration skipped: %s", e)
+
+BASE_DIR = get_home() / "workflows"
 SHARE_DIR = BASE_DIR / "shared"
 BASE_DIR.mkdir(parents=True, exist_ok=True)
 SHARE_DIR.mkdir(parents=True, exist_ok=True)

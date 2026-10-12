@@ -26,6 +26,7 @@ __all__ = [
     "is_single_client",
     "load_managed_config",
     "save_managed_config",
+    "bootstrap_dir_if_empty",
     "bootstrap_assets",
     "resolve_vision_config",
 ]
@@ -237,19 +238,35 @@ def save_managed_config(data: dict) -> None:
     path.write_text(json.dumps(data, indent=2), "utf-8")
 
 
+def bootstrap_dir_if_empty(src: Path, dst: Path) -> bool:
+    """Copy a seed directory tree into ``dst`` only when ``dst`` is missing or empty.
+
+    Used to seed user-data dirs (``assets`` and ``knowledge_bank``) from the bundled
+    source on first run. Note: the ``agents`` dir does NOT use this — it is user-editable
+    and uses the richer dpkg-style refresh in ``copilotj.multiagent.agent_loader``.
+    No-op (returns False) when:
+
+    - ``src`` does not exist (no seed available),
+    - ``src`` and ``dst`` resolve to the same path (dev mode, where the home dir
+      IS the source tree, so copying would recurse into itself),
+    - ``dst`` already exists and is non-empty (user data present; never clobber).
+
+    Otherwise copies ``src`` onto ``dst`` (``dirs_exist_ok=True``) and returns True.
+    """
+    if not src.exists():
+        return False
+    if src.resolve() == dst.resolve():
+        return False
+    if dst.exists() and any(dst.iterdir()):
+        return False
+    shutil.copytree(src, dst, dirs_exist_ok=True)
+    return True
+
+
 def bootstrap_assets() -> None:
     """Copy assets/ from project source to COPILOTJ_HOME if missing."""
-    home = get_home()
     source_root = Path(__file__).resolve().parent.parent.parent
-    source_assets = source_root / "assets"
-    target_assets = home / "assets"
-
-    if not source_assets.exists():
-        return
-    if target_assets.exists() and any(target_assets.iterdir()):
-        return
-
-    shutil.copytree(source_assets, target_assets, dirs_exist_ok=True)
+    bootstrap_dir_if_empty(source_root / "assets", get_home() / "assets")
 
 
 def _is_dev(cfg: Config) -> bool:
