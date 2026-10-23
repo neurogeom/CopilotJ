@@ -337,7 +337,7 @@ Upon user request, CopilotJ can capture an accepted analysis procedure as a stru
    Export workflow named: XXX as JSON
    ```
 
-   Exported workflow files are saved under `<copilotj_home>/temp/workflows/shared`. ZIP workflow packages can be shared directly with collaborators.
+   Exported workflow files are saved under `<copilotj_home>/workspace/workflows/shared`. ZIP workflow packages can be shared directly with collaborators.
 
    **Supported export formats:**
    - **Markdown workflows** for supplementary documentation or laboratory protocols.
@@ -346,15 +346,15 @@ Upon user request, CopilotJ can capture an accepted analysis procedure as a stru
 
    **Importing workflows:**
 
-   Previously exported workflow packages can be imported back into CopilotJ. To import a workflow package, first extract the ZIP archive. The extracted package contains a workflow folder (named after the workflow) with the JSON workflow file. Copy the entire workflow folder to `<copilotj_home>/temp/workflows`. CopilotJ automatically detects the imported workflow and adds it to the local workflow collection.
+   Previously exported workflow packages can be imported back into CopilotJ. To import a workflow package, first extract the ZIP archive. The extracted package contains a workflow folder (named after the workflow) with the JSON workflow file. Copy the entire workflow folder to `<copilotj_home>/workspace/workflows`. CopilotJ automatically detects the imported workflow and adds it to the local workflow collection.
 
-### File locations and temporary folder
+### File locations and workspace folder
 
-All files generated during execution are stored in a designated temporary working directory, referred to as the `<copilotj_home>/temp` folder.
+All files generated during execution are stored in a designated working directory, referred to as the `<copilotj_home>/workspace` folder.
 
-> **Tip:** Click **Open Resources** in the dialog's **Managed Server** tab to open `<copilotj_home>` (the CopilotJ home directory) directly in your file manager — the `temp/` folder lives inside it.
+> **Tip:** Click **Open Resources** in the dialog's **Managed Server** tab to open `<copilotj_home>` (the CopilotJ home directory) directly in your file manager — the `workspace/` folder lives inside it.
 
-The `<copilotj_home>/temp` folder serves as a centralized location for artifacts generated during an analysis session, including:
+The `<copilotj_home>/workspace` folder serves as a centralized location for artifacts generated during an analysis session, including:
 
 - processed images and intermediate image results
 - measurement tables such as CSV files
@@ -362,7 +362,7 @@ The `<copilotj_home>/temp` folder serves as a centralized location for artifacts
 - saved workflows in Markdown or JSON
 - optional ZIP bundles containing workflows, data, and metadata
 
-The temporary folder is managed by the CopilotJ core server and updates in real time as workflows execute. Unless explicitly cleaned or overwritten, it preserves outputs from the current session for debugging, validation, and reproducibility.
+The workspace folder is managed by the CopilotJ core server and updates in real time as workflows execute. Its contents are **not** deleted when a session ends: unless you explicitly clean or overwrite them, outputs are preserved for debugging, validation, and reproducibility, so remove files yourself once you no longer need them.
 
 ## FAQ
 
@@ -435,7 +435,7 @@ The **Open Resources** button opens the CopilotJ home directory in your file man
 If the button doesn't work:
 
 - **Nothing happens, or you see "Opening a folder is not supported".** Your platform may not support this from Fiji. Open the folder manually at the path above.
-- **The folder is empty, or there is no `temp/` folder.** Subfolders such as `temp/`, `assets/`, and `knowledge_bank/` are created when the Python environment is installed and a session runs. Click **Install** (then **Start**) in the **Managed Server** tab first.
+- **The folder is empty, or there is no `workspace/` folder.** Subfolders such as `workspace/`, `assets/`, and `knowledge_bank/` are created when the Python environment is installed and a session runs. Click **Install** (then **Start**) in the **Managed Server** tab first.
 - **You see a "Failed to open resource directory" error.** Open the path above manually in your file manager.
 
 </details>

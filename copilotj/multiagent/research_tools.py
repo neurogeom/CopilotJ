@@ -28,7 +28,7 @@ from copilotj.core.kb import (
     ensure_faiss_index,
     init_knowledge_base,  # noqa: E402
 )
-from copilotj.multiagent.py_tools import get_project_temp_dir
+from copilotj.multiagent.py_tools import get_project_workspace_dir
 from copilotj.multiagent.tools import execute_python_script
 
 __all__ = [
@@ -676,7 +676,7 @@ Please focus on the Query: {research_report["query"]} to extract the most relate
 async def download_resource(code: Annotated[str, "The code to download the resource"]) -> str:
     """Download a resource from the given URL using execute_python_script."""
     try:
-        download_dir = get_project_temp_dir("downloads")
+        download_dir = get_project_workspace_dir("downloads")
         download_dir.mkdir(parents=True, exist_ok=True)
 
         result = await execute_python_script(code)

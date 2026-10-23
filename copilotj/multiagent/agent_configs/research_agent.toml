@@ -240,7 +240,7 @@ Use this tool when you need to:
 
 Features:
 - Execute custom Python download code
-- Downloads saved to project temp/downloads/ directory
+- Downloads saved to project workspace/downloads/ directory
 - Full script output feedback
 - Flexible download strategies
 - Support for complex download scenarios
@@ -309,7 +309,7 @@ Use this tool when you need to:
 
 Parameters:
 - model_id: The model ID or name to download
-- dest_dir: Optional custom download directory (defaults to temp/bioimage_models)
+- dest_dir: Optional custom download directory (defaults to workspace/bioimage_models)
 
 ⚠️ Note: Downloads may be large. Ensure sufficient disk space.
 """
