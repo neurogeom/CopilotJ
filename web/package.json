@@ -14,7 +14,7 @@
     "@tabler/icons-vue": "^3.49.0",
     "@tailwindcss/typography": "^0.5.20",
     "@tailwindcss/vite": "^4.3.3",
-    "@vueuse/core": "^14.4.0",
+    "@vueuse/core": "^15.0.0",
     "date-fns": "^4.4.0",
     "dayjs": "^1.11.23",
     "highlight.js": "^11.12.0",
