@@ -30,7 +30,7 @@ The core agent framework follows a layered architecture:
 - `LeaderDriven` (Pattern) — Main multi-agent pattern. Creates a `LeaderAgent` and loads specialized `Executor` agents from TOML configs.
 - `LeaderAgent` (ChatAgent) — ReAct-style leader that reasons, calls tools (ImageJ perception, macro execution, Python scripts, knowledge bank), and delegates to specialized agents. Manages dialog-level conversation history with summarization.
 - `Executor` (ChatAgent) — Generic specialized agent with its own system prompt and tools, loaded from TOML. Runs ReAct loops with tool retry and error recovery.
-- `agent_configs/` — TOML files defining specialized agents. Active configs: `tool_agent.toml`, `research_agent.toml`, `success_case.toml`, `imagej_macro_help.toml`. Disabled configs have `.disabled.toml` suffix.
+- `agent_configs/` — TOML files defining specialized agents. `agent_loader.py` loads only files matching `*_agent.toml`: currently `tool_agent.toml` and `research_agent.toml`. Plugin-syntax and macro reference knowledge belongs in `knowledge_bank/`, not here.
 - `agent_loader.py` — Dynamically loads agent classes and tool functions from TOML configs using `importlib`.
 
 **`copilotj/server/`** — HTTP layer:
