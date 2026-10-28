@@ -11,10 +11,10 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from copilotj.multiagent.py_tools import get_project_temp_dir
+from copilotj.multiagent.py_tools import get_project_workspace_dir
 from copilotj.workflow.contract import RUNS_DIR, SCHEMA_VERSION, WorkflowInterface, parse_interface
 
-BASE_DIR = get_project_temp_dir("workflows")
+BASE_DIR = get_project_workspace_dir("workflows")
 SHARE_DIR = BASE_DIR / "shared"
 BASE_DIR.mkdir(parents=True, exist_ok=True)
 SHARE_DIR.mkdir(parents=True, exist_ok=True)
