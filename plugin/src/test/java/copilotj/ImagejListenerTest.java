@@ -9,11 +9,15 @@ package copilotj;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.IntConsumer;
 
 import org.junit.jupiter.api.Test;
 
@@ -115,5 +119,77 @@ public class ImagejListenerTest {
     assertEquals(1, l.getMessages(ts).messages.size(), "since is inclusive: equal timestamp is kept");
     assertEquals(0, l.getMessages(LocalDateTime.MIN, ts).messages.size(),
         "until is strict: equal timestamp is excluded");
+  }
+
+  // ===== concurrent access =====
+  // ImageJ calls the listener from macro/script threads and the EDT at the same time.
+
+  private static final int THREADS = 8;
+  private static final int PUSHES_PER_THREAD = 5000;
+
+  /** Runs {@code task(threadIndex)} on THREADS threads released together; returns the first failure. */
+  private static Throwable runConcurrently(final IntConsumer task) throws InterruptedException {
+    final CountDownLatch start = new CountDownLatch(1);
+    final AtomicReference<Throwable> failure = new AtomicReference<>();
+    final Thread[] threads = new Thread[THREADS];
+    for (int t = 0; t < THREADS; t++) {
+      final int index = t;
+      threads[t] = new Thread(() -> {
+        try {
+          start.await();
+          task.accept(index);
+        } catch (final Throwable e) {
+          failure.compareAndSet(null, e);
+        }
+      });
+      threads[t].start();
+    }
+    start.countDown();
+    for (final Thread thread : threads) {
+      thread.join();
+    }
+    return failure.get();
+  }
+
+  @Test
+  public void concurrentPushesAreNotLost() throws InterruptedException {
+    final ImagejListener l = newListener(THREADS * PUSHES_PER_THREAD);
+    final Throwable failure = runConcurrently(t -> {
+      for (int i = 0; i < PUSHES_PER_THREAD; i++) {
+        l.push(new ImagejListener.LogMessage("t" + t + "-" + i)); // distinct: never merged
+      }
+    });
+    assertNull(failure, "push must not throw under concurrent use");
+    assertEquals(THREADS * PUSHES_PER_THREAD, queue(l).size(), "no push may be lost");
+  }
+
+  @Test
+  public void concurrentMergesCountEveryPush() throws InterruptedException {
+    final ImagejListener l = newListener(16);
+    final Throwable failure = runConcurrently(t -> {
+      for (int i = 0; i < PUSHES_PER_THREAD; i++) {
+        l.push(new ImagejListener.LogMessage("same")); // always merged into the tail
+      }
+    });
+    assertNull(failure, "push must not throw under concurrent use");
+    final List<ImagejListener.Message> msgs = queue(l);
+    assertEquals(1, msgs.size());
+    assertEquals(THREADS * PUSHES_PER_THREAD, msgs.get(0).count, "every merge must be counted");
+  }
+
+  @Test
+  public void getMessagesIsSafeDuringConcurrentPushes() throws InterruptedException {
+    final ImagejListener l = newListener(64); // small cap: pushes evict while readers iterate
+    final Throwable failure = runConcurrently(t -> {
+      for (int i = 0; i < PUSHES_PER_THREAD; i++) {
+        if (t % 2 == 0) {
+          l.push(new ImagejListener.LogMessage("t" + t + "-" + i));
+        } else {
+          l.getMessages(LocalDateTime.MIN);
+        }
+      }
+    });
+    assertNull(failure, "getMessages must not throw while other threads push");
+    assertEquals(64, queue(l).size());
   }
 }
