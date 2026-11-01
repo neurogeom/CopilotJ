@@ -231,7 +231,10 @@ public class ImagejListener implements PlugIn, IJEventListener, ImageListener, R
 
   private final boolean debug;
   private final int maxSize;
+  // Listener callbacks arrive concurrently (macro/script threads and the EDT), so
+  // every access to the queue, including merging into its tail, holds this lock.
   private final Deque<Message> messageQueue = new ArrayDeque<>();
+  private final Object queueLock = new Object();
 
   public ImagejListener() {
     this(10240, false);
@@ -263,18 +266,18 @@ public class ImagejListener implements PlugIn, IJEventListener, ImageListener, R
       System.out.println(LocalDateTime.now() + ": " + message.getMessage());
     }
 
-    if (!messageQueue.isEmpty()) {
+    synchronized (queueLock) {
       // peek last message and try to merge
       final Message lastMessage = messageQueue.peekLast();
-      if (lastMessage.mergeIfEquals(message)) {
+      if (lastMessage != null && lastMessage.mergeIfEquals(message)) {
         return;
       }
-    }
 
-    messageQueue.add(message);
+      messageQueue.add(message);
 
-    if (messageQueue.size() > maxSize) {
-      messageQueue.remove(); // Keep the queue size limited
+      if (messageQueue.size() > maxSize) {
+        messageQueue.remove(); // Keep the queue size limited
+      }
     }
   }
 
@@ -314,19 +317,19 @@ public class ImagejListener implements PlugIn, IJEventListener, ImageListener, R
     final List<Message> messages = new ArrayList<>();
     boolean isComplete = false;
 
-    // Check if we have messages older than requested time
-    if (!messageQueue.isEmpty()) {
+    synchronized (queueLock) {
+      // Check if we have messages older than requested time
       final Message oldestMessage = messageQueue.peekFirst();
-      if (oldestMessage.timestampEarliest.isAfter(since)) {
+      if (oldestMessage != null && oldestMessage.timestampEarliest.isAfter(since)) {
         isComplete = true;
       }
-    }
 
-    // Collect matching messages
-    for (final Message message : messageQueue) {
-      if ((message.timestampEarliest.isAfter(since) || message.timestampEarliest.isEqual(since)) &&
-          (until == null || message.timestampEarliest.isBefore(until))) {
-        messages.add(message);
+      // Collect matching messages
+      for (final Message message : messageQueue) {
+        if ((message.timestampEarliest.isAfter(since) || message.timestampEarliest.isEqual(since)) &&
+            (until == null || message.timestampEarliest.isBefore(until))) {
+          messages.add(message);
+        }
       }
     }
     return new HistoryResponse(messages, isComplete, since, until);
