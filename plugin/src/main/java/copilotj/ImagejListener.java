@@ -41,7 +41,7 @@ import copilotj.util.FlexibleLocalDateTimeDeserializer;
 public class ImagejListener implements PlugIn, IJEventListener, ImageListener, RoiListener, CommandListener {
   // --- Messages ---
 
-  public abstract static class Message {
+  public abstract static class Message implements Cloneable {
     public final LocalDateTime timestampEarliest;
     public LocalDateTime timestampLatest;
     public int count;
@@ -59,6 +59,14 @@ public class ImagejListener implements PlugIn, IJEventListener, ImageListener, R
         return true;
       }
       return false;
+    }
+
+    final Message snapshot() {
+      try {
+        return (Message) super.clone();
+      } catch (final CloneNotSupportedException e) {
+        throw new AssertionError(e);
+      }
     }
 
     public abstract String getMessage();
@@ -324,11 +332,12 @@ public class ImagejListener implements PlugIn, IJEventListener, ImageListener, R
         isComplete = true;
       }
 
-      // Collect matching messages
+      // Collect matching messages. Return snapshots: a later push() may merge into
+      // a queued message (count/timestampLatest) while the caller serializes it.
       for (final Message message : messageQueue) {
         if ((message.timestampEarliest.isAfter(since) || message.timestampEarliest.isEqual(since)) &&
             (until == null || message.timestampEarliest.isBefore(until))) {
-          messages.add(message);
+          messages.add(message.snapshot());
         }
       }
     }
