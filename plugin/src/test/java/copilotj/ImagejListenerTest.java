@@ -71,6 +71,20 @@ public class ImagejListenerTest {
     assertEquals(1, msgs.get(1).count);
   }
 
+  @Test
+  public void getMessagesReturnsSnapshotsUnaffectedByLaterMerges() {
+    final ImagejListener l = newListener(16);
+    l.push(new ImagejListener.LogMessage("x"));
+    final ImagejListener.Message before = queue(l).get(0);
+
+    l.push(new ImagejListener.LogMessage("x")); // merges into the queued message
+
+    assertEquals(1, before.count, "a returned message must not see later merges");
+    assertNull(before.timestampLatest, "a returned message must not see later merges");
+    assertEquals("x", before.getMessage(), "snapshot keeps subclass state");
+    assertEquals(2, queue(l).get(0).count, "the queued message itself is still merged");
+  }
+
   // ===== getMessages(since, until) =====
 
   @Test
