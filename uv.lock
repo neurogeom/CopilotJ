@@ -232,11 +232,11 @@ wheels = [
 
 [[package]]
 name = "appose"
-version = "0.11.0"
+version = "0.12.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/49/77/6e34728bf31e4e6205a45e1cd0da1145defb340ebb024641e3c53fb2046e/appose-0.11.0.tar.gz", hash = "sha256:31c1d3c1ae0b090fe262499005afd42cee9183c2c12df120560a634dc6dcccb2", size = 60879, upload-time = "2026-03-03T22:31:12.144Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3c/8d/1203e933693d885f88465d18143346b6b20322ac40c14f98d3b7ea70ef4e/appose-0.12.0.tar.gz", hash = "sha256:2f73eaac3db95f9666ba5d2a2a89600b2605ff45fbf7f05afdbd368503ce2f53", size = 67896, upload-time = "2026-07-28T17:20:42.574Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0a/0f/13f9c2e509423cd6e6ac2555cdb05e88b3c6f94d2ebbc24638ae9285f060/appose-0.11.0-py3-none-any.whl", hash = "sha256:2daa1ee03a221d2e509fe9ee13f24f712cf2e3623353379c9a1bdfd12bf98cbd", size = 68492, upload-time = "2026-03-03T22:31:10.994Z" },
+    { url = "https://files.pythonhosted.org/packages/33/12/969743e8b7150d13b654756f3bb927c4a916747e16742c0e202e9a5e6a66/appose-0.12.0-py3-none-any.whl", hash = "sha256:5c36f8293e824b049deb7393c53a46066ad67625f2de8ccb7f662eaa94ef5c80", size = 75171, upload-time = "2026-07-28T17:20:41.328Z" },
 ]
 
 [[package]]
@@ -817,7 +817,7 @@ requires-dist = [
     { name = "aiohttp-cors", specifier = ">=0.8.1" },
     { name = "altair", specifier = ">=5.5.0" },
     { name = "anthropic", specifier = ">=0.52.0" },
-    { name = "appose", specifier = ">=0.5.1" },
+    { name = "appose", specifier = ">=0.12.0" },
     { name = "beautifulsoup4", specifier = ">=4.12.3" },
     { name = "biapy", specifier = ">=3.5.6" },
     { name = "bokeh", specifier = ">=3.7.3" },

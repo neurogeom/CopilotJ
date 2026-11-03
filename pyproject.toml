@@ -9,7 +9,7 @@ authors = [
 ]
 requires-python = ">=3.12,<3.13"
 dependencies = [
-  "appose>=0.5.1",
+  "appose>=0.12.0",
   "aiohttp[speedups]>=3.14.1",
   "aiohttp-cors>=0.8.1",
   "ujson>=5.13.0",
