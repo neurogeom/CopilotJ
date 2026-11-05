@@ -115,7 +115,7 @@
 
           # web
           nodejs
-          (pnpm.override { nodejs-slim = pkgs.nodejs-slim_latest; }) # TODO: workaround with NixOS/nixpkgs#525627, remove after next bump of flake.lock
+          pnpm
           prettier
 
           # misc
@@ -154,7 +154,7 @@
               # JDK configuration
               JAVA_HOME = pkgs.jdk21.home;
             }
-            // lib.optionalAttrs pkgs.stdenv.isLinux {
+            // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
               # Python libraries often load native shared objects using dlopen(3).
               # Setting LD_LIBRARY_PATH makes the dynamic library loader aware of libraries without using RPATH for lookup.
               LD_LIBRARY_PATH = lib.makeLibraryPath pkgs.pythonManylinuxPackages.manylinux1;
@@ -188,7 +188,6 @@
               #
               # Enable all optional dependencies for development.
               virtualenv = editablePythonSet.mkVirtualEnv "copilotj-dev-env" workspace.deps.all;
-
             in
             pkgs.mkShell {
               packages = packages ++ [ virtualenv ];
