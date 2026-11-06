@@ -33,6 +33,7 @@ from copilotj.core import (
 from copilotj.core.config import Config
 from copilotj.multiagent.agent_loader import load_agent_configs
 from copilotj.multiagent.Executor import Executor
+from copilotj.multiagent.react_format import reconstruct_react_text
 from copilotj.multiagent.kb_tools import (
     _load_macro_plugin_names,
     kb_build,
@@ -74,27 +75,6 @@ OPTIMIZE_CHAT_HISTORY_LIMIT = 3
 OPTIMIZE_ASSISTANT_SNIPPET_CHARS = 100
 CONTEXT_SNIPPET_CHARS = 500
 SaveWorkflowHandler = Callable[[str, str | None, int | None, list[int] | None], Awaitable[str]]
-
-
-def _reconstruct_react_text(response: ModelResponse) -> str:
-    """Rebuild an assistant-side ReAct text block from a parsed ModelResponse.
-
-    The ReAct wrapper parses the model's raw text output into ``reasoning_content``
-    (Thought), ``tool_calls`` (Action), and ``content`` (Final Answer). For
-    multi-turn conversation we re-assemble those parts into the same shape the
-    model originally produced, so the next turn's context matches the
-    ReAct-formatted examples in the system prompt.
-    """
-    parts: list[str] = []
-    if response.reasoning_content:
-        parts.append(f"Thought: {response.reasoning_content.strip()}")
-    if response.tool_calls:
-        tc = response.tool_calls[0]
-        args_json = json.dumps(tc.args.model_dump(), ensure_ascii=False)
-        parts.append(f'Action: {{"name": "{tc.tool.name}", "args": {args_json}}}')
-    if response.content:
-        parts.append(f"Final Answer: {response.content.strip()}")
-    return "\n".join(parts)
 
 
 class LeaderAgent(ChatAgent):
@@ -231,7 +211,7 @@ class LeaderAgent(ChatAgent):
         parser's structured output) and a new user message carrying the tool
         observation plus refreshed ImageJ window info.
         """
-        assistant_text = _reconstruct_react_text(prior_response)
+        assistant_text = reconstruct_react_text(prior_response)
         if assistant_text:
             self._dialog_messages.append(TextMessage(role="assistant", text=assistant_text))
 
