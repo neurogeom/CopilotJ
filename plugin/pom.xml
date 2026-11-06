@@ -288,6 +288,7 @@
           <include>copilotj/**/*.py</include>
           <include>copilotj/**/*.toml</include>
           <include>knowledge_bank/**/*.toml</include>
+          <include>agents/**/*.toml</include>
           <include>assets/**</include>
           <include>pyproject.toml</include>
           <include>uv.lock</include>

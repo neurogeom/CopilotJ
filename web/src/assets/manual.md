@@ -359,10 +359,13 @@ The `<copilotj_home>/temp` folder serves as a centralized location for artifacts
 - processed images and intermediate image results
 - measurement tables such as CSV files
 - generated reports and logs
-- saved workflows in Markdown or JSON
-- optional ZIP bundles containing workflows, data, and metadata
+- per-run workflow output directories
 
 The temporary folder is managed by the CopilotJ core server and updates in real time as workflows execute. Unless explicitly cleaned or overwritten, it preserves outputs from the current session for debugging, validation, and reproducibility.
+
+**Saved workflows** (your reusable workflow library — workflow JSON, Markdown exports, and optional ZIP bundles) live in `<copilotj_home>/workflows/`, kept separate from the temp folder so they persist across sessions.
+
+**Agent configuration files** live in `<copilotj_home>/agents/`. When CopilotJ is updated and a default agent config has changed since you customized it, your edited copy is preserved as a backup named `<name>.bak.YYYYMMDD` before the new default is written. **Do not modify, rename, or delete these `.bak` files** — they are your recovery copy. To keep your customizations, diff the `.bak` against the new default and re-apply your edits to the live config by hand.
 
 ## FAQ
 

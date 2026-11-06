@@ -4,7 +4,6 @@
 
 import json
 import re
-import shutil
 import tomllib
 from pathlib import Path
 from typing import Annotated, Any
@@ -14,7 +13,7 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-from copilotj.core.config import get_home
+from copilotj.core.config import bootstrap_dir_if_empty, get_home
 from copilotj.core.message import TextMessage
 from copilotj.core.model_client import ModelClient
 
@@ -67,11 +66,7 @@ def _ensure_dirs() -> None:
 
 def _bootstrap_kb() -> None:
     """Copy knowledge_bank from project source to COPILOTJ_HOME if missing."""
-    if KB_ROOT.exists() and any(KB_ROOT.iterdir()):
-        return
-    source = _SOURCE_ROOT / "knowledge_bank"
-    if source.exists():
-        shutil.copytree(source, KB_ROOT, dirs_exist_ok=True)
+    bootstrap_dir_if_empty(_SOURCE_ROOT / "knowledge_bank", KB_ROOT)
 
 
 def _read_toml(path: Path) -> dict[str, Any]:

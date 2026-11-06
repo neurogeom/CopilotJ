@@ -420,7 +420,7 @@ class LeaderDriven(Pattern):
 
         # --- Load Agents and Define Tools ---
         rebuild_registry()  # Rebuild registry to include any new workflow files
-        self.log_info("Loading agents from agent_configs...")
+        self.log_info("Loading agents...")
 
         # Load agents defined in configurations
         try:
@@ -441,7 +441,7 @@ class LeaderDriven(Pattern):
                     )
 
         except Exception as e:
-            self.log_error(f"Error loading agents from 'agent_configs': {e}")
+            self.log_error(f"Error loading agents: {e}")
             self.specialized_agents = {}
 
         # --- Initialize Leader Agent ---
