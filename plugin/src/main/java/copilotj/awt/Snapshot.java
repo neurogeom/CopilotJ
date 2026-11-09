@@ -169,6 +169,20 @@ public class Snapshot {
     }
   }
 
+  /** Executes the action selected in a retained snapshot, even if order changed. */
+  public Action.Response runAction(final Action selected, final List<Object> parameters) {
+    if (selected == null) {
+      throw new IllegalArgumentException("Action not found in the requested snapshot");
+    }
+    for (int i = 0; i < actions.size(); i++) {
+      final Action current = actions.get(i);
+      if (Objects.equals(current.type, selected.type) && Objects.equals(current.path, selected.path)) {
+        return runAction(i, parameters);
+      }
+    }
+    throw new IllegalArgumentException("Action is no longer available; take a new snapshot");
+  }
+
   public Action.Response runAction(final int actionId, final List<Object> parameters) {
     if (actionId < 0 || actionId >= actions.size()) {
       throw new IllegalArgumentException("Invalid action ID: " + actionId);
