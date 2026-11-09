@@ -17,11 +17,11 @@ import langfuse
 import pydantic
 from langfuse import propagate_attributes
 
-from copilotj.core import UI, UIEvent, UIEventPost, UIEventState
+from copilotj.core import UI, UIEvent, UIEventError, UIEventPost, UIEventState
 from copilotj.core.config import Config, resolve_vision_config
 from copilotj.core.ui import UIEventContentMarkdown
 from copilotj.multiagent.leader_multiagent import LeaderDriven
-from copilotj.plugin.api import BridgePluginAPI, PluginAPI
+from copilotj.plugin.api import BridgePluginAPI, PluginAPI, PluginNotConnectedError
 
 if TYPE_CHECKING:
     from copilotj.server.bridge import Bridge
@@ -30,6 +30,11 @@ __all__ = ["Threads"]
 
 # Timeout for thread locks in seconds (300ms)
 THREAD_LOCK_TIMEOUT = 0.3
+
+# Generic, leakage-safe message shown to the user when the agent crashes on an
+# unexpected error. Exception text is kept in server logs only (it may contain
+# provider payloads, file paths, or script content).
+GENERIC_AGENT_ERROR_MSG = "The agent stopped unexpectedly. Please check the server logs or try again."
 
 _log = logging.getLogger(__name__)
 
@@ -338,9 +343,16 @@ class _Thread(UI):
                     ):
                         await self._agent.run(prompt, trace_ctx=self._trace_ctx)
 
+        except PluginNotConnectedError as e:
+            # Curated, actionable message — safe to show verbatim.
+            _log.warning("Plugin not connected for thread %s", self.thread_id)
+            await self.send(UIEventError(role="system", data=str(e)))
         except Exception:
+            # Unknown crash: log full detail, show only a generic message so provider
+            # payloads / file paths / script text never leak to the frontend.
             _log.exception("Agent run failed for thread %s", self.thread_id)
             self._agent.log_error(f"Agent run failed for thread {self.thread_id}:\n{traceback.format_exc()}")
+            await self.send(UIEventError(role="system", data=GENERIC_AGENT_ERROR_MSG))
         finally:
             done_event.set()  # Signal that the chat is done
 

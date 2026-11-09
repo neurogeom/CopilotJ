@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import abc
+import logging
 import uuid
 import warnings
 from datetime import datetime
@@ -31,7 +32,47 @@ from copilotj.plugin.summarizer import EnvironmentSummary, SummariseEnvironmentR
 if TYPE_CHECKING:
     from copilotj.server import Bridge
 
-__all__ = ["PluginAPI", "HTTPPluginAPI", "BridgePluginAPI", "ClientPluginAPI"]
+_log = logging.getLogger(__name__)
+
+__all__ = [
+    "PluginAPI",
+    "HTTPPluginAPI",
+    "BridgePluginAPI",
+    "ClientPluginAPI",
+    "PluginRequestError",
+    "PluginNotConnectedError",
+    "CLIENT_NOT_FOUND_ERR",
+]
+
+# Bridge error string returned when no ImageJ plugin client is connected. Shared with
+# ``copilotj.server.bridge`` so the producer and the consumer agree on the literal.
+CLIENT_NOT_FOUND_ERR = "Client not found"
+
+
+class PluginRequestError(RuntimeError):
+    """Any failure of a plugin request (no client connected, timeout, plugin-side error).
+
+    Catch this base class where plugin failures should be tolerated (e.g. optional
+    ImageJ window-info lookups). Catch :class:`PluginNotConnectedError` where the
+    "plugin not connected" case specifically should short-circuit.
+    """
+
+
+class PluginNotConnectedError(PluginRequestError):
+    """No ImageJ plugin client is connected to the bridge.
+
+    Carries a curated, user-facing message (``DEFAULT_MESSAGE``) so the agent/UI layer
+    can surface it directly without leaking internal detail.
+    """
+
+    DEFAULT_MESSAGE = (
+        "ImageJ is not connected. Please start Fiji with the CopilotJ plugin "
+        "installed and wait for it to connect to the server, then resend your request."
+    )
+
+    def __init__(self, message: str | None = None) -> None:
+        super().__init__(message or self.DEFAULT_MESSAGE)
+
 
 ##########################################################
 
@@ -185,11 +226,29 @@ class HTTPPluginAPI(PluginAPI):
             "/api/plugins/events", data=bytes(request, "utf-8"), headers={"Content-Type": "application/json"}
         ) as resp:
             respStr = await resp.text()
+            # The bridge returns HTTP 500 + a BridgeResponse body (err=...) for plugin-side
+            # failures such as "Client not found". Parse the body even on >=400 so those map
+            # to the typed plugin errors instead of a generic Exception (the status check
+            # used to fire first, hiding the not-connected mapping).
+            result: BridgeResponse | None
+            try:
+                result = BridgeResponse.model_validate_json(respStr)
+            except Exception:
+                result = None
+            err = result.err if result is not None else None
+            if err == CLIENT_NOT_FOUND_ERR:
+                raise PluginNotConnectedError()
             if resp.status >= 400:
-                raise Exception(f"Plugin API request failed with {resp.status}: {respStr}")
-            result = BridgeResponse.model_validate_json(respStr)
-            if result.err:
-                raise Exception(result.err)
+                # Body may be plugin/proxy-controlled (echoed paths, script text) — log it
+                # server-side only, keep the exception message free of raw response text so
+                # it can't flow into the LLM retry observation or the UI.
+                _log.warning("Plugin API request failed: status=%s body=%s", resp.status, respStr)
+                raise PluginRequestError(f"Plugin API request failed with HTTP {resp.status}")
+            if err:
+                _log.warning("Plugin request returned error: %s", err)
+                raise PluginRequestError("Plugin request failed")
+            if result is None:
+                raise PluginRequestError("Plugin API returned a malformed response")
             return cast(R, data.response_type.model_validate(result.data))
 
     @override
@@ -212,7 +271,10 @@ class BridgePluginAPI(PluginAPI):
             BridgeRequest(client_id=client_id, event=data.event, data=data, timeout=timeout)
         )
         if response.err:
-            raise RuntimeError(f"Plugin request failed: {response.err}")
+            if response.err == CLIENT_NOT_FOUND_ERR:
+                raise PluginNotConnectedError()
+            _log.warning("Plugin request failed: %s", response.err)
+            raise PluginRequestError("Plugin request failed")
         adapter = TypeAdapter(data.response_type)
         return cast(R, adapter.validate_python(response.data))
 

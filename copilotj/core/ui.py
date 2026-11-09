@@ -18,6 +18,7 @@ __all__ = [
     "CLI",
     "UIEventState",
     "UIEventPost",
+    "UIEventError",
     "UIEventPostReasoningChunk",
     "UIEventPostContentChunk",
     "UIEventToolCall",

@@ -65,6 +65,7 @@ from copilotj.multiagent.leader_prompts import (
 )
 from copilotj.multiagent.tools import system_info
 from copilotj.plugin import ClientPluginAPI
+from copilotj.plugin.api import PluginNotConnectedError, PluginRequestError
 from copilotj.util import ReActChatCompletionClient
 
 __all__ = ["LeaderDriven"]
@@ -194,6 +195,21 @@ class LeaderAgent(ChatAgent):
             default_image_path=str(py_tools.get_project_temp_dir()),
         )
 
+    async def _safe_window_info(self) -> str:
+        """Best-effort ImageJ window info for prompt context.
+
+        Window info is optional context; any plugin failure (no client connected,
+        timeout, plugin-side error) is tolerated as an empty string so dialog entry
+        and prompt optimization degrade gracefully instead of crashing the run.
+        Returns ``""`` when ``plugin_tools`` is absent (e.g. a stripped-down leader).
+        """
+        if not hasattr(self, "plugin_tools"):
+            return ""
+        try:
+            return await self.plugin_tools.imagej_windowInfo()
+        except PluginRequestError:
+            return ""
+
     async def begin_dialog(self, main_task: str, *, trace_ctx: Langfuse | None = None) -> ModelResponse:
         """Start a new dialog, seeding the conversation with system + initial user turn.
 
@@ -202,7 +218,7 @@ class LeaderAgent(ChatAgent):
         here and then retained in ``self._dialog_messages`` so subsequent steps
         only append new turns rather than resending the whole prompt.
         """
-        self.imagej_windowInfo_text = await self.plugin_tools.imagej_windowInfo()
+        self.imagej_windowInfo_text = await self._safe_window_info()
         system_prompt = await self._build_system_prompt()
 
         initial_user = build_initial_user_message(
@@ -235,7 +251,7 @@ class LeaderAgent(ChatAgent):
         if assistant_text:
             self._dialog_messages.append(TextMessage(role="assistant", text=assistant_text))
 
-        self.imagej_windowInfo_text = await self.plugin_tools.imagej_windowInfo()
+        self.imagej_windowInfo_text = await self._safe_window_info()
         user_text = build_observation_message(
             tool_response=observation,
             imagej_window_info=self.imagej_windowInfo_text,
@@ -303,7 +319,7 @@ class LeaderAgent(ChatAgent):
 
         agent_instance = self.agents[agent]
         self.log_info(f"[CALL] Calling Agent: {agent} | Params/Task: {task}")
-        self.imagej_windowInfo_text = await self.plugin_tools.imagej_windowInfo()
+        self.imagej_windowInfo_text = await self._safe_window_info()
 
         context = f"{task}{self.imagej_windowInfo_text}Previous Chat History: \n{self._prompt_chat_history_json()}"
         return await agent_instance.run(context)
@@ -328,12 +344,7 @@ class LeaderAgent(ChatAgent):
         """
         # Get ImageJ window info for context (only if available)
         # This is read-only, no side effects
-        window_info = ""
-        try:
-            if hasattr(self, "plugin_tools"):
-                window_info = await self.plugin_tools.imagej_windowInfo()
-        except Exception:
-            window_info = ""
+        window_info = await self._safe_window_info()
 
         # Build context section
         context_parts = []
@@ -511,11 +522,7 @@ class LeaderDriven(Pattern):
         """
 
         # Get ImageJ window info for context (only if available)
-        window_info = ""
-        try:
-            window_info = await self.leader_agent.plugin_tools.imagej_windowInfo()
-        except Exception:
-            window_info = ""
+        window_info = await self.leader_agent._safe_window_info()
 
         # Build context section
         context_parts = []
@@ -849,6 +856,14 @@ User prompt to optimize:
             try:
                 resp = await self.leader_agent._call_tool(tool_call)
                 tool_retry_counter = 0  # Reset retry counter on success
+
+            except PluginNotConnectedError as e:
+                # No ImageJ plugin connected: don't burn retries on a tool that can't
+                # succeed. Surface the curated message to the user and end the dialog.
+                await self.leader_agent.print_error(str(e))
+                dialog_context["status"] = "failed"
+                dialog_context["steps"].append({"name": tool_call.tool.name, "error": str(e)})
+                break
 
             except Exception as e:
                 self.log_error(f"[ERROR] Error executing '{tool_call.tool.name}': {e}")
