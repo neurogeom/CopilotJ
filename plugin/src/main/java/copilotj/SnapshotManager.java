@@ -114,9 +114,12 @@ public class SnapshotManager {
       throw new IllegalArgumentException("Snapshot not found");
     }
 
-    // TODO: use old snapshot as reference
+    if (request.actionId < 0 || request.actionId >= snapshot.actions.size()) {
+      throw new IllegalArgumentException("Invalid action ID: " + request.actionId);
+    }
+    final Action selected = snapshot.actions.get(request.actionId);
     final int id = nextId++;
     final Snapshot created = newSnapshot(id);
-    return created.runAction(request.actionId, request.parameters);
+    return created.runAction(selected, request.parameters);
   }
 }

@@ -87,25 +87,17 @@ public class IjTextWindow extends AbstractAwtWindow<TextWindow> {
       this.title = t.getTitle();
       this.total = t.size();
 
-      if (offset < 0) {
-        offset = 0;
-      }
-
-      if (limit <= 0) {
-        limit = 50;
-      } else if (offset + limit > t.size()) {
-        limit = t.size() - offset;
-      }
-
-      this.offset = offset;
-      this.limit = limit;
+      // Clamp against the remaining rows before allocating. This also avoids
+      // offset + limit overflow and negative array sizes for an exhausted page.
+      this.offset = Math.max(0, Math.min(offset, this.total));
+      this.limit = Math.min(limit <= 0 ? 50 : limit, this.total - this.offset);
       this.data = new HashMap<>();
 
       final String[] headings = t.getHeadings();
       for (int i = 0; i < headings.length; i++) {
-        final Double[] col = new Double[limit];
-        for (int j = offset; j < limit; j++) {
-          col[j] = t.getValue(headings[i], j);
+        final Double[] col = new Double[this.limit];
+        for (int j = 0; j < this.limit; j++) {
+          col[j] = t.getValue(headings[i], this.offset + j);
         }
         this.data.put(headings[i], col);
       }
@@ -197,11 +189,12 @@ public class IjTextWindow extends AbstractAwtWindow<TextWindow> {
     if (!this.isActivate()) {
       throw new IllegalStateException("Window is not active");
     } else if (path.size() != 0) {
-      throw new IllegalArgumentException("Path must be empty for IjImage");
+      throw new IllegalArgumentException("Path must be empty for IjTextWindow");
     }
 
     switch (type) {
-      case TYPE + ".get_results_table":
+      case TYPE + ".getResultsTable":
+      case TYPE + ".get_results_table": // Retain the older internal spelling.
         if (parameters == null || parameters.size() != 2) {
           throw new IllegalArgumentException(
               "Action 'Get Results Table' requires exactly 2 parameters (offset, limit). Found: "
