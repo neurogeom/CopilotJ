@@ -22,6 +22,7 @@ __all__ = [
     "build_initial_user_message",
     "build_observation_message",
     "make_summary_prompt",
+    "make_summary_tail",
     "make_workflow_definition_prompt",
     "build_tool_prompt",
     "build_available_specialized_agents_prompt",
@@ -500,15 +501,7 @@ Use 1 montage by default, 2 for medium or multi-folder datasets, and 3 for large
 """
 
 
-def make_summary_prompt(task: str, steps_text: str) -> str:
-    return f"""
-You are an expert at compressing a dialog execution trace into concise context for future conversation.
-User ask: {task}
-Execution Steps to Summarize:
-{steps_text}
-Please summarize the ImageJ task execution steps as reusable conversation context.
-Do not generate workflow JSON, workflow steps, or template variables. Workflow saving has a separate prompt.
-
+_SUMMARY_FORMAT_BLOCK = """\
 ## Required Summary Format
 The summary must be comprehensive like:
 <Example>
@@ -524,6 +517,35 @@ Dialog Context Summary
 Rule:
 1. Be careful of the `'gbk' codec can't encode character '\u2080'` error
 """
+
+
+def make_summary_prompt(task: str, steps_text: str) -> str:
+    return f"""
+You are an expert at compressing a dialog execution trace into concise context for future conversation.
+User ask: {task}
+Execution Steps to Summarize:
+{steps_text}
+Please summarize the ImageJ task execution steps as reusable conversation context.
+Do not generate workflow JSON, workflow steps, or template variables. Workflow saving has a separate prompt.
+
+{_SUMMARY_FORMAT_BLOCK}"""
+
+
+def make_summary_tail(task: str) -> str:
+    """Short instruction appended to a leader-conversation snapshot.
+
+    Asks for a reusable summary of the conversation ABOVE (which already holds
+    the full execution trace as assistant/user turns), so no ``steps_text`` is
+    re-serialized. Paired with ``LeaderDriven._leader_dialog_snapshot`` so the
+    prior conversation is the cached prefix and only this tail is fresh.
+    """
+    return (
+        "Summarize the CopilotJ dialog above as reusable conversation context for future turns. "
+        f"The user's original request was: {task}\n"
+        "Do not generate workflow JSON, workflow steps, or template variables. "
+        "Workflow saving has a separate prompt.\n\n"
+        f"{_SUMMARY_FORMAT_BLOCK}"
+    )
 
 
 def build_tool_prompt(tools: list[Tool]) -> str:

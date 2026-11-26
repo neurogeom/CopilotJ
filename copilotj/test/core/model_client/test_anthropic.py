@@ -148,3 +148,60 @@ def test_anthropic_format_tools_empty():
     """Empty tool list returns NOT_GIVEN."""
     result = AnthropicChatCompletionClient._format_tools([])
     assert result is anthropic.NOT_GIVEN
+
+
+def test_anthropic_format_snapshot_plus_tail_cache_compatible():
+    """Appending a ``user`` tail to a ``user``-ended snapshot keeps every
+    earlier content block identical and relocates BP2 onto the tail.
+
+    This is the unit-testable proxy for the helper-call cache trick: the
+    leader's last request cached ``[system, ..., last_user_turn]`` (BP2 on that
+    last turn). A helper sending ``[*snapshot, user:tail]`` must keep all prior
+    blocks content-identical so the prefix is a cache READ, with only the tail
+    fresh. The consecutive-``user`` merge coalesces the last turn + tail into
+    one message; that must not alter any earlier block's bytes.
+    """
+    snapshot = [
+        TextMessage(role="system", text="Be helpful"),
+        TextMessage(role="user", text="count cells"),
+        TextMessage(role="assistant", text="Thought: ..."),
+        TextMessage(role="user", text="Observation: 42 cells"),  # dialog ends in user
+    ]
+    tail = TextMessage(role="user", text="Summarize the dialog above.")
+
+    snap_system, snap_msgs = AnthropicChatCompletionClient._format_messages(snapshot)
+    help_system, help_msgs = AnthropicChatCompletionClient._format_messages([*snapshot, tail])
+
+    def content_blocks(msgs):
+        """Flatten (type, payload) per content block, ignoring cache_control."""
+        out = []
+        for m in msgs:
+            for b in m["content"]:
+                payload = b.get("text") if b["type"] == "text" else b.get("source")
+                out.append((b["type"], payload))
+        return out
+
+    # BP1 (system) identical -> the system breakpoint still reads.
+    assert help_system == snap_system
+
+    snap_blocks = content_blocks(snap_msgs)
+    help_blocks = content_blocks(help_msgs)
+
+    # Helper = snapshot blocks + exactly one appended tail block; no earlier block changed.
+    assert help_blocks[: len(snap_blocks)] == snap_blocks
+    assert help_blocks[len(snap_blocks)] == ("text", "Summarize the dialog above.")
+    assert len(help_blocks) == len(snap_blocks) + 1
+
+    # BP2 sits on the tail (last content block of the last message); the merged
+    # last message carries the prior user turn + the tail, in order.
+    assert help_msgs[-1]["content"][-1]["text"] == "Summarize the dialog above."
+    assert help_msgs[-1]["content"][0]["text"] == "Observation: 42 cells"
+    assert "cache_control" in help_msgs[-1]["content"][-1]
+    assert "cache_control" not in help_msgs[-1]["content"][0]
+    # Guard Anthropic's 4-breakpoint budget: across all message blocks, exactly
+    # one cache_control (the tail). With the system breakpoint that's 2/4 total,
+    # so the request stays in budget and a stale breakpoint on an earlier block
+    # would fail this assertion instead of silently inflating cost.
+    cached_blocks = [b for m in help_msgs for b in m["content"] if "cache_control" in b]
+    assert len(cached_blocks) == 1
+    assert cached_blocks[0]["text"] == "Summarize the dialog above."
