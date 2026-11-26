@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Annotated
 
 from copilotj.core import ImageMessage, TextMessage, new_vlm_model_client
-from copilotj.core.config import Config
+from copilotj.core.config import Config, ConfigLike, resolve_config
 from copilotj.core.lifecycle import register_cleanup
 from copilotj.plugin.api import ClientPluginAPI
 from copilotj.util import JupyterNotebook
@@ -29,10 +29,17 @@ _log = logging.getLogger(__name__)
 
 
 class PluginTools:
-    def __init__(self, apis: ClientPluginAPI, *, cfg: Config):
+    def __init__(self, apis: ClientPluginAPI, *, cfg: ConfigLike):
         super().__init__()
         self.apis = apis
+        # ``cfg`` may be a static ``Config`` snapshot or a live ``ConfigProvider``. Resolve lazily via
+        # the ``cfg`` property so config changes from ``update_config`` are observed without rebuilding.
         self._cfg = cfg
+
+    @property
+    def cfg(self) -> Config:
+        """Resolve the current config (static instance or live provider)."""
+        return resolve_config(self._cfg)
 
     def _detect_timeout_from_script(self, script: str) -> float:
         script_lower = script.lower()
@@ -51,6 +58,7 @@ class PluginTools:
     ) -> str:
         if timeout is None:
             timeout = self._detect_timeout_from_script(script)
+        _cfg = self.cfg
         try:
             script = script + "\n" + 'print("Macro executed.");'
             response = await self.apis.run_script("macro", script, timeout=timeout)
@@ -70,7 +78,7 @@ class PluginTools:
         result = f"{script} has executed successfully.\n"
 
         # Perform result verification if requested
-        if verify_result and operation_intent and self._cfg.vision_enabled:
+        if verify_result and operation_intent and _cfg.vision_enabled:
             verification = await self.simple_result_verification(operation_intent)
             result += f"\nOperation verification: {verification}"
 
@@ -88,11 +96,12 @@ class PluginTools:
 
     async def capture_screen(self, query: str | None = None) -> str:
         """Capture ImageJ Screen."""
-        if not self._cfg.vision_enabled:
+        _cfg = self.cfg
+        if not _cfg.vision_enabled:
             window_info = await self.imagej_windowInfo()
             return f"[Vision disabled] Basic ImageJ window info:\n{window_info}"
 
-        if not self._cfg.vision_available:
+        if not _cfg.vision_available:
             window_info = await self.imagej_windowInfo()
             return (
                 "[Vision not available] The configured model does not support image input. "
@@ -101,7 +110,7 @@ class PluginTools:
                 f"Basic ImageJ window info:\n{window_info}"
             )
 
-        vlm = new_vlm_model_client(self._cfg)
+        vlm = new_vlm_model_client(_cfg)
         imagejCapture_resp = await self.apis.capture_screen()
         vision_prompt = """
 You are an ImageJ Vision Perception tool.  
@@ -177,11 +186,12 @@ Provide any additional warnings or clarifications:
     async def imagej_perception(self, query: str | None = None) -> str:
         """ImageJ Perception Tool."""
         perception = await self.imagej_windowInfo()
+        _cfg = self.cfg
 
-        if not self._cfg.vision_enabled:
+        if not _cfg.vision_enabled:
             return f"[Vision disabled] ImageJ Window Information:\n{perception}"
 
-        if not self._cfg.vision_available:
+        if not _cfg.vision_available:
             return (
                 "[Vision not available] The configured model does not support image input. "
                 "Please configure a vision-capable model (COPILOTJ_VLM_MODEL) "
@@ -221,17 +231,18 @@ imagejOperation is the monitor event history of ImageJ.
 
     async def simple_result_verification(self, operation_intent: str, expected_outcome: str = None) -> str:
         """Simple perception-based result verification."""
-        if not self._cfg.vision_enabled:
+        _cfg = self.cfg
+        if not _cfg.vision_enabled:
             return "[Vision disabled] Visual verification skipped. Operation assumed successful."
 
-        if not self._cfg.vision_available:
+        if not _cfg.vision_available:
             return (
                 "[Vision not available] Visual verification skipped — "
                 "the configured model does not support image input. "
                 "Operation assumed successful."
             )
 
-        vlm = new_vlm_model_client(self._cfg)
+        vlm = new_vlm_model_client(_cfg)
         imagejCapture_resp = await self.apis.capture_screen()
 
         verification_prompt = f"""
