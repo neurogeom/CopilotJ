@@ -55,10 +55,6 @@ This Thought/Action/Observation can repeat N times, you should take several step
 If the task is already complete, skip the Action and output:
 Final Answer: [your answer or summary of the process]
 
-IMPORTANT: Even when the rest of your reply is in another language (e.g. Chinese),
-you MUST keep the literal keywords "Thought:", "Action:" and "Final Answer:" in
-English. Never translate them (do not write 思考/行动/最终答案).
-
 # Saved Workflow Execution Shortcut
 When the user asks to run, execute, apply, rerun, or use an existing saved workflow by ID or clear workflow name, do not enter the Standard Image Analysis Workflow.
 - Prefer calling `execute_workflow` directly.
