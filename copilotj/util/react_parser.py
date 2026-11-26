@@ -44,9 +44,9 @@ class ReActChatCompletionClient(ModelClient):
         self,
         model_client: ModelClient,
         *,
-        kw_thought: str = "Thought",
-        kw_action: str = "Action",
-        kw_final: str = "Final Answer",
+        kw_thought: str | Sequence[str] = ("Thought", "思考"),
+        kw_action: str | Sequence[str] = ("Action", "行动"),
+        kw_final: str | Sequence[str] = ("Final Answer", "最终答案", "最终回答"),
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -97,13 +97,65 @@ class ReActChatCompletionClient(ModelClient):
         # Use compiled regex patterns
         text = response.content.strip()
 
+        # DeepSeek-style DSML tool-call markup, e.g.
+        # <｜｜DSML｜｜ invoke name="tool">
+        #   <｜｜DSML｜｜ parameter name="args" string="false">{"...": ...}</｜｜DSML｜｜ parameter>
+        # </｜｜DSML｜｜ invoke>
+        # Some models fall back to this native format even though we ask for
+        # text ReAct.  Parse it instead of treating it as a final answer.
+        dsml_calls = _extract_dsml_tool_calls(text)
+        if dsml_calls:
+            try:
+                parsed_calls = [
+                    self._parse_action_content(
+                        json.dumps({"name": call.name, "args": call.args}, ensure_ascii=False),
+                        tools=tools or [],
+                    )
+                    for call in dsml_calls
+                ]
+            except ModelSyntaxError as e:
+                e.chat_completion = ModelResponse(
+                    content=text,
+                    reasoning_content=response.reasoning_content,
+                    tool_calls=[],
+                    finish_reason=response.finish_reason,
+                )
+                raise e
+            return ModelResponse(
+                content=None,
+                reasoning_content=response.reasoning_content,
+                tool_calls=parsed_calls,
+                finish_reason=response.finish_reason,
+            )
+
         thought_match = self._pattern_thought.search(text)
         action_match = self._pattern_action.search(text)
         final_match = self._pattern_final.search(text)
         thought = thought_match and thought_match.group(1).strip()
 
-        # Fallback: if no structured reasoning or action found, return raw content as final answer
+        # Fallback: if no structured reasoning or action found, return raw content as final answer.
+        # However, if the text clearly contains a tool call (e.g. the model wrote an
+        # "Action" but used an unrecognized keyword), do NOT treat it as a final
+        # answer: surface a syntax error so the leader retries instead of silently
+        # ending the dialog.
         if thought_match is None and action_match is None and final_match is None:
+            if (
+                re.search(r'\{\s*"name"\s*:', text)
+                or re.search(r'"name"\s*:\s*"', text)
+                or re.search(_DSML_OPEN, text)
+            ):
+                error = ModelSyntaxError(
+                    "Response contains a tool action but no valid ReAct keyword. "
+                    'Reply with a single "Thought: ..." followed by "Action: {...}" '
+                    '(keep these keywords in English).'
+                )
+                error.chat_completion = ModelResponse(
+                    content=text,
+                    reasoning_content=None,
+                    tool_calls=[],
+                    finish_reason=response.finish_reason,
+                )
+                raise error
             return ModelResponse(
                 content=text,
                 reasoning_content=None,
@@ -199,9 +251,25 @@ class ReActChatCompletionClient(ModelClient):
         if buffer.strip():
             match state:
                 case _StreamingState.Init:
-                    # If we are still in Init state, we can yield the buffer as a final answer
-                    last = ModelResponseChunk(reasoning_content=None, content=buffer, finish_reason=None)
-                    yield last
+                    # Some models emit native DSML tool-call markup instead of
+                    # text ReAct. Parse it instead of treating it as a final
+                    # answer (which would end the dialog halfway through).
+                    dsml_calls = _extract_dsml_tool_calls(buffer)
+                    if dsml_calls:
+                        for call in dsml_calls:
+                            last = self._parse_action_content(
+                                json.dumps({"name": call.name, "args": call.args}, ensure_ascii=False),
+                                tools=tools,
+                            )
+                            yield last
+                    elif re.search(_DSML_OPEN, buffer):
+                        raise ModelSyntaxError(
+                            f"Failed to parse DSML tool call from streamed response: {buffer[:300]}"
+                        )
+                    else:
+                        # If we are still in Init state, we can yield the buffer as a final answer
+                        last = ModelResponseChunk(reasoning_content=None, content=buffer, finish_reason=None)
+                        yield last
 
                 case _StreamingState.Thought:
                     last = ModelResponseChunk(reasoning_content=buffer, content=None, finish_reason=None)
@@ -378,6 +446,76 @@ class ReActToolCall:
     args: dict[str, Any]
 
 
+# DeepSeek's native tool-call markup uses full-width vertical bars:
+#   <｜｜DSML｜｜ invoke name="tool"> ... </｜｜DSML｜｜ invoke>
+_DSML_OPEN = r"<[｜|]{1,3}\s*DSML\s*[｜|]{1,3}\s*"
+_DSML_CLOSE = r"</[｜|]{1,3}\s*DSML\s*[｜|]{1,3}\s*"
+
+
+def _try_parse_json(value: Any) -> Any:
+    if not isinstance(value, str):
+        return value
+    try:
+        return json.loads(value.strip())
+    except (json.JSONDecodeError, ValueError):
+        return value
+
+
+def _extract_dsml_tool_calls(text: str) -> list[ReActToolCall] | None:
+    """Parse DeepSeek ``<｜｜DSML｜｜ invoke ...>`` blocks into tool calls.
+
+    Models sometimes emit their native tool-call markup as plain content even
+    when asked for text ReAct.  Without this, such a message is mistaken for a
+    final answer and the dialog ends halfway through the task.
+    """
+    invoke_pattern = re.compile(
+        rf"{_DSML_OPEN}invoke\b([^>]*)>(.*?){_DSML_CLOSE}invoke>",
+        re.IGNORECASE | re.DOTALL,
+    )
+    # Tolerate a missing </parameter> closing tag (some models omit it): stop
+    # at the next parameter or at the end of the invoke block instead.
+    param_pattern = re.compile(
+        rf"{_DSML_OPEN}parameter\b([^>]*)>(.*?)"
+        rf"(?:{_DSML_CLOSE}parameter>|(?={_DSML_OPEN}parameter\b)|(?={_DSML_CLOSE}invoke>))",
+        re.IGNORECASE | re.DOTALL,
+    )
+
+    calls: list[ReActToolCall] = []
+    for invoke in invoke_pattern.finditer(text):
+        attrs, body = invoke.group(1), invoke.group(2)
+        name_match = re.search(r'name\s*=\s*"([^"]+)"', attrs)
+        name: str | None = name_match.group(1) if name_match else None
+
+        params: dict[str, Any] = {}
+        for param in param_pattern.finditer(body):
+            p_attrs, value = param.group(1), param.group(2)
+            p_name = re.search(r'name\s*=\s*"([^"]+)"', p_attrs)
+            if p_name is None:
+                continue
+            key = p_name.group(1)
+            # DeepSeek convention: string="true" -> literal string,
+            # string="false" -> value is JSON.
+            is_string = re.search(r'string\s*=\s*"true"', p_attrs, re.IGNORECASE) is not None
+            params[key] = value if is_string else _try_parse_json(value)
+
+        if name is None:
+            name = params.pop("name", None)
+        if not isinstance(name, str) or not name:
+            continue
+
+        if "args" in params:
+            args = params["args"]
+            if isinstance(args, str):
+                args = _try_parse_json(args)
+            if not isinstance(args, dict):
+                args = {"value": args}
+        else:
+            args = {k: v for k, v in params.items() if k != "name"}
+        calls.append(ReActToolCall(name=name, args=args))
+
+    return calls or None
+
+
 def _extract_json_tool_call(text: str) -> ReActToolCall:
     code_block_pattern = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL | re.IGNORECASE)
     code_block_match = code_block_pattern.search(text.strip())
@@ -458,7 +596,7 @@ def _extract_action_with_regex(text: str) -> ReActToolCall:
     return ReActToolCall(name=action_name, args=args)
 
 
-def _build_last_line_prefix_regex(*words: str) -> re.Pattern:
+def _build_last_line_prefix_regex(*words: str | Sequence[str]) -> re.Pattern:
     """Build a regex pattern to match any prefix of multiple keywords
 
     Args:
@@ -467,6 +605,13 @@ def _build_last_line_prefix_regex(*words: str) -> re.Pattern:
     Return:
         Compiled regex pattern that matches any prefix of the given words,
     """
+    flat: list[str] = []
+    for word in words:
+        if isinstance(word, str):
+            flat.append(word)
+        else:
+            flat.extend(word)
+    words = tuple(flat)
 
     def word_to_prefix_regex(word: str) -> str:
         assert word, "Word must not be empty"
@@ -474,7 +619,7 @@ def _build_last_line_prefix_regex(*words: str) -> re.Pattern:
         escaped = [re.escape(char) for char in word]
         return escaped[0] + "".join(f"(?:{char}?" for char in escaped[1:]) + ")?" * (len(word) - 1)
 
-    pattern_parts = [rf"(?:\*\*)?{word_to_prefix_regex(w)}(?:\*\*?|:\*\*?|:)?" for w in words]
+    pattern_parts = [rf"(?:\*\*)?{word_to_prefix_regex(w)}(?:\*\*?|[:：]\*\*?|[:：])?" for w in words]
     # Combine patterns with non-capturing group and ignore case: (?:^|\n)(ActionPrefix|FinalAnswerPrefix)\Z
     pattern = r"(?i)(?:^|\n)(?:" + "|".join(pattern_parts) + r")\Z"
     return re.compile(pattern)
@@ -485,7 +630,12 @@ def _build_keyword_regex(keyword: str) -> str:
     return rf"(?:\*\*)?{escaped}(?:\*\*)?"
 
 
-def _build_keyword_with_sep_regex(keyword: str) -> str:
-    keyword_only_bold = _build_keyword_regex(keyword)
-    keyword_colon_in_bold = rf"\*\*{re.escape(keyword)}:\*\*"
-    return rf"(?:{keyword_colon_in_bold}\s*|{keyword_only_bold}\s*(?::|\n))"
+def _build_keyword_with_sep_regex(keyword: str | Sequence[str]) -> str:
+    words = [keyword] if isinstance(keyword, str) else list(keyword)
+    parts: list[str] = []
+    for word in words:
+        keyword_only_bold = _build_keyword_regex(word)
+        # Accept ASCII colon, full-width colon (common in Chinese output) and newline.
+        keyword_colon_in_bold = rf"\*\*{re.escape(word)}[:：]\*\*"
+        parts.append(rf"(?:{keyword_colon_in_bold}\s*|{keyword_only_bold}\s*(?::|：|\n))")
+    return rf"(?:{'|'.join(parts)})"
